@@ -4,6 +4,7 @@
 
 import smach
 import subprocess
+import time
 from bs4 import BeautifulSoup
 
 
@@ -22,7 +23,9 @@ class RecCustomerComplaints(smach.State):
         subprocess.call(['java', '-jar', 'CustomerXPS.jar'])
 
     def execute(self, userdata):
+        print("############################################")
         print("executing REC_CUSTOMER_COMPLAINTS state..")
+        print("############################################")
         val = ""
         while val != "0" and val != "1":
             val = input("starting diagnosis with [0] / without [1] customer complaints")
@@ -37,16 +40,18 @@ class RecCustomerComplaints(smach.State):
             return "no_complaints"
 
 
-class EstablishContextOrHypothesis(smach.State):
+class EstablishHypothesis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['established_context', 'established_hypothesis', 'unknown'],
+                             outcomes=['established_hypothesis'],
                              input_keys=['interview_protocol_file'],
                              output_keys=['context', 'hypothesis'])
 
     def execute(self, userdata):
-        print("executing ESTABLISH_CONTEXT_OR_HYPOTHESIS state..")
+        print("############################################")
+        print("executing ESTABLISH_HYPOTHESIS state..")
+        print("############################################")
         print("reading XML protocol..")
 
         with open(userdata.interview_protocol_file) as f:
@@ -58,6 +63,8 @@ class EstablishContextOrHypothesis(smach.State):
         for tag in session_data.find_all('rating', {'type': 'heuristic'}):
             res = tag.parent['objectName']
 
+        print("establish hypothesis..")
+        time.sleep(10)
         userdata.hypothesis = res
         return "established_hypothesis"
 
@@ -71,13 +78,17 @@ class ReadOBDInformation(smach.State):
                              output_keys=['processed_OBD_info'])
 
     def execute(self, userdata):
+        print("############################################")
         print("executing READ_OBD_INFORMATION state..")
+        print("############################################")
         if userdata.hypothesis:
             print("already have a hypothesis based on customer constraints:", userdata.hypothesis)
         else:
             print("starting without hypothesis..")
         # TODO: include OBD parser (OBD codes + meta data)
         userdata.processed_OBD_info = ""
+        print("processed OBD information..")
+        time.sleep(10)
         return "processed_OBD_info"
 
 
@@ -90,9 +101,13 @@ class SuggestMeasuringPos(smach.State):
                              output_keys=[''])
 
     def execute(self, userdata):
+        print("############################################")
         print("executing SUGGEST_MEASURING_POS state..")
+        print("############################################")
         print(userdata.processed_OBD_info)
         # TODO: implement suggestion for measuring pos
+        print("SUGGESTED MEASURING POS: X, Y, Z")
+        time.sleep(10)
         return "provided_suggestion"
 
 
@@ -105,9 +120,13 @@ class PerformSensorRecording(smach.State):
                              output_keys=['oscillogram'])
 
     def execute(self, userdata):
+        print("############################################")
         print("executing PERFORM_SENSOR_RECORDING state..")
+        print("############################################")
         # TODO: perform sensor recording and process data -> generate oscillogram
         userdata.oscillogram = ""
+        time.sleep(10)
+        print("performed sensor recording..")
         return "processed_sensor_data"
 
 
@@ -115,40 +134,54 @@ class MapOscillogramToDiagnosis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['diagnosis_provided'],
+                             outcomes=['diagnosis_provided', 'no_diagnosis'],
                              input_keys=['oscillogram'],
                              output_keys=['diagnosis'])
 
     def execute(self, userdata):
+        print("############################################")
         print("executing MAP_OSCILLOGRAM_TO_DIAGNOSIS state..")
+        print("############################################")
         net_input = userdata.oscillogram
         # TODO: apply trained NN
         userdata.diagnosis = ""
-        return "diagnosis_provided"
+        feasible_diag = True
+        time.sleep(10)
+        print("mapped oscillogram to diagnosis..")
+        if feasible_diag:
+            return "diagnosis_provided"
+        return "no_diagnosis"
 
 
 class RecommendActionAndShowTrace(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['action_suggestion_and_trace_provided'],
+                             outcomes=['info_provided', 'no_suggestion'],
                              input_keys=['diagnosis'],
                              output_keys=[''])
 
     def execute(self, userdata):
+        print("############################################")
         print("executing RECOMMEND_ACTION_AND_SHOW_TRACE state..")
+        print("############################################")
         diag = userdata.diagnosis
         # TODO: apply [XPS / ...] that recommends action based on diagnosis
         #   - print action
         #   - show trace
-        return "action_suggestion_and_trace_provided"
+        feasible_suggestion = True
+        time.sleep(10)
+        print("recommended action and showed trace..")
+        if feasible_suggestion:
+            return "info_provided"
+        return "no_suggestion"
 
 
 class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
     def __init__(self):
         super(VehicleDiagnosisAndRecommendationStateMachine, self).__init__(
-            outcomes=['diagnosis_without_recommendation', 'diagnosis_with_recommendation', 'no_diagnosis'],
+            outcomes=['diag_without_reco', 'diag_with_reco', 'no_diag'],
             input_keys=[],
             output_keys=[]
         )
@@ -156,15 +189,13 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
         with self:
             self.add('REC_CUSTOMER_COMPLAINTS', RecCustomerComplaints(),
-                     transitions={'complaints_received': 'ESTABLISH_CONTEXT_OR_HYPOTHESIS',
+                     transitions={'complaints_received': 'ESTABLISH_HYPOTHESIS',
                                   'no_complaints': 'READ_OBD_INFORMATION'},
                      remapping={'input_info': 'sm_input',
                                 'interview_protocol_file': 'sm_input'})
 
-            self.add('ESTABLISH_CONTEXT_OR_HYPOTHESIS', EstablishContextOrHypothesis(),
-                     transitions={'established_context': 'READ_OBD_INFORMATION',
-                                  'established_hypothesis': 'READ_OBD_INFORMATION',
-                                  'unknown': 'READ_OBD_INFORMATION'},
+            self.add('ESTABLISH_HYPOTHESIS', EstablishHypothesis(),
+                     transitions={'established_hypothesis': 'READ_OBD_INFORMATION'},
                      remapping={'interview_protocol_file': 'sm_input',
                                 'hypothesis': 'sm_input'})
 
@@ -182,12 +213,14 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={'oscillogram': 'sm_input'})
 
             self.add('MAP_OSCILLOGRAM_TO_DIAGNOSIS', MapOscillogramToDiagnosis(),
-                     transitions={'diagnosis_provided': 'RECOMMEND_ACTION_AND_SHOW_TRACE'},
+                     transitions={'diagnosis_provided': 'RECOMMEND_ACTION_AND_SHOW_TRACE',
+                                  'no_diagnosis': 'no_diag'},
                      remapping={'oscillogram': 'sm_input',
                                 'diagnosis': 'sm_input'})
 
             self.add('RECOMMEND_ACTION_AND_SHOW_TRACE', RecommendActionAndShowTrace(),
-                     transitions={'action_suggestion_and_trace_provided': 'diagnosis_with_recommendation'},
+                     transitions={'info_provided': 'diag_with_reco',
+                                  'no_suggestion': 'diag_without_reco'},
                      remapping={'diagnosis': 'sm_input'})
 
 
@@ -195,3 +228,4 @@ if __name__ == '__main__':
     sm = VehicleDiagnosisAndRecommendationStateMachine()
     outcome = sm.execute()
     print("OUTCOME:", outcome)
+
