@@ -20,7 +20,7 @@ class RecCustomerComplaints(smach.State):
     @staticmethod
     def launch_customer_xps():
         print("launching customer XPS..")
-        subprocess.call(['java', '-jar', 'CustomerXPS.jar'])
+        subprocess.call(['java', '-jar', 'lib/CustomerXPS.jar'])
 
     def execute(self, userdata):
         print("############################################")
