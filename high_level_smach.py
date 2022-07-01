@@ -2,13 +2,16 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
-import smach
 import subprocess
+import sys
 import time
+from os import path
+
+import smach
 from bs4 import BeautifulSoup
 
-from os import path
-import sys
+import config
+
 sys.path.append(path.abspath('../AW_40_GUI'))
 
 from GUI import run_gui
@@ -26,7 +29,7 @@ class RecCustomerComplaints(smach.State):
     @staticmethod
     def launch_customer_xps():
         print("launching customer XPS..")
-        subprocess.call(['java', '-jar', 'lib/CustomerXPS.jar'])
+        subprocess.call(['java', '-jar', config.CUSTOMER_XPS])
 
     def execute(self, userdata):
         print("############################################")
@@ -39,7 +42,7 @@ class RecCustomerComplaints(smach.State):
         if val == "0":
             self.launch_customer_xps()
             print("customer XPS session protocol saved..")
-            userdata.interview_protocol_file = "./KB/session_res.xml"
+            userdata.interview_protocol_file = config.INTERVIEW_PROTOCOL_FILE
             return "complaints_received"
         else:
             print("starting diagnosis without customer complaints..")
@@ -237,4 +240,3 @@ if __name__ == '__main__':
     sm = VehicleDiagnosisAndRecommendationStateMachine()
     outcome = sm.execute()
     print("OUTCOME:", outcome)
-
