@@ -7,6 +7,12 @@ import subprocess
 import time
 from bs4 import BeautifulSoup
 
+from os import path
+import sys
+sys.path.append(path.abspath('../AW_40_GUI'))
+
+from GUI import run_gui
+
 
 class RecCustomerComplaints(smach.State):
 
@@ -86,6 +92,9 @@ class ReadOBDInformation(smach.State):
         else:
             print("starting without hypothesis..")
         # TODO: include OBD parser (OBD codes + meta data)
+
+        run_gui()
+
         userdata.processed_OBD_info = ""
         print("processed OBD information..")
         time.sleep(10)
