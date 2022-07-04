@@ -12,9 +12,27 @@ from bs4 import BeautifulSoup
 
 import config
 
+import rospy
+import smach_ros
+
 sys.path.append(path.abspath('../AW_40_GUI'))
 
 from GUI import run_gui
+
+
+class ProcUserInfo(smach.State):
+
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['read_user_info'],
+                             input_keys=[''],
+                             output_keys=[''])
+
+    def execute(self, userdata):
+        print("############################################")
+        print("executing PROC_USER_INFO state..")
+        print("############################################")
+        return "read_user_info"
 
 
 class RecCustomerComplaints(smach.State):
@@ -200,6 +218,11 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
         self.userdata.sm_input = []
 
         with self:
+
+            self.add('PROC_USER_INFO', ProcUserInfo(),
+                     transitions={'read_user_info': 'REC_CUSTOMER_COMPLAINTS'},
+                     remapping={})
+
             self.add('REC_CUSTOMER_COMPLAINTS', RecCustomerComplaints(),
                      transitions={'complaints_received': 'ESTABLISH_HYPOTHESIS',
                                   'no_complaints': 'READ_OBD_INFORMATION'},
@@ -236,7 +259,21 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={'diagnosis': 'sm_input'})
 
 
-if __name__ == '__main__':
+def node():
+    rospy.init_node('test')
     sm = VehicleDiagnosisAndRecommendationStateMachine()
+    sis = smach_ros.IntrospectionServer('server_name', sm, '/AW4.0')
+    sis.start()
     outcome = sm.execute()
     print("OUTCOME:", outcome)
+
+    rospy.spin()
+    sis.stop()
+
+
+if __name__ == '__main__':
+    try:
+        node()
+    except rospy.ROSInterruptException:
+        pass
+
