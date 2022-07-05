@@ -160,13 +160,34 @@ class PerformSensorRecording(smach.State):
         return "processed_sensor_data"
 
 
+class PerformDataManagement(smach.State):
+
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['data_management_performed'],
+                             input_keys=[''],
+                             output_keys=[''])
+
+    def execute(self, userdata):
+        print("############################################")
+        print("executing PERFORM_DATA_MANAGEMENT state..")
+        print("############################################")
+        # TODO:
+        #   - EDC (Eclipse Dataspace Connector) communication
+        #   - consolidate + upload data (user info, customer complaints, OBD info, sensor data) to server
+        #   - optional: [retrieve latest version of trained NN from server]
+        return "data_management_performed"
+
+
 class MapOscillogramToDiagnosis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['diagnosis_provided', 'no_diagnosis'],
+                             outcomes=['diagnosis_provided', 'no_diagnosis', 'no_diagnosis_final'],
                              input_keys=['oscillogram'],
                              output_keys=['diagnosis'])
+
+        self.no_diag_cnt = 0
 
     def execute(self, userdata):
         print("############################################")
@@ -180,7 +201,11 @@ class MapOscillogramToDiagnosis(smach.State):
         print("mapped oscillogram to diagnosis..")
         if feasible_diag:
             return "diagnosis_provided"
-        return "no_diagnosis"
+        elif self.no_diag_cnt < 3:
+            self.no_diag_cnt += 1
+            return "no_diagnosis"
+        else:
+            return "no_diagnosis_final"
 
 
 class RecommendActionAndShowTrace(smach.State):
@@ -211,7 +236,7 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
     def __init__(self):
         super(VehicleDiagnosisAndRecommendationStateMachine, self).__init__(
-            outcomes=['diag_without_reco', 'diag_with_reco', 'no_diag'],
+            outcomes=['diag', 'D+R', 'no_diag'],
             input_keys=[],
             output_keys=[]
         )
@@ -244,18 +269,23 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={'processed_OBD_info': 'sm_input'})
 
             self.add('PERFORM_SENSOR_RECORDING', PerformSensorRecording(),
-                     transitions={'processed_sensor_data': 'MAP_OSCILLOGRAM_TO_DIAGNOSIS'},
+                     transitions={'processed_sensor_data': 'PERFORM_DATA_MANAGEMENT'},
                      remapping={'oscillogram': 'sm_input'})
+
+            self.add('PERFORM_DATA_MANAGEMENT', PerformDataManagement(),
+                     transitions={'data_management_performed': 'MAP_OSCILLOGRAM_TO_DIAGNOSIS'},
+                     remapping={})
 
             self.add('MAP_OSCILLOGRAM_TO_DIAGNOSIS', MapOscillogramToDiagnosis(),
                      transitions={'diagnosis_provided': 'RECOMMEND_ACTION_AND_SHOW_TRACE',
-                                  'no_diagnosis': 'no_diag'},
+                                  'no_diagnosis_final': 'no_diag',
+                                  'no_diagnosis': 'SUGGEST_MEASURING_POS'},
                      remapping={'oscillogram': 'sm_input',
                                 'diagnosis': 'sm_input'})
 
             self.add('RECOMMEND_ACTION_AND_SHOW_TRACE', RecommendActionAndShowTrace(),
-                     transitions={'info_provided': 'diag_with_reco',
-                                  'no_suggestion': 'diag_without_reco'},
+                     transitions={'info_provided': 'D+R',
+                                  'no_suggestion': 'diag'},
                      remapping={'diagnosis': 'sm_input'})
 
 
