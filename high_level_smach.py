@@ -32,6 +32,7 @@ class ProcUserInfo(smach.State):
         print("############################################")
         print("executing PROC_USER_INFO state..")
         print("############################################")
+        time.sleep(10)
         return "read_user_info"
 
 
@@ -67,7 +68,7 @@ class RecCustomerComplaints(smach.State):
             return "no_complaints"
 
 
-class EstablishHypothesis(smach.State):
+class EstablishInitialHypothesis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
@@ -77,7 +78,7 @@ class EstablishHypothesis(smach.State):
 
     def execute(self, userdata):
         print("############################################")
-        print("executing ESTABLISH_HYPOTHESIS state..")
+        print("executing ESTABLISH_INITIAL_HYPOTHESIS state..")
         print("############################################")
         print("reading XML protocol..")
 
@@ -120,6 +121,25 @@ class ReadOBDInformation(smach.State):
         print("processed OBD information..")
         time.sleep(10)
         return "processed_OBD_info"
+
+
+class RetrieveHistoricalInfo(smach.State):
+
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['processed_historical_info'],
+                             input_keys=['obd_info'],
+                             output_keys=['obd_and_hist_info'])
+
+    def execute(self, userdata):
+        print("############################################")
+        print("executing RETRIEVE_HISTORICAL_INFO state..")
+        print("############################################")
+        # TODO: retrieve historical info for the specified vehicle
+        #   - using the VIN (obtained from OBD reading)
+        #   - use the information to deny certain hypotheses (e.g. repeated replacement of same component)
+        time.sleep(10)
+        return "processed_historical_info"
 
 
 class SuggestMeasuringPos(smach.State):
@@ -172,6 +192,7 @@ class PerformDataManagement(smach.State):
         print("############################################")
         print("executing PERFORM_DATA_MANAGEMENT state..")
         print("############################################")
+        time.sleep(10)
         # TODO:
         #   - EDC (Eclipse Dataspace Connector) communication
         #   - consolidate + upload data (user info, customer complaints, OBD info, sensor data) to server
@@ -249,20 +270,25 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={})
 
             self.add('REC_CUSTOMER_COMPLAINTS', RecCustomerComplaints(),
-                     transitions={'complaints_received': 'ESTABLISH_HYPOTHESIS',
+                     transitions={'complaints_received': 'ESTABLISH_INITIAL_HYPOTHESIS',
                                   'no_complaints': 'READ_OBD_INFORMATION'},
                      remapping={'input_info': 'sm_input',
                                 'interview_protocol_file': 'sm_input'})
 
-            self.add('ESTABLISH_HYPOTHESIS', EstablishHypothesis(),
+            self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(),
                      transitions={'established_hypothesis': 'READ_OBD_INFORMATION'},
                      remapping={'interview_protocol_file': 'sm_input',
                                 'hypothesis': 'sm_input'})
 
             self.add('READ_OBD_INFORMATION', ReadOBDInformation(),
-                     transitions={'processed_OBD_info': 'SUGGEST_MEASURING_POS'},
+                     transitions={'processed_OBD_info': 'RETRIEVE_HISTORICAL_INFO'},
                      remapping={'hypothesis': 'sm_input',
                                 'processed_OBD_info': 'sm_input'})
+
+            self.add('RETRIEVE_HISTORICAL_INFO', RetrieveHistoricalInfo(),
+                     transitions={'processed_historical_info': 'SUGGEST_MEASURING_POS'},
+                     remapping={'obd_info': 'sm_input',
+                                'obd_and_hist_info': 'sm_input'})
 
             self.add('SUGGEST_MEASURING_POS', SuggestMeasuringPos(),
                      transitions={'provided_suggestion': 'PERFORM_SENSOR_RECORDING'},
