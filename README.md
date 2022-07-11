@@ -1,6 +1,6 @@
 # AW4.0 Prototype
 
-State-machine-based prototype of a vehicle diagnosis and recommendation system.
+State-machine-based prototype of a vehicle diagnosis *[and recommendation]* system.
 
 ## Dependencies
 
