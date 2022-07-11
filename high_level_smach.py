@@ -204,7 +204,7 @@ class MapOscillogramToDiagnosis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['diagnosis_provided', 'no_diagnosis', 'no_diagnosis_final'],
+                             outcomes=['diagnosis_determined', 'no_diagnosis', 'no_diagnosis_final'],
                              input_keys=['oscillogram'],
                              output_keys=['diagnosis'])
 
@@ -229,35 +229,30 @@ class MapOscillogramToDiagnosis(smach.State):
             return "no_diagnosis_final"
 
 
-class RecommendActionAndShowTrace(smach.State):
+class ProvideDiagAndShowTrace(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['info_provided', 'no_suggestion'],
+                             outcomes=['info_provided'],
                              input_keys=['diagnosis'],
                              output_keys=[''])
 
     def execute(self, userdata):
         print("############################################")
-        print("executing RECOMMEND_ACTION_AND_SHOW_TRACE state..")
+        print("executing PROVIDE_DIAG_AND_SHOW_TRACE state..")
         print("############################################")
         diag = userdata.diagnosis
-        # TODO: apply [XPS / ...] that recommends action based on diagnosis
+        # TODO: OPTIONAL: apply [XPS / ...] that recommends action based on diagnosis
         #   - print action
         #   - show trace
-        feasible_suggestion = True
-        time.sleep(10)
-        print("recommended action and showed trace..")
-        if feasible_suggestion:
-            return "info_provided"
-        return "no_suggestion"
+        return "info_provided"
 
 
 class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
     def __init__(self):
         super(VehicleDiagnosisAndRecommendationStateMachine, self).__init__(
-            outcomes=['diag', 'D+R', 'no_diag'],
+            outcomes=['diag', 'no_diag'],
             input_keys=[],
             output_keys=[]
         )
@@ -303,15 +298,14 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={})
 
             self.add('MAP_OSCILLOGRAM_TO_DIAGNOSIS', MapOscillogramToDiagnosis(),
-                     transitions={'diagnosis_provided': 'RECOMMEND_ACTION_AND_SHOW_TRACE',
+                     transitions={'diagnosis_determined': 'PROVIDE_DIAG_AND_SHOW_TRACE',
                                   'no_diagnosis_final': 'no_diag',
                                   'no_diagnosis': 'SUGGEST_MEASURING_POS'},
                      remapping={'oscillogram': 'sm_input',
                                 'diagnosis': 'sm_input'})
 
-            self.add('RECOMMEND_ACTION_AND_SHOW_TRACE', RecommendActionAndShowTrace(),
-                     transitions={'info_provided': 'D+R',
-                                  'no_suggestion': 'diag'},
+            self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(),
+                     transitions={'info_provided': 'diag'},
                      remapping={'diagnosis': 'sm_input'})
 
 
