@@ -16,8 +16,10 @@ import rospy
 import smach_ros
 
 sys.path.append(path.abspath('../AW_40_GUI'))
+sys.path.append(path.abspath('../OBDOntology'))
 
 from GUI import run_gui
+from ontology_query_tool import OntologyQueryTool
 
 
 class ProcUserInfo(smach.State):
@@ -114,9 +116,12 @@ class ReadOBDInformation(smach.State):
         else:
             print("starting without hypothesis..")
         # TODO: include OBD parser (OBD codes + meta data)
-
         run_gui()
-
+        # TODO: read from OBD file
+        read_dtc = "P0138"
+        oqt = OntologyQueryTool()
+        measuring_pos = oqt.query_measuring_pos_by_dtc(read_dtc)
+        print("determined measuring pos:", measuring_pos)
         userdata.processed_OBD_info = ""
         print("processed OBD information..")
         time.sleep(10)
