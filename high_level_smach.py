@@ -138,6 +138,10 @@ class RetrieveHistoricalInfo(smach.State):
         # TODO: retrieve historical info for the specified vehicle
         #   - using the VIN (obtained from OBD reading)
         #   - use the information to deny certain hypotheses (e.g. repeated replacement of same component)
+        #
+        # - two kinds of information:
+        #   - historical info for specific vehicle (via VIN)
+        #   - historical info for vehicle type (model)
         time.sleep(10)
         return "processed_historical_info"
 
