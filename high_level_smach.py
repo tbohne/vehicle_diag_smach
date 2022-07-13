@@ -22,20 +22,21 @@ from GUI import run_gui
 from ontology_query_tool import OntologyQueryTool
 
 
-class ProcUserInfo(smach.State):
+class ProcUserData(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['read_user_info'],
+                             outcomes=['read_user_data'],
                              input_keys=[''],
-                             output_keys=[''])
+                             output_keys=['user_data'])
 
     def execute(self, userdata):
         print("############################################")
-        print("executing PROC_USER_INFO state..")
+        print("executing PROC_USER_DATA state..")
         print("############################################")
         time.sleep(10)
-        return "read_user_info"
+        userdata.user_data = "dummy user info"
+        return "read_user_data"
 
 
 class RecCustomerComplaints(smach.State):
@@ -44,7 +45,7 @@ class RecCustomerComplaints(smach.State):
 
         smach.State.__init__(self,
                              outcomes=['complaints_received', 'no_complaints'],
-                             input_keys=['input_info'],
+                             input_keys=['user_data'],
                              output_keys=['interview_protocol_file'])
 
     @staticmethod
@@ -56,6 +57,9 @@ class RecCustomerComplaints(smach.State):
         print("############################################")
         print("executing REC_CUSTOMER_COMPLAINTS state..")
         print("############################################")
+
+        print("provided user data:", userdata.user_data)
+
         val = ""
         while val != "0" and val != "1":
             val = input("starting diagnosis with [0] / without [1] customer complaints")
@@ -67,6 +71,7 @@ class RecCustomerComplaints(smach.State):
             return "complaints_received"
         else:
             print("starting diagnosis without customer complaints..")
+            userdata.interview_protocol_file = ""
             return "no_complaints"
 
 
@@ -74,7 +79,7 @@ class EstablishInitialHypothesis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['established_hypothesis'],
+                             outcomes=['established_init_hypothesis', 'no_oscilloscope_required'],
                              input_keys=['interview_protocol_file'],
                              output_keys=['context', 'hypothesis'])
 
@@ -84,61 +89,72 @@ class EstablishInitialHypothesis(smach.State):
         print("############################################")
         print("reading XML protocol..")
 
-        with open(userdata.interview_protocol_file) as f:
-            data = f.read()
-        session_data = BeautifulSoup(data, 'xml')
+        if userdata.interview_protocol_file:
+            print("customer complaints available..")
+            with open(userdata.interview_protocol_file) as f:
+                data = f.read()
+            session_data = BeautifulSoup(data, 'xml')
+            # print(session_data.prettify())
+            for tag in session_data.find_all('rating', {'type': 'heuristic'}):
+                res = tag.parent['objectName']
 
-        # print(session_data.prettify())
+            userdata.hypothesis = res
+        else:
+            print("no customer complaints available..")
 
-        for tag in session_data.find_all('rating', {'type': 'heuristic'}):
-            res = tag.parent['objectName']
+        oscilloscope_required = True
+        if not oscilloscope_required:
+            return "no_oscilloscope_required"
 
         print("establish hypothesis..")
         time.sleep(10)
-        userdata.hypothesis = res
-        return "established_hypothesis"
+        return "established_init_hypothesis"
 
 
-class ReadOBDInformation(smach.State):
+class ReadOBDData(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['processed_OBD_info'],
-                             input_keys=['hypothesis', 'context'],
-                             output_keys=['processed_OBD_info'])
+                             outcomes=['processed_OBD_data', 'no_OBD_data'],
+                             input_keys=['interview_data'],
+                             output_keys=['processed_OBD_data'])
 
     def execute(self, userdata):
         print("############################################")
-        print("executing READ_OBD_INFORMATION state..")
+        print("executing READ_OBD_DATA state..")
         print("############################################")
-        if userdata.hypothesis:
-            print("already have a hypothesis based on customer constraints:", userdata.hypothesis)
-        else:
-            print("starting without hypothesis..")
+
+        print("OBD INPUT:", userdata.interview_data)
+
         # TODO: include OBD parser (OBD codes + meta data)
         run_gui()
         # TODO: read from OBD file
+
+        obd_avail = True
+        if not obd_avail:
+            return "no_OBD_data"
+
         read_dtc = "P0138"
         oqt = OntologyQueryTool()
         measuring_pos = oqt.query_measuring_pos_by_dtc(read_dtc)
         print("determined measuring pos:", measuring_pos)
-        userdata.processed_OBD_info = ""
+        userdata.processed_OBD_data = userdata.interview_data
         print("processed OBD information..")
         time.sleep(10)
-        return "processed_OBD_info"
+        return "processed_OBD_data"
 
 
-class RetrieveHistoricalInfo(smach.State):
+class RetrieveHistoricalData(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['processed_historical_info'],
+                             outcomes=['processed_all_info'],
                              input_keys=['obd_info'],
                              output_keys=['obd_and_hist_info'])
 
     def execute(self, userdata):
         print("############################################")
-        print("executing RETRIEVE_HISTORICAL_INFO state..")
+        print("executing RETRIEVE_HISTORICAL_DATA state..")
         print("############################################")
         # TODO: retrieve historical info for the specified vehicle
         #   - using the VIN (obtained from OBD reading)
@@ -147,8 +163,9 @@ class RetrieveHistoricalInfo(smach.State):
         # - two kinds of information:
         #   - historical info for specific vehicle (via VIN)
         #   - historical info for vehicle type (model)
+        userdata.obd_and_hist_info = userdata.obd_info
         time.sleep(10)
-        return "processed_historical_info"
+        return "processed_all_info"
 
 
 class SuggestMeasuringPos(smach.State):
@@ -156,14 +173,14 @@ class SuggestMeasuringPos(smach.State):
     def __init__(self):
         smach.State.__init__(self,
                              outcomes=['provided_suggestion'],
-                             input_keys=['processed_OBD_info'],
+                             input_keys=['processed_OBD_data'],
                              output_keys=[''])
 
     def execute(self, userdata):
         print("############################################")
         print("executing SUGGEST_MEASURING_POS state..")
         print("############################################")
-        print(userdata.processed_OBD_info)
+        print(userdata.processed_OBD_data)
         # TODO: implement suggestion for measuring pos
         print("SUGGESTED MEASURING POS: X, Y, Z")
         time.sleep(10)
@@ -193,7 +210,7 @@ class PerformDataManagement(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['data_management_performed'],
+                             outcomes=['data_management_performed', 'reduced_data_management_performed'],
                              input_keys=[''],
                              output_keys=[''])
 
@@ -206,6 +223,10 @@ class PerformDataManagement(smach.State):
         #   - EDC (Eclipse Dataspace Connector) communication
         #   - consolidate + upload data (user info, customer complaints, OBD info, sensor data) to server
         #   - optional: [retrieve latest version of trained NN from server]
+
+        no_oscilloscope = True
+        if no_oscilloscope:
+            return "reduced_data_management_performed"
         return "data_management_performed"
 
 
@@ -269,41 +290,45 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
         with self:
 
-            self.add('PROC_USER_INFO', ProcUserInfo(),
-                     transitions={'read_user_info': 'REC_CUSTOMER_COMPLAINTS'},
-                     remapping={})
+            self.add('PROC_USER_DATA', ProcUserData(),
+                     transitions={'read_user_data': 'REC_CUSTOMER_COMPLAINTS'},
+                     remapping={'input': 'sm_input',
+                                'user_data': 'sm_input'})
 
             self.add('REC_CUSTOMER_COMPLAINTS', RecCustomerComplaints(),
-                     transitions={'complaints_received': 'ESTABLISH_INITIAL_HYPOTHESIS',
-                                  'no_complaints': 'READ_OBD_INFORMATION'},
-                     remapping={'input_info': 'sm_input',
+                     transitions={'complaints_received': 'READ_OBD_DATA',
+                                  'no_complaints': 'READ_OBD_DATA'},
+                     remapping={'user_data': 'sm_input',
                                 'interview_protocol_file': 'sm_input'})
 
+            self.add('READ_OBD_DATA', ReadOBDData(),
+                     transitions={'processed_OBD_data': 'RETRIEVE_HISTORICAL_DATA',
+                                  'no_OBD_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
+                     remapping={'interview_data': 'sm_input',
+                                'processed_OBD_data': 'sm_input'})
+
             self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(),
-                     transitions={'established_hypothesis': 'READ_OBD_INFORMATION'},
+                     transitions={'established_init_hypothesis': 'SUGGEST_MEASURING_POS',
+                                  'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT'},
                      remapping={'interview_protocol_file': 'sm_input',
                                 'hypothesis': 'sm_input'})
 
-            self.add('READ_OBD_INFORMATION', ReadOBDInformation(),
-                     transitions={'processed_OBD_info': 'RETRIEVE_HISTORICAL_INFO'},
-                     remapping={'hypothesis': 'sm_input',
-                                'processed_OBD_info': 'sm_input'})
-
-            self.add('RETRIEVE_HISTORICAL_INFO', RetrieveHistoricalInfo(),
-                     transitions={'processed_historical_info': 'SUGGEST_MEASURING_POS'},
+            self.add('RETRIEVE_HISTORICAL_DATA', RetrieveHistoricalData(),
+                     transitions={'processed_all_info': 'ESTABLISH_INITIAL_HYPOTHESIS'},
                      remapping={'obd_info': 'sm_input',
                                 'obd_and_hist_info': 'sm_input'})
 
             self.add('SUGGEST_MEASURING_POS', SuggestMeasuringPos(),
                      transitions={'provided_suggestion': 'PERFORM_SENSOR_RECORDING'},
-                     remapping={'processed_OBD_info': 'sm_input'})
+                     remapping={'processed_OBD_data': 'sm_input'})
 
             self.add('PERFORM_SENSOR_RECORDING', PerformSensorRecording(),
                      transitions={'processed_sensor_data': 'PERFORM_DATA_MANAGEMENT'},
                      remapping={'oscillogram': 'sm_input'})
 
             self.add('PERFORM_DATA_MANAGEMENT', PerformDataManagement(),
-                     transitions={'data_management_performed': 'MAP_OSCILLOGRAM_TO_DIAGNOSIS'},
+                     transitions={'data_management_performed': 'MAP_OSCILLOGRAM_TO_DIAGNOSIS',
+                                  'reduced_data_management_performed': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
                      remapping={})
 
             self.add('MAP_OSCILLOGRAM_TO_DIAGNOSIS', MapOscillogramToDiagnosis(),
