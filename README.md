@@ -11,4 +11,4 @@ State-machine-based prototype of a vehicle diagnosis *[and recommendation]* syst
 
 ## State Machine Architecture
 
-![](img/smach_v4.png)
+![](img/smach_v5.png)
