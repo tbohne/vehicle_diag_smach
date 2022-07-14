@@ -22,29 +22,29 @@ from GUI import run_gui
 from ontology_query_tool import OntologyQueryTool
 
 
-class ProcUserData(smach.State):
+class RecVehicleAndProcUserData(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['read_user_data'],
+                             outcomes=['processed_user_data'],
                              input_keys=[''],
                              output_keys=['user_data'])
 
     def execute(self, userdata):
         print("############################################")
-        print("executing PROC_USER_DATA state..")
+        print("executing REC_VEHICLE_AND_PROC_USER_DATA state..")
         print("############################################")
         time.sleep(10)
         userdata.user_data = "dummy user info"
-        return "read_user_data"
+        return "processed_user_data"
 
 
-class RecCustomerComplaints(smach.State):
+class ProcCustomerComplaints(smach.State):
 
     def __init__(self):
 
         smach.State.__init__(self,
-                             outcomes=['complaints_received', 'no_complaints'],
+                             outcomes=['received_complaints', 'no_complaints'],
                              input_keys=['user_data'],
                              output_keys=['interview_protocol_file'])
 
@@ -55,7 +55,7 @@ class RecCustomerComplaints(smach.State):
 
     def execute(self, userdata):
         print("############################################")
-        print("executing REC_CUSTOMER_COMPLAINTS state..")
+        print("executing PROC_CUSTOMER_COMPLAINTS state..")
         print("############################################")
 
         print("provided user data:", userdata.user_data)
@@ -68,7 +68,7 @@ class RecCustomerComplaints(smach.State):
             self.launch_customer_xps()
             print("customer XPS session protocol saved..")
             userdata.interview_protocol_file = config.INTERVIEW_PROTOCOL_FILE
-            return "complaints_received"
+            return "received_complaints"
         else:
             print("starting diagnosis without customer complaints..")
             userdata.interview_protocol_file = ""
@@ -148,7 +148,7 @@ class RetrieveHistoricalData(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['processed_all_info'],
+                             outcomes=['processed_all_data'],
                              input_keys=['obd_info'],
                              output_keys=['obd_and_hist_info'])
 
@@ -165,7 +165,7 @@ class RetrieveHistoricalData(smach.State):
         #   - historical info for vehicle type (model)
         userdata.obd_and_hist_info = userdata.obd_info
         time.sleep(10)
-        return "processed_all_info"
+        return "processed_all_data"
 
 
 class SuggestMeasuringPos(smach.State):
@@ -210,7 +210,7 @@ class PerformDataManagement(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['data_management_performed', 'reduced_data_management_performed'],
+                             outcomes=['performed_data_management', 'performed_reduced_data_management'],
                              input_keys=[''],
                              output_keys=[''])
 
@@ -226,15 +226,15 @@ class PerformDataManagement(smach.State):
 
         no_oscilloscope = True
         if no_oscilloscope:
-            return "reduced_data_management_performed"
-        return "data_management_performed"
+            return "performed_reduced_data_management"
+        return "performed_data_management"
 
 
 class MapOscillogramToDiagnosis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['diagnosis_determined', 'no_diagnosis', 'no_diagnosis_final'],
+                             outcomes=['determined_diagnosis', 'no_diagnosis', 'no_diagnosis_final'],
                              input_keys=['oscillogram'],
                              output_keys=['diagnosis'])
 
@@ -251,7 +251,7 @@ class MapOscillogramToDiagnosis(smach.State):
         time.sleep(10)
         print("mapped oscillogram to diagnosis..")
         if feasible_diag:
-            return "diagnosis_provided"
+            return "determined_diagnosis"
         elif self.no_diag_cnt < 3:
             self.no_diag_cnt += 1
             return "no_diagnosis"
@@ -263,7 +263,7 @@ class ProvideDiagAndShowTrace(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['info_provided'],
+                             outcomes=['provided_diag_and_explanation'],
                              input_keys=['diagnosis'],
                              output_keys=[''])
 
@@ -275,7 +275,7 @@ class ProvideDiagAndShowTrace(smach.State):
         # TODO: OPTIONAL: apply [XPS / ...] that recommends action based on diagnosis
         #   - print action
         #   - show trace
-        return "info_provided"
+        return "provided_diag_and_explanation"
 
 
 class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
@@ -290,13 +290,13 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
         with self:
 
-            self.add('PROC_USER_DATA', ProcUserData(),
-                     transitions={'read_user_data': 'REC_CUSTOMER_COMPLAINTS'},
+            self.add('REC_VEHICLE_AND_PROC_USER_DATA', RecVehicleAndProcUserData(),
+                     transitions={'processed_user_data': 'PROC_CUSTOMER_COMPLAINTS'},
                      remapping={'input': 'sm_input',
                                 'user_data': 'sm_input'})
 
-            self.add('REC_CUSTOMER_COMPLAINTS', RecCustomerComplaints(),
-                     transitions={'complaints_received': 'READ_OBD_DATA',
+            self.add('PROC_CUSTOMER_COMPLAINTS', ProcCustomerComplaints(),
+                     transitions={'received_complaints': 'READ_OBD_DATA',
                                   'no_complaints': 'READ_OBD_DATA'},
                      remapping={'user_data': 'sm_input',
                                 'interview_protocol_file': 'sm_input'})
@@ -314,7 +314,7 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                                 'hypothesis': 'sm_input'})
 
             self.add('RETRIEVE_HISTORICAL_DATA', RetrieveHistoricalData(),
-                     transitions={'processed_all_info': 'ESTABLISH_INITIAL_HYPOTHESIS'},
+                     transitions={'processed_all_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
                      remapping={'obd_info': 'sm_input',
                                 'obd_and_hist_info': 'sm_input'})
 
@@ -327,19 +327,19 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={'oscillogram': 'sm_input'})
 
             self.add('PERFORM_DATA_MANAGEMENT', PerformDataManagement(),
-                     transitions={'data_management_performed': 'MAP_OSCILLOGRAM_TO_DIAGNOSIS',
-                                  'reduced_data_management_performed': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
+                     transitions={'performed_data_management': 'MAP_OSCILLOGRAM_TO_DIAGNOSIS',
+                                  'performed_reduced_data_management': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
                      remapping={})
 
             self.add('MAP_OSCILLOGRAM_TO_DIAGNOSIS', MapOscillogramToDiagnosis(),
-                     transitions={'diagnosis_determined': 'PROVIDE_DIAG_AND_SHOW_TRACE',
+                     transitions={'determined_diagnosis': 'PROVIDE_DIAG_AND_SHOW_TRACE',
                                   'no_diagnosis_final': 'no_diag',
                                   'no_diagnosis': 'SUGGEST_MEASURING_POS'},
                      remapping={'oscillogram': 'sm_input',
                                 'diagnosis': 'sm_input'})
 
             self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(),
-                     transitions={'info_provided': 'diag'},
+                     transitions={'provided_diag_and_explanation': 'diag'},
                      remapping={'diagnosis': 'sm_input'})
 
 
