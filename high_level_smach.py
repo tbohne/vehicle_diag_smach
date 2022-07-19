@@ -7,19 +7,21 @@ import sys
 import time
 from os import path
 
+import rospy
 import smach
+import smach_ros
 from bs4 import BeautifulSoup
 
 import config
-
-import rospy
-import smach_ros
+from ontology_instance_generator import OntologyInstanceGenerator
 
 sys.path.append(path.abspath('../AW_40_GUI'))
 sys.path.append(path.abspath('../OBDOntology'))
 
 from GUI import run_gui
-from ontology_query_tool import OntologyQueryTool
+
+ONTOLOGY_PATH = "../OBDOntology"
+ONTOLOGY_FILE = "obd_ontology.owl"
 
 
 class RecVehicleAndProcUserData(smach.State):
@@ -128,19 +130,23 @@ class ReadOBDDataAndGenOntologyInstance(smach.State):
 
         # TODO: include OBD parser (OBD codes + meta data)
         run_gui()
-        # TODO: read from OBD file
-
         obd_avail = True
         if not obd_avail:
             return "no_OBD_data"
 
-        read_dtc = "P0138"
-        oqt = OntologyQueryTool()
-        measuring_pos = oqt.query_measuring_pos_by_dtc(read_dtc)
-        print("determined measuring pos:", measuring_pos)
-        userdata.processed_OBD_data = userdata.interview_data
-        print("processed OBD information..")
+        # TODO: read from OBD file
+        read_dtc = "P1111"
+        read_model = "Mazda 3"
+        read_hsn = "849357984"
+        read_tsn = "453948539"
         time.sleep(10)
+        print("processed OBD information..")
+
+        # generate ontology instance based on read OBD data
+        instance_gen = OntologyInstanceGenerator(read_model, read_hsn, read_tsn, read_dtc, ONTOLOGY_PATH, ONTOLOGY_FILE)
+        instance_gen.create_ontology_instance()
+
+        userdata.processed_OBD_data = userdata.interview_data
         return "processed_OBD_data"
 
 
@@ -183,6 +189,9 @@ class SuggestMeasuringPos(smach.State):
         print(userdata.processed_OBD_data)
         # TODO: implement suggestion for measuring pos
         print("SUGGESTED MEASURING POS: X, Y, Z")
+        # oqt = OntologyQueryTool()
+        # measuring_pos = oqt.query_measuring_pos_by_dtc(read_dtc)
+        # print("determined measuring pos:", measuring_pos)
         time.sleep(10)
         return "provided_suggestion"
 
