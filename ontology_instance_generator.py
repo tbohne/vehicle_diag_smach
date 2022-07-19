@@ -47,15 +47,17 @@ class OntologyInstanceGenerator:
 
     def add_fault_condition(self):
         # TODO: retrieve from DB
-        fault_condition = "dummy_fault_cond"
-        c = self.onto.FaultCondition(fault_condition)
-        self.onto[self.dtc].represents.append(c)
+        fault_condition = "Dummy fault condition.."
+        fc = self.onto.FaultCondition()
+        fc.condition_description.append(fault_condition)
+        self.onto[self.dtc].represents.append(fc)
 
     def add_fault_causes(self):
         # TODO: retrieve from DB
         fault_causes = ["causeOne", "causeTwo", "causeThree"]
         for fault in fault_causes:
-            cause = self.onto.FaultCause(fault)
+            cause = self.onto.FaultCause()
+            cause.cause_description.append(fault)
             fault_condition = list(self.onto[self.dtc].represents)[0]
             fault_condition.hasCause.append(cause)
 
@@ -63,7 +65,8 @@ class OntologyInstanceGenerator:
         # TODO: retrieve from DB
         symptoms = ["sympOne", "sympTwo", "sympThree"]
         for symptom in symptoms:
-            s = self.onto.Symptom(symptom)
+            s = self.onto.Symptom()
+            s.symptom_description.append(symptom)
             fault_condition = list(self.onto[self.dtc].represents)[0]
             fault_condition.manifestedBy.append(s)
 
@@ -71,7 +74,8 @@ class OntologyInstanceGenerator:
         # TODO: retrieve from DB
         sus_components = ["susOne", "susTwo", "susThree"]
         for sus in sus_components:
-            comp = self.onto.SuspectComponent(sus)
+            comp = self.onto.SuspectComponent()
+            comp.component_name.append(sus)
             self.onto[self.dtc].pointsTo.append(comp)
 
     def add_occurs_with(self):
@@ -83,37 +87,42 @@ class OntologyInstanceGenerator:
 
     def add_fault_category(self):
         # TODO: retrieve from DB
-        fault_cat = "category A"
-        cat = self.onto.FaultCategory(fault_cat)
+        fault_cat = "category_A"
+        cat = self.onto.FaultCategory()
+        cat.category_name.append(fault_cat)
         self.onto[self.dtc].hasCategory.append(cat)
 
     def add_fault_description(self):
         # TODO: retrieve from DB
-        fault_desc = "This is fault X - test - test - test"
-        desc = self.onto.FaultDescription(fault_desc)
+        fault_desc = "This is fault X - test - test - test.."
+        desc = self.onto.FaultDescription()
+        desc.fault_description.append(fault_desc)
         self.onto[self.dtc].hasDescription.append(desc)
 
     def add_measuring_positions(self):
         # TODO: retrieve from DB
         measuring_pos = ["pos_A", "pos_B", "pos_C"]
         for pos in measuring_pos:
-            measuring_position = self.onto.MeasuringPos(pos)
+            measuring_position = self.onto.MeasuringPos()
+            measuring_position.position_description.append(pos)
             self.onto[self.dtc].implies.append(measuring_position)
 
     def add_corrective_actions(self):
         # TODO: retrieve from DB
-        corrective_actions = ["perform test A", "check sensor B", "apply C"]
+        corrective_actions = ["perform_test_A", "check_sensor_B", "apply_C"]
         dtc = self.onto[self.dtc]
         fault_condition = list(self.onto[self.dtc].represents)[0]
         for act in corrective_actions:
-            action = self.onto.CorrectiveAction(act)
+            action = self.onto.CorrectiveAction()
+            action.action_description.append(act)
             action.deletes.append(dtc)
             action.resolves.append(fault_condition)
             self.onto.CorrectiveAction(action)
 
     def add_vehicle(self):
         fault_condition = list(self.onto[self.dtc].represents)[0]
-        vehicle = self.onto.Vehicle(self.vehicle)
+        vehicle = self.onto.Vehicle()
+        vehicle.model.append(self.vehicle)
         vehicle.HSN.append(self.hsn)
         vehicle.TSN.append(self.tsn)
         fault_condition.occurredIn.append(vehicle)
