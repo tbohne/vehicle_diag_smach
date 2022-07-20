@@ -134,6 +134,7 @@ class ReadOBDDataAndGenOntologyInstance(smach.State):
         if not obd_avail:
             return "no_OBD_data"
 
+        # OBD data available
         # TODO: read from OBD file
         read_dtc = "P1111"
         read_model = "Mazda 3"
@@ -142,9 +143,18 @@ class ReadOBDDataAndGenOntologyInstance(smach.State):
         time.sleep(10)
         print("processed OBD information..")
 
-        # generate ontology instance based on read OBD data
-        instance_gen = OntologyInstanceGenerator(read_model, read_hsn, read_tsn, read_dtc, ONTOLOGY_PATH, ONTOLOGY_FILE)
-        instance_gen.create_ontology_instance()
+        # TODO: first step is a lookup on our own server
+        #   - did we create an ontology instance for this vehicle-DTC combination before?
+        #   - if so, retrieve this instance instead of creating a new one from external DB data
+        instance_match_on_server = True
+        if instance_match_on_server:
+            pass
+        else:
+            # generate ontology instance based on read OBD data
+            instance_gen = OntologyInstanceGenerator(
+                read_model, read_hsn, read_tsn, read_dtc, ONTOLOGY_PATH, ONTOLOGY_FILE
+            )
+            instance_gen.create_ontology_instance()
 
         userdata.processed_OBD_data = userdata.interview_data
         return "processed_OBD_data"
@@ -369,4 +379,3 @@ if __name__ == '__main__':
         node()
     except rospy.ROSInterruptException:
         pass
-
