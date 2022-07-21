@@ -15,6 +15,7 @@ class OntologyInstanceGenerator:
         self.tsn = tsn
         self.vin = vin
         self.dtc = dtc
+        self.dtc_obj = None
 
         # load ontology
         onto_path.append(ontology_path)
@@ -28,7 +29,6 @@ class OntologyInstanceGenerator:
         self.add_fault_causes()
         self.add_fault_symptoms()
         self.add_suspect_component()
-        self.add_occurs_with()
         self.add_fault_description()
         self.add_fault_category()
         self.add_measuring_positions()
@@ -47,15 +47,19 @@ class OntologyInstanceGenerator:
         self.onto.save(file)
 
     def add_dtc(self):
-        dtc = self.onto.DTC(self.dtc)
-        self.onto.DTC(dtc)
+        self.dtc_obj = self.onto.DTC()
+        self.dtc_obj.code.append(self.dtc)
+        # TODO: retrieve from DB
+        dtc_occurring_with = ["PXXXX", "PYYYY"]
+        for other_dtc in dtc_occurring_with:
+            self.dtc_obj.occurs_with_DTC.append(other_dtc)
 
     def add_fault_condition(self):
         # TODO: retrieve from DB
         fault_condition = "Dummy fault condition.."
         fc = self.onto.FaultCondition()
         fc.condition_description.append(fault_condition)
-        self.onto[self.dtc].represents.append(fc)
+        self.dtc_obj.represents.append(fc)
 
     def add_fault_causes(self):
         # TODO: retrieve from DB
@@ -63,7 +67,7 @@ class OntologyInstanceGenerator:
         for fault in fault_causes:
             cause = self.onto.FaultCause()
             cause.cause_description.append(fault)
-            fault_condition = list(self.onto[self.dtc].represents)[0]
+            fault_condition = list(self.dtc_obj.represents)[0]
             fault_condition.hasCause.append(cause)
 
     def add_fault_symptoms(self):
@@ -72,7 +76,7 @@ class OntologyInstanceGenerator:
         for symptom in symptoms:
             s = self.onto.Symptom()
             s.symptom_description.append(symptom)
-            fault_condition = list(self.onto[self.dtc].represents)[0]
+            fault_condition = list(self.dtc_obj.represents)[0]
             fault_condition.manifestedBy.append(s)
 
     def add_suspect_component(self):
@@ -81,28 +85,21 @@ class OntologyInstanceGenerator:
         for sus in sus_components:
             comp = self.onto.SuspectComponent()
             comp.component_name.append(sus)
-            self.onto[self.dtc].pointsTo.append(comp)
-
-    def add_occurs_with(self):
-        # TODO: retrieve from DB
-        dtc_occurring_with = ["PXXXX", "PYYYY"]
-        for dtc in dtc_occurring_with:
-            code = self.onto.DTC(dtc)
-            self.onto[self.dtc].occursWith.append(code)
+            self.dtc_obj.pointsTo.append(comp)
 
     def add_fault_category(self):
         # TODO: retrieve from DB
         fault_cat = "category_A"
         cat = self.onto.FaultCategory()
         cat.category_name.append(fault_cat)
-        self.onto[self.dtc].hasCategory.append(cat)
+        self.dtc_obj.hasCategory.append(cat)
 
     def add_fault_description(self):
         # TODO: retrieve from DB
         fault_desc = "This is fault X - test - test - test.."
         desc = self.onto.FaultDescription()
         desc.fault_description.append(fault_desc)
-        self.onto[self.dtc].hasDescription.append(desc)
+        self.dtc_obj.hasDescription.append(desc)
 
     def add_measuring_positions(self):
         # TODO: retrieve from DB
@@ -110,22 +107,21 @@ class OntologyInstanceGenerator:
         for pos in measuring_pos:
             measuring_position = self.onto.MeasuringPos()
             measuring_position.position_description.append(pos)
-            self.onto[self.dtc].implies.append(measuring_position)
+            self.dtc_obj.implies.append(measuring_position)
 
     def add_corrective_actions(self):
         # TODO: retrieve from DB
         corrective_actions = ["perform_test_A", "check_sensor_B", "apply_C"]
-        dtc = self.onto[self.dtc]
-        fault_condition = list(self.onto[self.dtc].represents)[0]
+        fault_condition = list(self.dtc_obj.represents)[0]
         for act in corrective_actions:
             action = self.onto.CorrectiveAction()
             action.action_description.append(act)
-            action.deletes.append(dtc)
+            action.deletes.append(self.dtc_obj)
             action.resolves.append(fault_condition)
             self.onto.CorrectiveAction(action)
 
     def add_vehicle(self):
-        fault_condition = list(self.onto[self.dtc].represents)[0]
+        fault_condition = list(self.dtc_obj.represents)[0]
         vehicle = self.onto.Vehicle()
         vehicle.model.append(self.vehicle)
         vehicle.HSN.append(self.hsn)
