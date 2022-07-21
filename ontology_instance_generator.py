@@ -9,10 +9,11 @@ from owlready2 import *
 
 class OntologyInstanceGenerator:
 
-    def __init__(self, vehicle, hsn, tsn, dtc, ontology_path, ontology_file):
+    def __init__(self, vehicle, hsn, tsn, vin, dtc, ontology_path, ontology_file):
         self.vehicle = vehicle
         self.hsn = hsn
         self.tsn = tsn
+        self.vin = vin
         self.dtc = dtc
 
         # load ontology
@@ -42,7 +43,7 @@ class OntologyInstanceGenerator:
             except owlready2.base.OwlReadyInconsistentOntologyError:
                 print("### reasoner determined inconsistency ###")
 
-        file = "ontology_instance_{}_{}_{}.owl".format(self.hsn, self.tsn, date.today())
+        file = "ontology_instance_{}_{}_{}_{}.owl".format(self.hsn, self.tsn, self.vin, date.today())
         self.onto.save(file)
 
     def add_dtc(self):
@@ -129,11 +130,12 @@ class OntologyInstanceGenerator:
         vehicle.model.append(self.vehicle)
         vehicle.HSN.append(self.hsn)
         vehicle.TSN.append(self.tsn)
+        vehicle.VIN.append(self.vin)
         fault_condition.occurredIn.append(vehicle)
 
 
 if __name__ == '__main__':
     instance_gen = OntologyInstanceGenerator(
-        "Mazda 3", "849357984", "453948539", "P1111", "../OBDOntology", "obd_ontology.owl"
+        "Mazda 3", "847984", "45539", "1234567890ABCDEFGHJKLMNPRSTUVWXYZ", "P1111", "../OBDOntology", "obd_ontology.owl"
     )
     instance_gen.create_ontology_instance()
