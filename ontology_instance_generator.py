@@ -39,9 +39,11 @@ class OntologyInstanceGenerator:
     def check_consistency_and_save_to_file(self):
         with self.onto:
             try:
-                sync_reasoner(infer_property_values=True)
-            except owlready2.base.OwlReadyInconsistentOntologyError:
+                sync_reasoner_pellet(infer_property_values=True, infer_data_property_values=True, debug=2)
+            except owlready2.base.OwlReadyInconsistentOntologyError as e:
                 print("### reasoner determined inconsistency ###")
+                print(list(default_world.inconsistent_classes()))
+                print("-->", e)
 
         file = "ontology_instance_{}_{}_{}_{}.owl".format(self.hsn, self.tsn, self.vin, date.today())
         self.onto.save(file)
@@ -96,7 +98,7 @@ class OntologyInstanceGenerator:
 
     def add_fault_description(self):
         # TODO: retrieve from DB
-        fault_desc = "This is fault X - test - test - test.."
+        fault_desc = "This is fault X test test test.."
         desc = self.onto.FaultDescription()
         desc.fault_description.append(fault_desc)
         self.dtc_obj.hasDescription.append(desc)
