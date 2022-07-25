@@ -298,11 +298,26 @@ class ProvideDiagAndShowTrace(smach.State):
         return "provided_diag_and_explanation"
 
 
+class ProvideInitialHypothesis(smach.State):
+
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['provided_limited_diag'],
+                             input_keys=[''],
+                             output_keys=[''])
+
+    def execute(self, userdata):
+        print("############################################")
+        print("executing PROVIDE_INITIAL_HYPOTHESIS state..")
+        print("############################################")
+        return "provided_limited_diag"
+
+
 class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
     def __init__(self):
         super(VehicleDiagnosisAndRecommendationStateMachine, self).__init__(
-            outcomes=['diag', 'no_diag'],
+            outcomes=['diag', 'lim_diag'],
             input_keys=[],
             output_keys=[]
         )
@@ -353,7 +368,7 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
             self.add('MAP_OSCILLOGRAM_TO_SYMPTOM', MapOscillogramToSymptom(),
                      transitions={'determined_symptom': 'PROVIDE_DIAG_AND_SHOW_TRACE',
-                                  'conclusively_no_mapping': 'no_diag',
+                                  'conclusively_no_mapping': 'PROVIDE_INITIAL_HYPOTHESIS',
                                   'no_mapping': 'SUGGEST_MEASURING_POS'},
                      remapping={'oscillogram': 'sm_input',
                                 'diagnosis': 'sm_input'})
@@ -361,6 +376,10 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
             self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(),
                      transitions={'provided_diag_and_explanation': 'diag'},
                      remapping={'diagnosis': 'sm_input'})
+
+            self.add('PROVIDE_INITIAL_HYPOTHESIS', ProvideInitialHypothesis(),
+                     transitions={'provided_limited_diag': 'lim_diag'},
+                     remapping={})
 
 
 def node():
