@@ -113,7 +113,7 @@ class EstablishInitialHypothesis(smach.State):
         return "established_init_hypothesis"
 
 
-class ReadOBDDataAndGenOntologyInstance(smach.State):
+class ReadOBDDataAndGenOntologyInstances(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
@@ -123,7 +123,7 @@ class ReadOBDDataAndGenOntologyInstance(smach.State):
 
     def execute(self, userdata):
         print("############################################")
-        print("executing READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCE state..")
+        print("executing READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES state..")
         print("############################################")
 
         print("OBD INPUT:", userdata.interview_data)
@@ -346,12 +346,12 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                                 'user_data': 'sm_input'})
 
             self.add('PROC_CUSTOMER_COMPLAINTS', ProcCustomerComplaints(),
-                     transitions={'received_complaints': 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCE',
-                                  'no_complaints': 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCE'},
+                     transitions={'received_complaints': 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES',
+                                  'no_complaints': 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES'},
                      remapping={'user_data': 'sm_input',
                                 'interview_protocol_file': 'sm_input'})
 
-            self.add('READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCE', ReadOBDDataAndGenOntologyInstance(),
+            self.add('READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES', ReadOBDDataAndGenOntologyInstances(),
                      transitions={'processed_OBD_data': 'RETRIEVE_HISTORICAL_DATA',
                                   'no_OBD_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
                      remapping={'interview_data': 'sm_input',
