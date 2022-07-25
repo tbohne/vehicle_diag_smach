@@ -250,11 +250,11 @@ class PerformDataManagement(smach.State):
         return "performed_data_management"
 
 
-class MapOscillogramToDiagnosis(smach.State):
+class MapOscillogramToSymptom(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['determined_diagnosis', 'no_diagnosis', 'no_diagnosis_final'],
+                             outcomes=['determined_symptom', 'no_mapping', 'conclusively_no_mapping'],
                              input_keys=['oscillogram'],
                              output_keys=['diagnosis'])
 
@@ -262,7 +262,7 @@ class MapOscillogramToDiagnosis(smach.State):
 
     def execute(self, userdata):
         print("############################################")
-        print("executing MAP_OSCILLOGRAM_TO_DIAGNOSIS state..")
+        print("executing MAP_OSCILLOGRAM_TO_SYMPTOM state..")
         print("############################################")
         net_input = userdata.oscillogram
         # TODO: apply trained NN
@@ -271,12 +271,12 @@ class MapOscillogramToDiagnosis(smach.State):
         time.sleep(10)
         print("mapped oscillogram to diagnosis..")
         if feasible_diag:
-            return "determined_diagnosis"
+            return "determined_symptom"
         elif self.no_diag_cnt < 3:
             self.no_diag_cnt += 1
-            return "no_diagnosis"
+            return "no_mapping"
         else:
-            return "no_diagnosis_final"
+            return "conclusively_no_mapping"
 
 
 class ProvideDiagAndShowTrace(smach.State):
@@ -347,14 +347,14 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={'oscillogram': 'sm_input'})
 
             self.add('PERFORM_DATA_MANAGEMENT', PerformDataManagement(),
-                     transitions={'performed_data_management': 'MAP_OSCILLOGRAM_TO_DIAGNOSIS',
+                     transitions={'performed_data_management': 'MAP_OSCILLOGRAM_TO_SYMPTOM',
                                   'performed_reduced_data_management': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
                      remapping={})
 
-            self.add('MAP_OSCILLOGRAM_TO_DIAGNOSIS', MapOscillogramToDiagnosis(),
-                     transitions={'determined_diagnosis': 'PROVIDE_DIAG_AND_SHOW_TRACE',
-                                  'no_diagnosis_final': 'no_diag',
-                                  'no_diagnosis': 'SUGGEST_MEASURING_POS'},
+            self.add('MAP_OSCILLOGRAM_TO_SYMPTOM', MapOscillogramToSymptom(),
+                     transitions={'determined_symptom': 'PROVIDE_DIAG_AND_SHOW_TRACE',
+                                  'conclusively_no_mapping': 'no_diag',
+                                  'no_mapping': 'SUGGEST_MEASURING_POS'},
                      remapping={'oscillogram': 'sm_input',
                                 'diagnosis': 'sm_input'})
 
