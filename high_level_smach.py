@@ -313,6 +313,21 @@ class ProvideInitialHypothesis(smach.State):
         return "provided_limited_diag"
 
 
+class UploadDiagnosis(smach.State):
+
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['uploaded_limited_diag', 'uploaded_diag'],
+                             input_keys=[''],
+                             output_keys=[''])
+
+    def execute(self, userdata):
+        print("############################################")
+        print("executing UPLOAD_DIAGNOSIS state..")
+        print("############################################")
+        return "uploaded_diag"
+
+
 class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
     def __init__(self):
@@ -374,11 +389,16 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                                 'diagnosis': 'sm_input'})
 
             self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(),
-                     transitions={'provided_diag_and_explanation': 'diag'},
+                     transitions={'provided_diag_and_explanation': 'UPLOAD_DIAGNOSIS'},
                      remapping={'diagnosis': 'sm_input'})
 
             self.add('PROVIDE_INITIAL_HYPOTHESIS', ProvideInitialHypothesis(),
-                     transitions={'provided_limited_diag': 'lim_diag'},
+                     transitions={'provided_limited_diag': 'UPLOAD_DIAGNOSIS'},
+                     remapping={})
+
+            self.add('UPLOAD_DIAGNOSIS', UploadDiagnosis(),
+                     transitions={'uploaded_limited_diag': 'lim_diag',
+                                  'uploaded_diag': 'diag'},
                      remapping={})
 
 
