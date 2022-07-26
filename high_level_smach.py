@@ -254,7 +254,8 @@ class MapOscillogramToSymptom(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['determined_symptom', 'no_mapping', 'conclusively_no_mapping'],
+                             outcomes=['determined_matching_symptom_hyp_approved', 'no_mapping',
+                                       'conclusively_no_mapping', 'determined_not_matching_symptom'],
                              input_keys=['oscillogram'],
                              output_keys=['diagnosis'])
 
@@ -271,7 +272,7 @@ class MapOscillogramToSymptom(smach.State):
         time.sleep(10)
         print("mapped oscillogram to diagnosis..")
         if feasible_diag:
-            return "determined_symptom"
+            return "determined_matching_symptom_hyp_approved"
         elif self.no_diag_cnt < 3:
             self.no_diag_cnt += 1
             return "no_mapping"
@@ -302,7 +303,7 @@ class ProvideInitialHypothesis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['provided_limited_diag'],
+                             outcomes=['provided_limited_diag', 'remaining_instances'],
                              input_keys=[''],
                              output_keys=[''])
 
@@ -328,11 +329,57 @@ class UploadDiagnosis(smach.State):
         return "uploaded_diag"
 
 
+class GenArtificialInstanceBasedOnCC(smach.State):
+
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['generated_artificial_instance'],
+                             input_keys=[''],
+                             output_keys=[''])
+
+    def execute(self, userdata):
+        print("############################################")
+        print("executing GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC state..")
+        print("############################################")
+        return "generated_artificial_instance"
+
+
+class SelectBestInstance(smach.State):
+
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['selected_matching_instance(OBD_CC)', 'no_matching_selected_remaining_instance',
+                                       'no_instance', 'no_OBD_and_no_CC'],
+                             input_keys=[''],
+                             output_keys=[''])
+
+    def execute(self, userdata):
+        print("############################################")
+        print("executing SELECT_BEST_INSTANCE state..")
+        print("############################################")
+        return "selected_matching_instance"
+
+
+class ReportRefutedHypothesis(smach.State):
+
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['refuted_hypothesis'],
+                             input_keys=[''],
+                             output_keys=[''])
+
+    def execute(self, userdata):
+        print("############################################")
+        print("executing REPORT_REFUTED_HYPOTHESIS state..")
+        print("############################################")
+        return "refuted_hypothesis"
+
+
 class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
     def __init__(self):
         super(VehicleDiagnosisAndRecommendationStateMachine, self).__init__(
-            outcomes=['diag', 'lim_diag'],
+            outcomes=['diag', 'lim_diag', 'insufficient_data', 'conflicting_data'],
             input_keys=[],
             output_keys=[]
         )
@@ -358,7 +405,7 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                                 'processed_OBD_data': 'sm_input'})
 
             self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(),
-                     transitions={'established_init_hypothesis': 'SUGGEST_MEASURING_POS',
+                     transitions={'established_init_hypothesis': 'SELECT_BEST_INSTANCE',
                                   'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT'},
                      remapping={'interview_protocol_file': 'sm_input',
                                 'hypothesis': 'sm_input'})
@@ -382,9 +429,10 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={})
 
             self.add('MAP_OSCILLOGRAM_TO_SYMPTOM', MapOscillogramToSymptom(),
-                     transitions={'determined_symptom': 'PROVIDE_DIAG_AND_SHOW_TRACE',
+                     transitions={'determined_matching_symptom_hyp_approved': 'PROVIDE_DIAG_AND_SHOW_TRACE',
                                   'conclusively_no_mapping': 'PROVIDE_INITIAL_HYPOTHESIS',
-                                  'no_mapping': 'SUGGEST_MEASURING_POS'},
+                                  'no_mapping': 'SUGGEST_MEASURING_POS',
+                                  'determined_not_matching_symptom': 'REPORT_REFUTED_HYPOTHESIS'},
                      remapping={'oscillogram': 'sm_input',
                                 'diagnosis': 'sm_input'})
 
@@ -393,12 +441,28 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={'diagnosis': 'sm_input'})
 
             self.add('PROVIDE_INITIAL_HYPOTHESIS', ProvideInitialHypothesis(),
-                     transitions={'provided_limited_diag': 'UPLOAD_DIAGNOSIS'},
+                     transitions={'provided_limited_diag': 'UPLOAD_DIAGNOSIS',
+                                  'remaining_instances': 'SELECT_BEST_INSTANCE'},
                      remapping={})
 
             self.add('UPLOAD_DIAGNOSIS', UploadDiagnosis(),
                      transitions={'uploaded_limited_diag': 'lim_diag',
                                   'uploaded_diag': 'diag'},
+                     remapping={})
+
+            self.add('GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC', GenArtificialInstanceBasedOnCC(),
+                     transitions={'generated_artificial_instance': 'SUGGEST_MEASURING_POS'},
+                     remapping={})
+
+            self.add('SELECT_BEST_INSTANCE', SelectBestInstance(),
+                     transitions={'selected_matching_instance(OBD_CC)': 'SUGGEST_MEASURING_POS',
+                                  'no_matching_selected_remaining_instance': 'SUGGEST_MEASURING_POS',
+                                  'no_instance': 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC',
+                                  'no_OBD_and_no_CC': 'insufficient_data'},
+                     remapping={})
+
+            self.add('REPORT_REFUTED_HYPOTHESIS', ReportRefutedHypothesis(),
+                     transitions={'refuted_hypothesis': 'conflicting_data'},
                      remapping={})
 
 
