@@ -36,6 +36,9 @@ class RecVehicleAndProcUserData(smach.State):
         print("############################################")
         print("executing REC_VEHICLE_AND_PROC_USER_DATA state..")
         print("############################################")
+        # TODO: SETUP - how many parallel measurements are possible at most?
+        #   - based on workshop equipment (how many oscilloscope channels?)
+        #   - set value here, use it later for parallel measurements
         time.sleep(10)
         userdata.user_data = "dummy user info"
         return "processed_user_data"
@@ -81,7 +84,7 @@ class EstablishInitialHypothesis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['established_init_hypothesis', 'no_oscilloscope_required'],
+                             outcomes=['established_init_hypothesis', 'no_oscilloscope_required', 'no_OBD_and_no_CC'],
                              input_keys=['interview_protocol_file'],
                              output_keys=['context', 'hypothesis'])
 
@@ -185,17 +188,17 @@ class RetrieveHistoricalData(smach.State):
         return "processed_all_data"
 
 
-class SuggestMeasuringPos(smach.State):
+class SuggestMeasuringPosOrComponents(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['provided_suggestion'],
+                             outcomes=['provided_suggestions'],
                              input_keys=['processed_OBD_data'],
                              output_keys=[''])
 
     def execute(self, userdata):
         print("############################################")
-        print("executing SUGGEST_MEASURING_POS state..")
+        print("executing SUGGEST_MEASURING_POS_OR_COMPONENTS state..")
         print("############################################")
         print(userdata.processed_OBD_data)
         # TODO: implement suggestion for measuring pos
@@ -204,26 +207,26 @@ class SuggestMeasuringPos(smach.State):
         # measuring_pos = oqt.query_measuring_pos_by_dtc(read_dtc)
         # print("determined measuring pos:", measuring_pos)
         time.sleep(10)
-        return "provided_suggestion"
+        return "provided_suggestions"
 
 
-class PerformSensorRecording(smach.State):
+class PerformSynchronizedSensorRecordings(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['processed_sensor_data'],
+                             outcomes=['processed_sync_sensor_data'],
                              input_keys=[''],
                              output_keys=['oscillogram'])
 
     def execute(self, userdata):
         print("############################################")
-        print("executing PERFORM_SENSOR_RECORDING state..")
+        print("executing PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS state..")
         print("############################################")
         # TODO: perform sensor recording and process data -> generate oscillogram
         userdata.oscillogram = ""
         time.sleep(10)
-        print("performed sensor recording..")
-        return "processed_sensor_data"
+        print("performed sensor recordings..")
+        return "processed_sync_sensor_data"
 
 
 class PerformDataManagement(smach.State):
@@ -250,12 +253,12 @@ class PerformDataManagement(smach.State):
         return "performed_data_management"
 
 
-class MapOscillogramToSymptom(smach.State):
+class ClassifyOscillograms(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['determined_matching_symptom_hyp_approved', 'no_mapping',
-                                       'conclusively_no_mapping', 'determined_not_matching_symptom'],
+                             outcomes=['detected_anomalies', 'no_anomaly',
+                                       'no_anomaly_and_no_more_measuring_pos'],
                              input_keys=['oscillogram'],
                              output_keys=['diagnosis'])
 
@@ -263,7 +266,7 @@ class MapOscillogramToSymptom(smach.State):
 
     def execute(self, userdata):
         print("############################################")
-        print("executing MAP_OSCILLOGRAM_TO_SYMPTOM state..")
+        print("executing CLASSIFY_OSCILLOGRAMS state..")
         print("############################################")
         net_input = userdata.oscillogram
         # TODO: apply trained NN
@@ -272,12 +275,12 @@ class MapOscillogramToSymptom(smach.State):
         time.sleep(10)
         print("mapped oscillogram to diagnosis..")
         if feasible_diag:
-            return "determined_matching_symptom_hyp_approved"
+            return "detected_anomalies"
         elif self.no_diag_cnt < 3:
             self.no_diag_cnt += 1
-            return "no_mapping"
+            return "no_anomaly"
         else:
-            return "conclusively_no_mapping"
+            return "no_anomaly_and_no_more_measuring_pos"
 
 
 class ProvideDiagAndShowTrace(smach.State):
@@ -303,7 +306,7 @@ class ProvideInitialHypothesis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['provided_limited_diag', 'remaining_instances'],
+                             outcomes=['provided_initial_hypothesis'],
                              input_keys=[''],
                              output_keys=[''])
 
@@ -311,14 +314,14 @@ class ProvideInitialHypothesis(smach.State):
         print("############################################")
         print("executing PROVIDE_INITIAL_HYPOTHESIS state..")
         print("############################################")
-        return "provided_limited_diag"
+        return "provided_initial_hypothesis"
 
 
 class UploadDiagnosis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['uploaded_limited_diag', 'uploaded_diag'],
+                             outcomes=['uploaded_diag'],
                              input_keys=[''],
                              output_keys=[''])
 
@@ -344,23 +347,23 @@ class GenArtificialInstanceBasedOnCC(smach.State):
         return "generated_artificial_instance"
 
 
-class SelectBestInstance(smach.State):
+class SelectBestUnusedInstance(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['selected_matching_instance(OBD_CC)', 'no_matching_selected_remaining_instance',
-                                       'no_instance', 'no_OBD_and_no_CC'],
+                             outcomes=['selected_matching_instance(OBD_CC)', 'no_matching_selected_best_instance',
+                                       'no_instance', 'no_instance_and_CC_already_used'],
                              input_keys=[''],
                              output_keys=[''])
 
     def execute(self, userdata):
         print("############################################")
-        print("executing SELECT_BEST_INSTANCE state..")
+        print("executing SELECT_BEST_UNUSED_INSTANCE state..")
         print("############################################")
-        return "selected_matching_instance"
+        return "selected_matching_instance(OBD_CC)"
 
 
-class ReportRefutedHypothesis(smach.State):
+class NoProblemDetectedCheckSensor(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
@@ -370,16 +373,31 @@ class ReportRefutedHypothesis(smach.State):
 
     def execute(self, userdata):
         print("############################################")
-        print("executing REPORT_REFUTED_HYPOTHESIS state..")
+        print("executing NO_PROBLEM_DETECTED_CHECK_SENSOR state..")
         print("############################################")
         return "refuted_hypothesis"
+
+
+class IsolateProblemCheckEffectiveRadius(smach.State):
+
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['isolated_problem'],
+                             input_keys=[''],
+                             output_keys=[''])
+
+    def execute(self, userdata):
+        print("############################################")
+        print("executing ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS state..")
+        print("############################################")
+        return "isolated_problem"
 
 
 class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
     def __init__(self):
         super(VehicleDiagnosisAndRecommendationStateMachine, self).__init__(
-            outcomes=['diag', 'lim_diag', 'insufficient_data', 'conflicting_data'],
+            outcomes=['diag', 'insufficient_data', 'refuted_hypothesis'],
             input_keys=[],
             output_keys=[]
         )
@@ -405,8 +423,9 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                                 'processed_OBD_data': 'sm_input'})
 
             self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(),
-                     transitions={'established_init_hypothesis': 'SELECT_BEST_INSTANCE',
-                                  'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT'},
+                     transitions={'established_init_hypothesis': 'SELECT_BEST_UNUSED_INSTANCE',
+                                  'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT',
+                                  'no_OBD_and_no_CC': 'insufficient_data'},
                      remapping={'interview_protocol_file': 'sm_input',
                                 'hypothesis': 'sm_input'})
 
@@ -415,24 +434,23 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={'obd_info': 'sm_input',
                                 'obd_and_hist_info': 'sm_input'})
 
-            self.add('SUGGEST_MEASURING_POS', SuggestMeasuringPos(),
-                     transitions={'provided_suggestion': 'PERFORM_SENSOR_RECORDING'},
+            self.add('SUGGEST_MEASURING_POS_OR_COMPONENTS', SuggestMeasuringPosOrComponents(),
+                     transitions={'provided_suggestions': 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS'},
                      remapping={'processed_OBD_data': 'sm_input'})
 
-            self.add('PERFORM_SENSOR_RECORDING', PerformSensorRecording(),
-                     transitions={'processed_sensor_data': 'PERFORM_DATA_MANAGEMENT'},
+            self.add('PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS', PerformSynchronizedSensorRecordings(),
+                     transitions={'processed_sync_sensor_data': 'PERFORM_DATA_MANAGEMENT'},
                      remapping={'oscillogram': 'sm_input'})
 
             self.add('PERFORM_DATA_MANAGEMENT', PerformDataManagement(),
-                     transitions={'performed_data_management': 'MAP_OSCILLOGRAM_TO_SYMPTOM',
+                     transitions={'performed_data_management': 'CLASSIFY_OSCILLOGRAMS',
                                   'performed_reduced_data_management': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
                      remapping={})
 
-            self.add('MAP_OSCILLOGRAM_TO_SYMPTOM', MapOscillogramToSymptom(),
-                     transitions={'determined_matching_symptom_hyp_approved': 'PROVIDE_DIAG_AND_SHOW_TRACE',
-                                  'conclusively_no_mapping': 'PROVIDE_INITIAL_HYPOTHESIS',
-                                  'no_mapping': 'SUGGEST_MEASURING_POS',
-                                  'determined_not_matching_symptom': 'REPORT_REFUTED_HYPOTHESIS'},
+            self.add('CLASSIFY_OSCILLOGRAMS', ClassifyOscillograms(),
+                     transitions={'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_INSTANCE',
+                                  'no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
+                                  'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
                      remapping={'oscillogram': 'sm_input',
                                 'diagnosis': 'sm_input'})
 
@@ -441,28 +459,30 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={'diagnosis': 'sm_input'})
 
             self.add('PROVIDE_INITIAL_HYPOTHESIS', ProvideInitialHypothesis(),
-                     transitions={'provided_limited_diag': 'UPLOAD_DIAGNOSIS',
-                                  'remaining_instances': 'SELECT_BEST_INSTANCE'},
+                     transitions={'provided_initial_hypothesis': 'refuted_hypothesis'},
                      remapping={})
 
             self.add('UPLOAD_DIAGNOSIS', UploadDiagnosis(),
-                     transitions={'uploaded_limited_diag': 'lim_diag',
-                                  'uploaded_diag': 'diag'},
+                     transitions={'uploaded_diag': 'diag'},
                      remapping={})
 
             self.add('GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC', GenArtificialInstanceBasedOnCC(),
-                     transitions={'generated_artificial_instance': 'SUGGEST_MEASURING_POS'},
+                     transitions={'generated_artificial_instance': 'SUGGEST_MEASURING_POS_OR_COMPONENTS'},
                      remapping={})
 
-            self.add('SELECT_BEST_INSTANCE', SelectBestInstance(),
-                     transitions={'selected_matching_instance(OBD_CC)': 'SUGGEST_MEASURING_POS',
-                                  'no_matching_selected_remaining_instance': 'SUGGEST_MEASURING_POS',
+            self.add('SELECT_BEST_UNUSED_INSTANCE', SelectBestUnusedInstance(),
+                     transitions={'selected_matching_instance(OBD_CC)': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
+                                  'no_matching_selected_best_instance': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
                                   'no_instance': 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC',
-                                  'no_OBD_and_no_CC': 'insufficient_data'},
+                                  'no_instance_and_CC_already_used': 'NO_PROBLEM_DETECTED_CHECK_SENSOR'},
                      remapping={})
 
-            self.add('REPORT_REFUTED_HYPOTHESIS', ReportRefutedHypothesis(),
-                     transitions={'refuted_hypothesis': 'conflicting_data'},
+            self.add('NO_PROBLEM_DETECTED_CHECK_SENSOR', NoProblemDetectedCheckSensor(),
+                     transitions={'refuted_hypothesis': 'PROVIDE_INITIAL_HYPOTHESIS'},
+                     remapping={})
+
+            self.add('ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS', IsolateProblemCheckEffectiveRadius(),
+                     transitions={'isolated_problem': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
                      remapping={})
 
 
