@@ -306,7 +306,7 @@ class ProvideInitialHypothesis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['provided_initial_hypothesis'],
+                             outcomes=['no_diag'],
                              input_keys=[''],
                              output_keys=[''])
 
@@ -314,7 +314,7 @@ class ProvideInitialHypothesis(smach.State):
         print("############################################")
         print("executing PROVIDE_INITIAL_HYPOTHESIS state..")
         print("############################################")
-        return "provided_initial_hypothesis"
+        return "no_diag"
 
 
 class UploadDiagnosis(smach.State):
@@ -367,7 +367,7 @@ class NoProblemDetectedCheckSensor(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['refuted_hypothesis'],
+                             outcomes=['sensor_works', 'sensor_defective'],
                              input_keys=[''],
                              output_keys=[''])
 
@@ -375,7 +375,7 @@ class NoProblemDetectedCheckSensor(smach.State):
         print("############################################")
         print("executing NO_PROBLEM_DETECTED_CHECK_SENSOR state..")
         print("############################################")
-        return "refuted_hypothesis"
+        return "sensor_works"
 
 
 class IsolateProblemCheckEffectiveRadius(smach.State):
@@ -459,7 +459,7 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={'diagnosis': 'sm_input'})
 
             self.add('PROVIDE_INITIAL_HYPOTHESIS', ProvideInitialHypothesis(),
-                     transitions={'provided_initial_hypothesis': 'refuted_hypothesis'},
+                     transitions={'no_diag': 'refuted_hypothesis'},
                      remapping={})
 
             self.add('UPLOAD_DIAGNOSIS', UploadDiagnosis(),
@@ -478,7 +478,8 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={})
 
             self.add('NO_PROBLEM_DETECTED_CHECK_SENSOR', NoProblemDetectedCheckSensor(),
-                     transitions={'refuted_hypothesis': 'PROVIDE_INITIAL_HYPOTHESIS'},
+                     transitions={'sensor_works': 'PROVIDE_INITIAL_HYPOTHESIS',
+                                  'sensor_defective': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
                      remapping={})
 
             self.add('ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS', IsolateProblemCheckEffectiveRadius(),
