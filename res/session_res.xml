@@ -1,19 +1,28 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <repository>
-  <session changed="2022-07-13 11:38:03.570 +0200" created="2022-07-13 11:38:03.570 +0200" id="3a13d80e-af13-4bd8-bcb3-065c2693b55a">
+  <session changed="2022-08-02 11:57:52.109 +0200" created="2022-08-02 11:57:52.109 +0200" id="4af63a3a-b603-4bb9-a2ec-beca9901e359">
     <name/>
     <facts>
       <valueFacts>
         <fact objectName="Fehlerbild" psm="de.d3web.indication.inference.PSMethodUserSelected">
           <choiceValue>Lichtanlage defekt</choiceValue>
         </fact>
+        <fact objectName="Dynamo mit Batterie" psm="de.d3web.indication.inference.PSMethodUserSelected">
+          <choiceValue>weiter</choiceValue>
+        </fact>
+        <fact objectName="Lampe mit Batterie" psm="de.d3web.indication.inference.PSMethodUserSelected">
+          <choiceValue>weiter</choiceValue>
+        </fact>
         <fact objectName="Lampenenergie" psm="de.d3web.indication.inference.PSMethodUserSelected">
-          <choiceValue>Batterie</choiceValue>
+          <choiceValue>Dynamo</choiceValue>
         </fact>
-        <fact objectName="Reihenfolge Batterien" psm="de.d3web.indication.inference.PSMethodUserSelected">
-          <choiceValue>falsche Reihenfolge</choiceValue>
+        <fact objectName="Test Dynamo mit Batterie" psm="de.d3web.indication.inference.PSMethodUserSelected">
+          <choiceValue>Leuchtet</choiceValue>
         </fact>
-        <fact objectName="Batterie in verkehrter Reihenfolge eingesetzt" psm="de.d3web.diaFlux.inference.FluxSolver">
+        <fact objectName="Test Lampe mit Batterie" psm="de.d3web.indication.inference.PSMethodUserSelected">
+          <choiceValue>Leuchtet</choiceValue>
+        </fact>
+        <fact objectName="Dynamo defekt" psm="de.d3web.diaFlux.inference.FluxSolver">
           <rating score="999.0" type="heuristic">ESTABLISHED</rating>
         </fact>
       </valueFacts>
@@ -21,11 +30,20 @@
         <fact objectName="Fehlerbild" psm="de.d3web.diaFlux.inference.FluxSolver">
           <indication sorting="2.0">INDICATED</indication>
         </fact>
+        <fact objectName="Dynamo mit Batterie" psm="de.d3web.diaFlux.inference.FluxSolver">
+          <indication sorting="10.0">INDICATED</indication>
+        </fact>
+        <fact objectName="Lampe mit Batterie" psm="de.d3web.diaFlux.inference.FluxSolver">
+          <indication sorting="8.0">INDICATED</indication>
+        </fact>
         <fact objectName="Lampenenergie" psm="de.d3web.diaFlux.inference.FluxSolver">
           <indication sorting="4.0">INDICATED</indication>
         </fact>
-        <fact objectName="Reihenfolge Batterien" psm="de.d3web.diaFlux.inference.FluxSolver">
-          <indication sorting="5.0">INDICATED</indication>
+        <fact objectName="Test Dynamo mit Batterie" psm="de.d3web.diaFlux.inference.FluxSolver">
+          <indication sorting="11.0">INDICATED</indication>
+        </fact>
+        <fact objectName="Test Lampe mit Batterie" psm="de.d3web.diaFlux.inference.FluxSolver">
+          <indication sorting="9.0">INDICATED</indication>
         </fact>
         <fact objectName="Einstieg" psm="de.d3web.core.inference.PSMethodInit">
           <indication sorting="-1.0">INDICATED</indication>
@@ -33,14 +51,23 @@
       </interviewFacts>
     </facts>
     <protocol>
-      <entry date="2022-07-13 11:38:06.013 +0200" objectName="Fehlerbild" psm="de.d3web.indication.inference.PSMethodUserSelected" type="fact">
+      <entry date="2022-08-02 11:58:00.704 +0200" objectName="Fehlerbild" psm="de.d3web.indication.inference.PSMethodUserSelected" type="fact">
         <choiceValue>Lichtanlage defekt</choiceValue>
       </entry>
-      <entry date="2022-07-13 11:38:07.212 +0200" objectName="Lampenenergie" psm="de.d3web.indication.inference.PSMethodUserSelected" type="fact">
-        <choiceValue>Batterie</choiceValue>
+      <entry date="2022-08-02 11:58:02.175 +0200" objectName="Lampenenergie" psm="de.d3web.indication.inference.PSMethodUserSelected" type="fact">
+        <choiceValue>Dynamo</choiceValue>
       </entry>
-      <entry date="2022-07-13 11:38:08.028 +0200" objectName="Reihenfolge Batterien" psm="de.d3web.indication.inference.PSMethodUserSelected" type="fact">
-        <choiceValue>falsche Reihenfolge</choiceValue>
+      <entry date="2022-08-02 11:58:03.391 +0200" objectName="Lampe mit Batterie" psm="de.d3web.indication.inference.PSMethodUserSelected" type="fact">
+        <choiceValue>weiter</choiceValue>
+      </entry>
+      <entry date="2022-08-02 11:58:04.255 +0200" objectName="Test Lampe mit Batterie" psm="de.d3web.indication.inference.PSMethodUserSelected" type="fact">
+        <choiceValue>Leuchtet</choiceValue>
+      </entry>
+      <entry date="2022-08-02 11:58:04.911 +0200" objectName="Dynamo mit Batterie" psm="de.d3web.indication.inference.PSMethodUserSelected" type="fact">
+        <choiceValue>weiter</choiceValue>
+      </entry>
+      <entry date="2022-08-02 11:58:05.551 +0200" objectName="Test Dynamo mit Batterie" psm="de.d3web.indication.inference.PSMethodUserSelected" type="fact">
+        <choiceValue>Leuchtet</choiceValue>
       </entry>
     </protocol>
   </session>
