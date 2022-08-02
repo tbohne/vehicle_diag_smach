@@ -15,13 +15,10 @@ from bs4 import BeautifulSoup
 import config
 from ontology_instance_generator import OntologyInstanceGenerator
 
-sys.path.append(path.abspath('../AW_40_GUI'))
-sys.path.append(path.abspath('../OBDOntology'))
+sys.path.append(path.abspath(config.AW_GUI_PATH))
+sys.path.append(path.abspath(config.OBD_ONTOLOGY_PATH))
 
 from GUI import run_gui
-
-ONTOLOGY_PATH = "../OBDOntology"
-ONTOLOGY_FILE = "obd_ontology.owl"
 
 
 class RecVehicleAndProcUserData(smach.State):
@@ -156,7 +153,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         else:
             # generate ontology instance based on read OBD data
             instance_gen = OntologyInstanceGenerator(
-                read_model, read_hsn, read_tsn, read_vin, read_dtc, ONTOLOGY_PATH, ONTOLOGY_FILE
+                read_model, read_hsn, read_tsn, read_vin, read_dtc, config.OBD_ONTOLOGY_PATH, config.ONTOLOGY_FILE
             )
             instance_gen.create_ontology_instance()
 
@@ -262,8 +259,6 @@ class ClassifyOscillograms(smach.State):
                              input_keys=['oscillogram'],
                              output_keys=['diagnosis'])
 
-        self.no_diag_cnt = 0
-
     def execute(self, userdata):
         print("############################################")
         print("executing CLASSIFY_OSCILLOGRAMS state..")
@@ -271,13 +266,13 @@ class ClassifyOscillograms(smach.State):
         net_input = userdata.oscillogram
         # TODO: apply trained NN
         userdata.diagnosis = ""
-        feasible_diag = True
+        at_least_one_anomaly = True
+        remaining_measuring_pos_suggestions = True
         time.sleep(10)
         print("mapped oscillogram to diagnosis..")
-        if feasible_diag:
+        if at_least_one_anomaly:
             return "detected_anomalies"
-        elif self.no_diag_cnt < 3:
-            self.no_diag_cnt += 1
+        elif remaining_measuring_pos_suggestions:
             return "no_anomaly"
         else:
             return "no_anomaly_and_no_more_measuring_pos"
