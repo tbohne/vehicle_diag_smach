@@ -7,9 +7,7 @@ import sys
 import time
 from os import path
 
-import rospy
 import smach
-import smach_ros
 from bs4 import BeautifulSoup
 
 import config
@@ -482,20 +480,7 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
                      remapping={})
 
 
-def node():
-    rospy.init_node('test')
+if __name__ == '__main__':
     sm = VehicleDiagnosisAndRecommendationStateMachine()
-    sis = smach_ros.IntrospectionServer('server_name', sm, '/AW4.0')
-    sis.start()
     outcome = sm.execute()
     print("OUTCOME:", outcome)
-
-    rospy.spin()
-    sis.stop()
-
-
-if __name__ == '__main__':
-    try:
-        node()
-    except rospy.ROSInterruptException:
-        pass
