@@ -274,8 +274,6 @@ class ClassifyOscillograms(smach.State):
         _, voltages = preprocess.read_oscilloscope_recording(config.DUMMY_OSCILLOSCOPE)
         voltages = preprocess.z_normalize_time_series(voltages)
 
-        print(voltages)
-
         model = keras.models.load_model(config.TRAINED_MODEL)
 
         # fix input size
@@ -287,8 +285,11 @@ class ClassifyOscillograms(smach.State):
         net_input = np.asarray(voltages).astype('float32')
         net_input = net_input.reshape((net_input.shape[0], 1))
 
-        prediction = model.predict([net_input])
+        print("input shape:", net_input.shape)
+
+        prediction = model.predict(np.array([net_input]))
         print("PREDICTION:", prediction)
+        print("shape of pred.:", prediction.shape)
 
         # TODO: apply trained NN
         userdata.diagnosis = ""
