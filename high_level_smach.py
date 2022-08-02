@@ -13,10 +13,17 @@ from bs4 import BeautifulSoup
 import config
 from ontology_instance_generator import OntologyInstanceGenerator
 
+from tensorflow import keras
+
 sys.path.append(path.abspath(config.AW_GUI_PATH))
 sys.path.append(path.abspath(config.OBD_ONTOLOGY_PATH))
+sys.path.append(path.abspath(config.CLASSIFICATION_PATH))
 
 from GUI import run_gui
+
+import preprocess
+
+import numpy as np
 
 
 class RecVehicleAndProcUserData(smach.State):
@@ -34,7 +41,7 @@ class RecVehicleAndProcUserData(smach.State):
         # TODO: SETUP - how many parallel measurements are possible at most?
         #   - based on workshop equipment (how many oscilloscope channels?)
         #   - set value here, use it later for parallel measurements
-        time.sleep(10)
+        # time.sleep(10)
         userdata.user_data = "dummy user info"
         return "processed_user_data"
 
@@ -107,7 +114,7 @@ class EstablishInitialHypothesis(smach.State):
             return "no_oscilloscope_required"
 
         print("establish hypothesis..")
-        time.sleep(10)
+        # time.sleep(10)
         return "established_init_hypothesis"
 
 
@@ -139,7 +146,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         read_hsn = "849357984"
         read_tsn = "453948539"
         read_vin = "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
-        time.sleep(10)
+        # time.sleep(10)
         print("processed OBD information..")
 
         # TODO: first step is a lookup on our own server
@@ -179,7 +186,7 @@ class RetrieveHistoricalData(smach.State):
         #   - historical info for specific vehicle (via VIN)
         #   - historical info for vehicle type (model)
         userdata.obd_and_hist_info = userdata.obd_info
-        time.sleep(10)
+        # time.sleep(10)
         return "processed_all_data"
 
 
@@ -201,7 +208,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
         # oqt = OntologyQueryTool()
         # measuring_pos = oqt.query_measuring_pos_by_dtc(read_dtc)
         # print("determined measuring pos:", measuring_pos)
-        time.sleep(10)
+        # time.sleep(10)
         return "provided_suggestions"
 
 
@@ -219,7 +226,7 @@ class PerformSynchronizedSensorRecordings(smach.State):
         print("############################################")
         # TODO: perform sensor recording and process data -> generate oscillogram
         userdata.oscillogram = ""
-        time.sleep(10)
+        # time.sleep(10)
         print("performed sensor recordings..")
         return "processed_sync_sensor_data"
 
@@ -236,13 +243,13 @@ class PerformDataManagement(smach.State):
         print("############################################")
         print("executing PERFORM_DATA_MANAGEMENT state..")
         print("############################################")
-        time.sleep(10)
+        # time.sleep(10)
         # TODO:
         #   - EDC (Eclipse Dataspace Connector) communication
         #   - consolidate + upload data (user info, customer complaints, OBD info, sensor data) to server
         #   - optional: [retrieve latest version of trained NN from server]
 
-        no_oscilloscope = True
+        no_oscilloscope = False
         if no_oscilloscope:
             return "performed_reduced_data_management"
         return "performed_data_management"
@@ -261,12 +268,33 @@ class ClassifyOscillograms(smach.State):
         print("############################################")
         print("executing CLASSIFY_OSCILLOGRAMS state..")
         print("############################################")
-        net_input = userdata.oscillogram
+
+        # net_input = userdata.oscillogram
+
+        _, voltages = preprocess.read_oscilloscope_recording(config.DUMMY_OSCILLOSCOPE)
+        voltages = preprocess.z_normalize_time_series(voltages)
+
+        print(voltages)
+
+        model = keras.models.load_model(config.TRAINED_MODEL)
+
+        # fix input size
+        net_input_size = model.layers[0].output_shape[0][1]
+        if len(voltages) > net_input_size:
+            remove = len(voltages) - net_input_size
+            voltages = voltages[: len(voltages) - remove]
+
+        net_input = np.asarray(voltages).astype('float32')
+        net_input = net_input.reshape((net_input.shape[0], 1))
+
+        prediction = model.predict([net_input])
+        print("PREDICTION:", prediction)
+
         # TODO: apply trained NN
         userdata.diagnosis = ""
         at_least_one_anomaly = True
         remaining_measuring_pos_suggestions = True
-        time.sleep(10)
+        # time.sleep(10)
         print("mapped oscillogram to diagnosis..")
         if at_least_one_anomaly:
             return "detected_anomalies"
