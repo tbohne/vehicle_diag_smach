@@ -22,6 +22,7 @@ sys.path.append(path.abspath(config.CLASSIFICATION_PATH))
 from GUI import run_gui
 
 import preprocess
+import grad_cam
 
 import numpy as np
 
@@ -266,7 +267,7 @@ class ClassifyOscillograms(smach.State):
 
     def execute(self, userdata):
         print("############################################")
-        print("executing CLASSIFY_OSCILLOGRAMS state..")
+        print("executing CLASSIFY_OSCILLOGRAMS state (apply trained CNN)..")
         print("############################################")
 
         # net_input = userdata.oscillogram
@@ -291,7 +292,11 @@ class ClassifyOscillograms(smach.State):
         print("PREDICTION:", prediction)
         print("shape of pred.:", prediction.shape)
 
-        # TODO: apply trained NN
+        heatmap = grad_cam.generate_gradcam(np.array([net_input]), model)
+        grad_cam.plot_gradcam(heatmap, voltages)
+
+
+
         userdata.diagnosis = ""
         at_least_one_anomaly = True
         remaining_measuring_pos_suggestions = True
