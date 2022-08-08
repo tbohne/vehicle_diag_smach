@@ -26,7 +26,7 @@ Open `setup.py` and enter the following:
 from setuptools import setup, find_packages
 setup(
     name='diag',
-    packages=find_packages('diag'),
+    packages=find_packages(),
 )
 ```
 Install:
