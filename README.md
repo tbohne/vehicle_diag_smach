@@ -27,6 +27,8 @@ from setuptools import setup, find_packages
 setup(
     name='diag',
     packages=find_packages(),
+    package_data={'': ['img/*.ico', 'img/*.png']},
+    include_package_data=True,
 )
 ```
 Install:
