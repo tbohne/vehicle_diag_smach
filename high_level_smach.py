@@ -3,23 +3,17 @@
 # @author Tim Bohne
 
 import subprocess
-import sys
-from os import path
 
-import grad_cam
 import numpy as np
-import preprocess
 import smach
-from GUI import run_gui
 from bs4 import BeautifulSoup
 from tensorflow import keras
 
-import config
-from ontology_instance_generator import OntologyInstanceGenerator
-
-sys.path.append(path.abspath(config.AW_GUI_PATH))
-sys.path.append(path.abspath(config.OBD_ONTOLOGY_PATH))
-sys.path.append(path.abspath(config.CLASSIFICATION_PATH))
+from AW_40_GUI.GUI import run_gui
+from oscillogram_classification import grad_cam
+from oscillogram_classification import preprocess
+from vehicle_diag_smach import config
+from vehicle_diag_smach import ontology_instance_generator
 
 
 class RecVehicleAndProcUserData(smach.State):
@@ -153,7 +147,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
             pass
         else:
             # generate ontology instance based on read OBD data
-            instance_gen = OntologyInstanceGenerator(
+            instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
                 read_model, read_hsn, read_tsn, read_vin, read_dtc, config.OBD_ONTOLOGY_PATH, config.ONTOLOGY_FILE
             )
             instance_gen.create_ontology_instance()
@@ -506,7 +500,14 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      remapping={})
 
 
-if __name__ == '__main__':
+def run():
+    """
+    Runs the state machine.
+    """
     sm = VehicleDiagnosisStateMachine()
     outcome = sm.execute()
     print("OUTCOME:", outcome)
+
+
+if __name__ == '__main__':
+    run()
