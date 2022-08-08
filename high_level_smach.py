@@ -4,27 +4,22 @@
 
 import subprocess
 import sys
-import time
 from os import path
 
+import grad_cam
+import numpy as np
+import preprocess
 import smach
+from GUI import run_gui
 from bs4 import BeautifulSoup
+from tensorflow import keras
 
 import config
 from ontology_instance_generator import OntologyInstanceGenerator
 
-from tensorflow import keras
-
 sys.path.append(path.abspath(config.AW_GUI_PATH))
 sys.path.append(path.abspath(config.OBD_ONTOLOGY_PATH))
 sys.path.append(path.abspath(config.CLASSIFICATION_PATH))
-
-from GUI import run_gui
-
-import preprocess
-import grad_cam
-
-import numpy as np
 
 
 class RecVehicleAndProcUserData(smach.State):
@@ -295,8 +290,6 @@ class ClassifyOscillograms(smach.State):
         heatmap = grad_cam.generate_gradcam(np.array([net_input]), model)
         grad_cam.plot_gradcam(heatmap, voltages)
 
-
-
         userdata.diagnosis = ""
         at_least_one_anomaly = True
         remaining_measuring_pos_suggestions = True
@@ -420,10 +413,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return "isolated_problem"
 
 
-class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
+class VehicleDiagnosisStateMachine(smach.StateMachine):
 
     def __init__(self):
-        super(VehicleDiagnosisAndRecommendationStateMachine, self).__init__(
+        super(VehicleDiagnosisStateMachine, self).__init__(
             outcomes=['diag', 'insufficient_data', 'refuted_hypothesis'],
             input_keys=[],
             output_keys=[]
@@ -431,7 +424,6 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
         self.userdata.sm_input = []
 
         with self:
-
             self.add('REC_VEHICLE_AND_PROC_USER_DATA', RecVehicleAndProcUserData(),
                      transitions={'processed_user_data': 'PROC_CUSTOMER_COMPLAINTS'},
                      remapping={'input': 'sm_input',
@@ -515,6 +507,6 @@ class VehicleDiagnosisAndRecommendationStateMachine(smach.StateMachine):
 
 
 if __name__ == '__main__':
-    sm = VehicleDiagnosisAndRecommendationStateMachine()
+    sm = VehicleDiagnosisStateMachine()
     outcome = sm.execute()
     print("OUTCOME:", outcome)
