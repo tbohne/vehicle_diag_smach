@@ -9,7 +9,7 @@ import smach
 from bs4 import BeautifulSoup
 from tensorflow import keras
 
-from AW_40_GUI.GUI import run_gui
+from AW_40_GUI import GUI
 from oscillogram_classification import grad_cam
 from oscillogram_classification import preprocess
 from vehicle_diag_smach import config
@@ -124,7 +124,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         print("OBD INPUT:", userdata.interview_data)
 
         # TODO: include OBD parser (OBD codes + meta data)
-        run_gui()
+        GUI.run_gui()
         obd_avail = True
         if not obd_avail:
             return "no_OBD_data"
