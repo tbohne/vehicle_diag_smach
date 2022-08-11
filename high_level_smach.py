@@ -17,6 +17,10 @@ from vehicle_diag_smach import ontology_instance_generator
 
 
 class RecVehicleAndProcUserData(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which the mechanic receives the vehicle and processes
+    the user data (data about the workshop, mechanic, etc.).
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -25,6 +29,12 @@ class RecVehicleAndProcUserData(smach.State):
                              output_keys=['user_data'])
 
     def execute(self, userdata):
+        """
+        Execution of 'REC_VEHICLE_AND_PROC_USER_DATA' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("processed_user_data")
+        """
         print("############################################")
         print("executing REC_VEHICLE_AND_PROC_USER_DATA state..")
         print("############################################")
@@ -37,6 +47,10 @@ class RecVehicleAndProcUserData(smach.State):
 
 
 class ProcCustomerComplaints(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which the mechanic enters the customer complaints
+    to the processing system (fault tree, decision tree, XPS, ...).
+    """
 
     def __init__(self):
 
@@ -47,10 +61,19 @@ class ProcCustomerComplaints(smach.State):
 
     @staticmethod
     def launch_customer_xps():
+        """
+        Launches the expert system that processes the customer complaints.
+        """
         print("launching customer XPS..")
         subprocess.call(['java', '-jar', config.CUSTOMER_XPS])
 
     def execute(self, userdata):
+        """
+        Execution of 'PROC_CUSTOMER_COMPLAINTS' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("received_complaints" | "no_complaints")
+        """
         print("############################################")
         print("executing PROC_CUSTOMER_COMPLAINTS state..")
         print("############################################")
@@ -73,6 +96,10 @@ class ProcCustomerComplaints(smach.State):
 
 
 class EstablishInitialHypothesis(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which an initial hypothesis is established based
+    on the provided information.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -81,6 +108,12 @@ class EstablishInitialHypothesis(smach.State):
                              output_keys=['context', 'hypothesis'])
 
     def execute(self, userdata):
+        """
+        Execution of 'ESTABLISH_INITIAL_HYPOTHESIS' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("established_init_hypothesis" | "no_oscilloscope_required" | "no_OBD_and_no_CC")
+        """
         print("############################################")
         print("executing ESTABLISH_INITIAL_HYPOTHESIS state..")
         print("############################################")
@@ -109,6 +142,11 @@ class EstablishInitialHypothesis(smach.State):
 
 
 class ReadOBDDataAndGenOntologyInstances(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which the OBD information are read from the ECU.
+    Based on the read information, an ontology instance is generated.
+    TODO: actually, based on the current state, we will probably have ontology instances generated in advance by experts
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -117,6 +155,12 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
                              output_keys=['processed_OBD_data'])
 
     def execute(self, userdata):
+        """
+        Execution of 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("processed_OBD_data" | "no_OBD_data")
+        """
         print("############################################")
         print("executing READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES state..")
         print("############################################")
@@ -157,6 +201,10 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
 
 
 class RetrieveHistoricalData(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which historical information are retrieved for the
+    given car (individually, not type), i.e., information that we accumulated in previous repair sessions in the past.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -165,6 +213,12 @@ class RetrieveHistoricalData(smach.State):
                              output_keys=['obd_and_hist_info'])
 
     def execute(self, userdata):
+        """
+        Execution of 'RETRIEVE_HISTORICAL_DATA' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("processed_all_data")
+        """
         print("############################################")
         print("executing RETRIEVE_HISTORICAL_DATA state..")
         print("############################################")
@@ -181,6 +235,10 @@ class RetrieveHistoricalData(smach.State):
 
 
 class SuggestMeasuringPosOrComponents(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which measuring positions or at least suspect
+    components in the car are suggested in order to place the sensors (oscilloscopes) accordingly.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -189,6 +247,12 @@ class SuggestMeasuringPosOrComponents(smach.State):
                              output_keys=[''])
 
     def execute(self, userdata):
+        """
+        Execution of 'SUGGEST_MEASURING_POS_OR_COMPONENTS' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("provided_suggestions")
+        """
         print("############################################")
         print("executing SUGGEST_MEASURING_POS_OR_COMPONENTS state..")
         print("############################################")
@@ -203,6 +267,9 @@ class SuggestMeasuringPosOrComponents(smach.State):
 
 
 class PerformSynchronizedSensorRecordings(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which the synchronized sensor recordings are performed.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -211,6 +278,12 @@ class PerformSynchronizedSensorRecordings(smach.State):
                              output_keys=['oscillogram'])
 
     def execute(self, userdata):
+        """
+        Execution of 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("processed_sync_sensor_data")
+        """
         print("############################################")
         print("executing PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS state..")
         print("############################################")
@@ -222,6 +295,9 @@ class PerformSynchronizedSensorRecordings(smach.State):
 
 
 class PerformDataManagement(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which data management is performed.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -230,6 +306,12 @@ class PerformDataManagement(smach.State):
                              output_keys=[''])
 
     def execute(self, userdata):
+        """
+        Execution of 'PERFORM_DATA_MANAGEMENT' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("performed_data_management" | "performed_reduced_data_management")
+        """
         print("############################################")
         print("executing PERFORM_DATA_MANAGEMENT state..")
         print("############################################")
@@ -246,6 +328,10 @@ class PerformDataManagement(smach.State):
 
 
 class ClassifyOscillograms(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which the recorded oscillograms are classified using
+    the trained neural net model, i.e., detecting anomalies.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -255,6 +341,12 @@ class ClassifyOscillograms(smach.State):
                              output_keys=['diagnosis'])
 
     def execute(self, userdata):
+        """
+        Execution of 'CLASSIFY_OSCILLOGRAMS' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_and_no_more_measuring_pos")
+        """
         print("############################################")
         print("executing CLASSIFY_OSCILLOGRAMS state (apply trained CNN)..")
         print("############################################")
@@ -298,6 +390,10 @@ class ClassifyOscillograms(smach.State):
 
 
 class ProvideDiagAndShowTrace(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which the diagnosis is provided in combination with
+    a detailed trace of all the relevant information that lead to it.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -306,6 +402,12 @@ class ProvideDiagAndShowTrace(smach.State):
                              output_keys=[''])
 
     def execute(self, userdata):
+        """
+        Execution of 'PROVIDE_DIAG_AND_SHOW_TRACE' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("provided_diag_and_explanation")
+        """
         print("############################################")
         print("executing PROVIDE_DIAG_AND_SHOW_TRACE state..")
         print("############################################")
@@ -317,6 +419,10 @@ class ProvideDiagAndShowTrace(smach.State):
 
 
 class ProvideInitialHypothesis(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which only the initial hypothesis is provided due to
+    unmanageable uncertainty.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -325,6 +431,12 @@ class ProvideInitialHypothesis(smach.State):
                              output_keys=[''])
 
     def execute(self, userdata):
+        """
+        Execution of 'PROVIDE_INITIAL_HYPOTHESIS' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("no_diag")
+        """
         print("############################################")
         print("executing PROVIDE_INITIAL_HYPOTHESIS state..")
         print("############################################")
@@ -332,6 +444,9 @@ class ProvideInitialHypothesis(smach.State):
 
 
 class UploadDiagnosis(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which the diagnosis is uploaded to the server.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -340,6 +455,12 @@ class UploadDiagnosis(smach.State):
                              output_keys=[''])
 
     def execute(self, userdata):
+        """
+        Execution of 'UPLOAD_DIAGNOSIS' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("uploaded_diag")
+        """
         print("############################################")
         print("executing UPLOAD_DIAGNOSIS state..")
         print("############################################")
@@ -347,6 +468,10 @@ class UploadDiagnosis(smach.State):
 
 
 class GenArtificialInstanceBasedOnCC(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which an artificial OBD ontology instance is generated
+    based on the customer complaints. Used for cases where no OBD information is available.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -355,6 +480,12 @@ class GenArtificialInstanceBasedOnCC(smach.State):
                              output_keys=[''])
 
     def execute(self, userdata):
+        """
+        Execution of 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("generated_artificial_instance")
+        """
         print("############################################")
         print("executing GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC state..")
         print("############################################")
@@ -362,6 +493,10 @@ class GenArtificialInstanceBasedOnCC(smach.State):
 
 
 class SelectBestUnusedInstance(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which a best-suited, unused ontology instance is
+    selected for further processing.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -371,6 +506,13 @@ class SelectBestUnusedInstance(smach.State):
                              output_keys=[''])
 
     def execute(self, userdata):
+        """
+        Execution of 'SELECT_BEST_UNUSED_INSTANCE' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("selected_matching_instance(OBD_CC)" | "no_matching_selected_best_instance" |
+                                       "no_instance" | "no_instance_and_CC_already_used")
+        """
         print("############################################")
         print("executing SELECT_BEST_UNUSED_INSTANCE state..")
         print("############################################")
@@ -378,6 +520,11 @@ class SelectBestUnusedInstance(smach.State):
 
 
 class NoProblemDetectedCheckSensor(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which no actual anomaly was detected, and the indirect
+    conclusion of a potential sensor malfunction is provided. This conclusion should be verified / refuted in this
+    state.
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -386,6 +533,12 @@ class NoProblemDetectedCheckSensor(smach.State):
                              output_keys=[''])
 
     def execute(self, userdata):
+        """
+        Execution of 'NO_PROBLEM_DETECTED_CHECK_SENSOR' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("sensor_works" | "sensor_defective")
+        """
         print("############################################")
         print("executing NO_PROBLEM_DETECTED_CHECK_SENSOR state..")
         print("############################################")
@@ -393,6 +546,10 @@ class NoProblemDetectedCheckSensor(smach.State):
 
 
 class IsolateProblemCheckEffectiveRadius(smach.State):
+    """
+    State in the high-level SMACH that represents situations in which one or more anomalies have been detected, and the
+    task is to isolate the defective components based on the effective radius (structural knowledge).
+    """
 
     def __init__(self):
         smach.State.__init__(self,
@@ -401,6 +558,12 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                              output_keys=[''])
 
     def execute(self, userdata):
+        """
+        Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("isolated_problem")
+        """
         print("############################################")
         print("executing ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS state..")
         print("############################################")
@@ -408,6 +571,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
 
 class VehicleDiagnosisStateMachine(smach.StateMachine):
+    """
+    High-level state machine guiding the entire vehicle diagnosis process.
+    """
 
     def __init__(self):
         super(VehicleDiagnosisStateMachine, self).__init__(

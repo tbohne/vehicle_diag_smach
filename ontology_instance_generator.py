@@ -8,6 +8,13 @@ from owlready2 import *
 
 
 class OntologyInstanceGenerator:
+    """
+    Facilitates ontology instance generation based on on-board diagnosis information.
+
+    TODO: not yet clear whether this is still useful
+        - based on the current state, we won't use live DB access
+        - thus, the ontology instances are created 'manually' by experts (at least initially)
+    """
 
     def __init__(self, vehicle, hsn, tsn, vin, dtc, ontology_path, ontology_file):
         self.vehicle = vehicle
@@ -23,6 +30,9 @@ class OntologyInstanceGenerator:
         self.onto.load()
 
     def create_ontology_instance(self):
+        """
+        Creates an OBD ontology instance based on the present vehicle information and performs a consistency check.
+        """
         self.add_dtc()
         self.add_fault_condition()
         self.add_vehicle()
@@ -37,6 +47,9 @@ class OntologyInstanceGenerator:
         self.check_consistency_and_save_to_file()
 
     def check_consistency_and_save_to_file(self):
+        """
+        Checks the consistency of the generated ontology instance and saves it to file.
+        """
         with self.onto:
             try:
                 sync_reasoner_pellet(infer_property_values=True, infer_data_property_values=True, debug=2)
