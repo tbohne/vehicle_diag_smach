@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from tensorflow import keras
 
 from AW_40_GUI import GUI
-from oscillogram_classification import grad_cam
+from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from vehicle_diag_smach import config
 from vehicle_diag_smach import ontology_instance_generator
@@ -373,8 +373,8 @@ class ClassifyOscillograms(smach.State):
         print("PREDICTION:", prediction)
         print("shape of pred.:", prediction.shape)
 
-        heatmap = grad_cam.generate_gradcam(np.array([net_input]), model)
-        grad_cam.plot_gradcam(heatmap, voltages)
+        heatmap = cam.generate_gradcam(np.array([net_input]), model)
+        cam.plot_gradcam(heatmap, voltages)
 
         userdata.diagnosis = ""
         at_least_one_anomaly = True
