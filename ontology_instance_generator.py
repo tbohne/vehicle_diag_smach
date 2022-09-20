@@ -38,8 +38,7 @@ class OntologyInstanceGenerator:
         self.add_vehicle()
         self.add_fault_causes()
         self.add_fault_symptoms()
-        self.add_suspect_component()
-        self.add_fault_description()
+        self.add_suspect_components()
         self.add_fault_category()
         self.add_measuring_positions()
         self.add_corrective_actions()
@@ -94,7 +93,7 @@ class OntologyInstanceGenerator:
             fault_condition = list(self.dtc_obj.represents)[0]
             fault_condition.manifestedBy.append(s)
 
-    def add_suspect_component(self):
+    def add_suspect_components(self):
         # TODO: retrieve from DB
         sus_components = ["susOne", "susTwo", "susThree"]
         for sus in sus_components:
@@ -108,13 +107,6 @@ class OntologyInstanceGenerator:
         cat = self.onto.FaultCategory()
         cat.category_name.append(fault_cat)
         self.dtc_obj.hasCategory.append(cat)
-
-    def add_fault_description(self):
-        # TODO: retrieve from DB
-        fault_desc = "This is fault X test test test.."
-        desc = self.onto.FaultDescription()
-        desc.fault_description.append(fault_desc)
-        self.dtc_obj.hasDescription.append(desc)
 
     def add_measuring_positions(self):
         # TODO: retrieve from DB
