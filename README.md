@@ -16,6 +16,7 @@ State-machine-based prototype of a vehicle diagnosis *[and recommendation]* syst
 ```
 $ mkdir diag
 $ cd diag
+$ git clone https://github.com/tbohne/vehicle_diag_smach.git
 $ git clone https://github.com/tbohne/AW_40_GUI.git
 $ git clone https://github.com/tbohne/OBDOntology.git
 $ git clone https://github.com/tbohne/oscillogram_classification.git
@@ -33,7 +34,7 @@ setup(
 ```
 Install:
 ```
-$ python setup.py install
+$ pip install . --user
 ```
 
 ## Usage
