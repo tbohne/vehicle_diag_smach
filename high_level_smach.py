@@ -13,7 +13,7 @@ from AW_40_GUI import GUI
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from vehicle_diag_smach import config
-from vehicle_diag_smach import ontology_instance_generator
+from OBDOntology import ontology_instance_generator
 
 
 class RecVehicleAndProcUserData(smach.State):
