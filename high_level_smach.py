@@ -373,8 +373,8 @@ class ClassifyOscillograms(smach.State):
         print("PREDICTION:", prediction)
         print("shape of pred.:", prediction.shape)
 
-        heatmap = cam.generate_gradcam(np.array([net_input]), model)
-        cam.plot_gradcam(heatmap, voltages)
+        heatmaps = {'gradcam': cam.generate_gradcam(np.array([net_input]), model)}
+        cam.plot_heatmaps(heatmaps, voltages)
 
         userdata.diagnosis = ""
         at_least_one_anomaly = True
