@@ -23,7 +23,7 @@ $ git clone https://github.com/tbohne/oscillogram_classification.git
 $ touch __init__.py setup.py
 ```
 Open `setup.py` and enter the following:
-```
+```python
 from setuptools import setup, find_packages
 setup(
     name='diag',
