@@ -192,9 +192,9 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         else:
             # generate ontology instance based on read OBD data
             instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-                read_model, read_hsn, read_tsn, read_vin, read_dtc, config.OBD_ONTOLOGY_PATH, config.ONTOLOGY_FILE
+                config.OBD_ONTOLOGY_PATH, local_kb=False
             )
-            instance_gen.create_ontology_instance()
+            instance_gen.extend_knowledge_graph(read_model, read_hsn, read_tsn, read_vin, read_dtc)
 
         userdata.processed_OBD_data = userdata.interview_data
         return "processed_OBD_data"
