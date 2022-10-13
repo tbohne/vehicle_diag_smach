@@ -6,14 +6,13 @@ import subprocess
 
 import numpy as np
 import smach
-from bs4 import BeautifulSoup
-from tensorflow import keras
-
 from AW_40_GUI import GUI
+from OBDOntology import ontology_instance_generator
+from bs4 import BeautifulSoup
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
+from tensorflow import keras
 from vehicle_diag_smach import config
-from OBDOntology import ontology_instance_generator
 
 
 class RecVehicleAndProcUserData(smach.State):
