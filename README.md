@@ -10,6 +10,8 @@ State-machine-based prototype of a vehicle diagnosis *[and recommendation]* syst
 - [**tensorflow**](https://pypi.org/project/tensorflow/): open source machine learning framework
 - [**OBDOntology**](https://github.com/tbohne/OBDOntology): ontology for capturing knowledge about on-board diagnostics (OBD), particularly diagnostic trouble codes (DTCs) + ontology query tool
 - [**oscillogram_classification**](https://github.com/tbohne/oscillogram_classification): neural network based anomaly detection for vehicle components using oscilloscope recordings
+- [**CustomerXPS**](https://github.com/tbohne/CustomerXPS): expert system that deals with customer complaints
+- [**py4j**](https://www.py4j.org/): bridge between Python and Java
 
 ## Installation
 
@@ -20,6 +22,7 @@ $ git clone https://github.com/tbohne/vehicle_diag_smach.git
 $ git clone https://github.com/tbohne/AW_40_GUI.git
 $ git clone https://github.com/tbohne/OBDOntology.git
 $ git clone https://github.com/tbohne/oscillogram_classification.git
+$ git clone https://github.com/tbohne/CustomerXPS.git
 $ touch __init__.py setup.py
 ```
 Open `setup.py` and enter the following:
@@ -36,9 +39,15 @@ Install:
 ```
 $ pip install . --user
 ```
+Additionally, to use the customer XPS, create a .jar file with the py4j and d3web dependencies (cf. [CustomerXPS](https://github.com/tbohne/CustomerXPS)).
 
 ## Usage
 
+Run customer XPS server (in `CustomerXPS/`):
+```
+$ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
+```
+Run state machine (in `diag/`):
 ```
 $ python vehicle_diag_smach/high_level_smach.py
 ```
