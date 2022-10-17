@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
-import subprocess
+from datetime import date
 
 import numpy as np
 import smach
@@ -11,6 +11,7 @@ from OBDOntology import ontology_instance_generator
 from bs4 import BeautifulSoup
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
+from py4j.java_gateway import JavaGateway
 from tensorflow import keras
 from vehicle_diag_smach import config
 
@@ -22,12 +23,9 @@ class RecVehicleAndProcUserData(smach.State):
     """
 
     def __init__(self):
-        smach.State.__init__(self,
-                             outcomes=['processed_user_data'],
-                             input_keys=[''],
-                             output_keys=['user_data'])
+        smach.State.__init__(self, outcomes=['processed_user_data'], input_keys=[''], output_keys=['user_data'])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'REC_VEHICLE_AND_PROC_USER_DATA' state.
 
@@ -37,11 +35,18 @@ class RecVehicleAndProcUserData(smach.State):
         print("############################################")
         print("executing REC_VEHICLE_AND_PROC_USER_DATA state..")
         print("############################################")
-        # TODO: SETUP - how many parallel measurements are possible at most?
-        #   - based on workshop equipment (how many oscilloscope channels?)
-        #   - set value here, use it later for parallel measurements
-        # time.sleep(10)
-        userdata.user_data = "dummy user info"
+
+        # TODO: read from updated GUI
+        user_data = {
+            "workshop_name": "workshop_one",
+            "zipcode": "12345",
+            "workshop_id": "00000",
+            "mechanic_id": "99999",
+            # how many parallel measurements are possible at most (based on workshop equipment / oscilloscope channels)
+            "max_number_of_parallel_recordings": "1",
+            "date": date.today()
+        }
+        userdata.user_data = user_data
         return "processed_user_data"
 
 
@@ -52,7 +57,6 @@ class ProcCustomerComplaints(smach.State):
     """
 
     def __init__(self):
-
         smach.State.__init__(self,
                              outcomes=['received_complaints', 'no_complaints'],
                              input_keys=['user_data'],
@@ -63,14 +67,16 @@ class ProcCustomerComplaints(smach.State):
         """
         Launches the expert system that processes the customer complaints.
         """
-        print("launching customer XPS..")
-        subprocess.call(['java', '-jar', config.CUSTOMER_XPS])
+        print("establish connection to customer XPS server..")
+        gateway = JavaGateway()
+        customer_xps = gateway.entry_point
+        print("result of customer xps: ", customer_xps.demo())
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'PROC_CUSTOMER_COMPLAINTS' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state (provided user data)
         :return: outcome of the state ("received_complaints" | "no_complaints")
         """
         print("############################################")
