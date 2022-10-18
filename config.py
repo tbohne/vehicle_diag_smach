@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+SESSION_DIR = "session_files"
 INTERVIEW_PROTOCOL_FILE = "CustomerXPS/res/session_res.xml"
 OBD_ONTOLOGY_PATH = "OBDOntology/"
 ONTOLOGY_FILE = "static_obd_ontology.owl"

@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+import json
+import os
 from datetime import date
 
 import numpy as np
@@ -46,7 +48,16 @@ class RecVehicleAndProcUserData(smach.State):
             "max_number_of_parallel_recordings": "1",
             "date": date.today()
         }
-        userdata.user_data = user_data
+
+        # if not present, create directory for session data
+        if not os.path.exists(config.SESSION_DIR):
+            print("creating session data directory..")
+            os.makedirs(config.SESSION_DIR)
+
+        # write user data to session directory
+        with open(config.SESSION_DIR + '/user_data.json', 'w') as f:
+            json.dump(user_data, f, default=str)
+
         return "processed_user_data"
 
 
@@ -132,6 +143,7 @@ class EstablishInitialHypothesis(smach.State):
             # print(session_data.prettify())
             for tag in session_data.find_all('rating', {'type': 'heuristic'}):
                 res = tag.parent['objectName']
+            print("RES:", res)
 
             userdata.hypothesis = res
         else:
