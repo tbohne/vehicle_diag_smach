@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
-INTERVIEW_PROTOCOL_FILE = "vehicle_diag_smach/res/session_res.xml"
+INTERVIEW_PROTOCOL_FILE = "CustomerXPS/res/session_res.xml"
 OBD_ONTOLOGY_PATH = "OBDOntology/"
 ONTOLOGY_FILE = "static_obd_ontology.owl"
 TRAINED_MODEL = "vehicle_diag_smach/res/best_model.h5"
