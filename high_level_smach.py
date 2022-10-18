@@ -8,7 +8,7 @@ from datetime import date
 
 import numpy as np
 import smach
-from OBDOntology import ontology_instance_generator
+from OBDOntology import ontology_instance_generator, knowledge_graph_query_tool
 from bs4 import BeautifulSoup
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
@@ -119,13 +119,15 @@ class EstablishInitialHypothesis(smach.State):
         """
         Execution of 'ESTABLISH_INITIAL_HYPOTHESIS' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("established_init_hypothesis" | "no_oscilloscope_required" | "no_OBD_and_no_CC")
         """
         print("############################################")
         print("executing ESTABLISH_INITIAL_HYPOTHESIS state..")
         print("############################################")
         print("reading XML protocol..")
+
+        # TODO: use historical information to deny certain hypotheses (e.g. repeated replacement of same component)
 
         if userdata.interview_protocol_file:
             print("customer complaints available..")
@@ -161,7 +163,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         smach.State.__init__(self,
                              outcomes=['processed_OBD_data', 'no_OBD_data'],
                              input_keys=[''],
-                             output_keys=['VIN'])
+                             output_keys=['vehicle_specific_instance_data'])
 
     @staticmethod
     def parse_obd_logfile() -> dict:
@@ -183,7 +185,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         """
         Execution of 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("processed_OBD_data" | "no_OBD_data")
         """
         print("############################################")
@@ -200,41 +202,53 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
                 vehicle_specific_instance_data['model'], vehicle_specific_instance_data['hsn'],
                 vehicle_specific_instance_data['tsn'], vehicle_specific_instance_data['vin'], dtc
             )
-        userdata.VIN = vehicle_specific_instance_data['vin']
+        userdata.vehicle_specific_instance_data = vehicle_specific_instance_data
         return "processed_OBD_data"
 
 
 class RetrieveHistoricalData(smach.State):
     """
     State in the high-level SMACH that represents situations in which historical information are retrieved for the
-    given car (individually, not type), i.e., information that we accumulated in previous repair sessions in the past.
+    given car (individually, not type), i.e., information that we accumulated in previous repair sessions.
+    Optionally, historical data for the car model can be retrieved.
     """
 
     def __init__(self):
         smach.State.__init__(self,
                              outcomes=['processed_all_data'],
-                             input_keys=['obd_info'],
-                             output_keys=['obd_and_hist_info'])
+                             input_keys=['vehicle_specific_instance_data'],
+                             output_keys=[''])
 
     def execute(self, userdata):
         """
         Execution of 'RETRIEVE_HISTORICAL_DATA' state.
 
-        :param userdata:  input of state
+        Two kinds of information:
+        - historical info for specific vehicle (via VIN)
+        - historical info for vehicle type (via model)
+
+        :param userdata: input of state
         :return: outcome of the state ("processed_all_data")
         """
         print("############################################")
         print("executing RETRIEVE_HISTORICAL_DATA state..")
         print("############################################")
-        # TODO: retrieve historical info for the specified vehicle
-        #   - using the VIN (obtained from OBD reading)
-        #   - use the information to deny certain hypotheses (e.g. repeated replacement of same component)
-        #
-        # - two kinds of information:
-        #   - historical info for specific vehicle (via VIN)
-        #   - historical info for vehicle type (model)
-        userdata.obd_and_hist_info = userdata.obd_info
-        # time.sleep(10)
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+        vin = userdata.vehicle_specific_instance_data['vin']
+        model = userdata.vehicle_specific_instance_data['model']
+
+        # TODO: potentially retrieve more historical information (not only DTCs)
+        print("VIN to retrieve historical data for:", vin)
+        historic_dtcs_by_vin = qt.query_dtcs_by_vin(vin)
+        print("DTCs previously recorded in present car:", historic_dtcs_by_vin)
+        print("model to retrieve historical data for:", model)
+        historic_dtcs_by_model = qt.query_dtcs_by_model(model)
+        print("DTCs previously recorded in model of present car:", historic_dtcs_by_model)
+
+        with open(config.SESSION_DIR + "/historical_info.txt", "w") as f:
+            f.write("DTCs previously recorded in car with VIN " + vin + ": " + str(historic_dtcs_by_vin) + "\n")
+            f.write("DTCs previously recorded in cars of model " + model + ": " + str(historic_dtcs_by_model) + "\n")
+
         return "processed_all_data"
 
 
@@ -603,7 +617,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      transitions={'processed_OBD_data': 'RETRIEVE_HISTORICAL_DATA',
                                   'no_OBD_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
                      remapping={'interview_data': 'sm_input',
-                                'processed_OBD_data': 'sm_input'})
+                                'vehicle_specific_instance_data': 'sm_input'})
 
             self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(),
                      transitions={'established_init_hypothesis': 'SELECT_BEST_UNUSED_INSTANCE',
@@ -614,7 +628,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
 
             self.add('RETRIEVE_HISTORICAL_DATA', RetrieveHistoricalData(),
                      transitions={'processed_all_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
-                     remapping={'obd_info': 'sm_input',
+                     remapping={'vehicle_specific_instance_data': 'sm_input',
                                 'obd_and_hist_info': 'sm_input'})
 
             self.add('SUGGEST_MEASURING_POS_OR_COMPONENTS', SuggestMeasuringPosOrComponents(),
