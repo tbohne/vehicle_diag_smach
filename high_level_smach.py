@@ -153,15 +153,31 @@ class EstablishInitialHypothesis(smach.State):
 class ReadOBDDataAndGenOntologyInstances(smach.State):
     """
     State in the high-level SMACH that represents situations in which the OBD information are read from the ECU.
-    Based on the read information, an ontology instance is generated.
-    TODO: actually, based on the current state, we will probably have ontology instances generated in advance by experts
+    Based on the read information, an ontology instance is generated, i.e., the vehicle-specific instance data
+    is entered into the knowledge graph.
     """
 
     def __init__(self):
         smach.State.__init__(self,
                              outcomes=['processed_OBD_data', 'no_OBD_data'],
-                             input_keys=['interview_data'],
-                             output_keys=['processed_OBD_data'])
+                             input_keys=[''],
+                             output_keys=['VIN'])
+
+    @staticmethod
+    def parse_obd_logfile() -> dict:
+        print("processing OBD log file..")
+        obd_data = {"dtc_list": [], "model": "", "hsn": "", "tsn": "", "vin": ""}
+
+        with open(config.SAMPLE_OBD_LOG) as f:
+            obd_lines = f.readlines()
+
+        # TODO: parse DTCs from OBD log (above)
+        obd_data['dtc_list'] = ['P2563']
+        obd_data['model'] = "Mazda 3"
+        obd_data['hsn'] = "849357984"
+        obd_data['tsn'] = "453948539"
+        obd_data['vin'] = "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
+        return obd_data
 
     def execute(self, userdata):
         """
@@ -173,37 +189,18 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         print("############################################")
         print("executing READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES state..")
         print("############################################")
-
-        print("OBD INPUT:", userdata.interview_data)
-
-        # TODO: include OBD parser (OBD codes + meta data)
-        obd_avail = True
-        if not obd_avail:
+        vehicle_specific_instance_data = self.parse_obd_logfile()
+        if len(vehicle_specific_instance_data['dtc_list']) == 0:
             return "no_OBD_data"
 
-        # OBD data available
-        # TODO: read from OBD file
-        read_dtc = "P1111"
-        read_model = "Mazda 3"
-        read_hsn = "849357984"
-        read_tsn = "453948539"
-        read_vin = "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
-        print("processed OBD information..")
-
-        # TODO: first step is a lookup on our own server
-        #   - did we create an ontology instance for this vehicle-DTC combination before?
-        #   - if so, retrieve this instance instead of creating a new one from external DB data
-        instance_match_on_server = False
-        if instance_match_on_server:
-            pass
-        else:
-            # generate ontology instance based on read OBD data
-            instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-                config.OBD_ONTOLOGY_PATH, local_kb=False
+        # extend knowledge graph with read OBD data (if the vehicle instance already exists, it will be extended)
+        instance_gen = ontology_instance_generator.OntologyInstanceGenerator(config.OBD_ONTOLOGY_PATH, local_kb=False)
+        for dtc in vehicle_specific_instance_data['dtc_list']:
+            instance_gen.extend_knowledge_graph(
+                vehicle_specific_instance_data['model'], vehicle_specific_instance_data['hsn'],
+                vehicle_specific_instance_data['tsn'], vehicle_specific_instance_data['vin'], dtc
             )
-            instance_gen.extend_knowledge_graph(read_model, read_hsn, read_tsn, read_vin, read_dtc)
-
-        userdata.processed_OBD_data = userdata.interview_data
+        userdata.VIN = vehicle_specific_instance_data['vin']
         return "processed_OBD_data"
 
 
