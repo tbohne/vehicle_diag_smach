@@ -8,7 +8,6 @@ from datetime import date
 
 import numpy as np
 import smach
-from AW_40_GUI import GUI
 from OBDOntology import ontology_instance_generator
 from bs4 import BeautifulSoup
 from oscillogram_classification import cam
@@ -25,13 +24,13 @@ class RecVehicleAndProcUserData(smach.State):
     """
 
     def __init__(self):
-        smach.State.__init__(self, outcomes=['processed_user_data'], input_keys=[''], output_keys=['user_data'])
+        smach.State.__init__(self, outcomes=['processed_user_data'], input_keys=[''], output_keys=[''])
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'REC_VEHICLE_AND_PROC_USER_DATA' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("processed_user_data")
         """
         print("############################################")
@@ -39,6 +38,7 @@ class RecVehicleAndProcUserData(smach.State):
         print("############################################")
 
         # TODO: read from updated GUI
+        # GUI.run_gui()
         user_data = {
             "workshop_name": "workshop_one",
             "zipcode": "12345",
@@ -68,20 +68,17 @@ class ProcCustomerComplaints(smach.State):
     """
 
     def __init__(self):
-        smach.State.__init__(self,
-                             outcomes=['received_complaints', 'no_complaints'],
-                             input_keys=['user_data'],
-                             output_keys=['interview_protocol_file'])
+        smach.State.__init__(self, outcomes=['received_complaints', 'no_complaints'], input_keys=[''], output_keys=[''])
 
     @staticmethod
-    def launch_customer_xps():
+    def launch_customer_xps() -> str:
         """
         Launches the expert system that processes the customer complaints.
         """
         print("establish connection to customer XPS server..")
         gateway = JavaGateway()
         customer_xps = gateway.entry_point
-        print("result of customer xps: ", customer_xps.demo())
+        return customer_xps.demo("../" + config.SESSION_DIR + "/xps_session.xml")
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -93,21 +90,16 @@ class ProcCustomerComplaints(smach.State):
         print("############################################")
         print("executing PROC_CUSTOMER_COMPLAINTS state..")
         print("############################################")
-
-        print("provided user data:", userdata.user_data)
-
         val = ""
         while val != "0" and val != "1":
             val = input("starting diagnosis with [0] / without [1] customer complaints")
 
         if val == "0":
-            self.launch_customer_xps()
+            print("result of customer xps: ", self.launch_customer_xps())
             print("customer XPS session protocol saved..")
-            userdata.interview_protocol_file = config.INTERVIEW_PROTOCOL_FILE
             return "received_complaints"
         else:
             print("starting diagnosis without customer complaints..")
-            userdata.interview_protocol_file = ""
             return "no_complaints"
 
 
@@ -185,7 +177,6 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         print("OBD INPUT:", userdata.interview_data)
 
         # TODO: include OBD parser (OBD codes + meta data)
-        GUI.run_gui()
         obd_avail = True
         if not obd_avail:
             return "no_OBD_data"
@@ -197,7 +188,6 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         read_hsn = "849357984"
         read_tsn = "453948539"
         read_vin = "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
-        # time.sleep(10)
         print("processed OBD information..")
 
         # TODO: first step is a lookup on our own server
