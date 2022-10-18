@@ -5,7 +5,6 @@ State-machine-based prototype of a vehicle diagnosis *[and recommendation]* syst
 ## Dependencies
 
 - [**standalone-smach**](https://pypi.org/project/standalone-smach/): ROS SMACH fork for development of HSM outside of ROS
-- [**AW_40_GUI**](https://github.com/DanielNowak98/AW_40_GUI): GUI for parsing OBD data and vehicle meta information
 - [**BeautifulSoup**](https://pypi.org/project/beautifulsoup4/): library that makes it easy to scrape information from web pages
 - [**tensorflow**](https://pypi.org/project/tensorflow/): open source machine learning framework
 - [**OBDOntology**](https://github.com/tbohne/OBDOntology): ontology for capturing knowledge about on-board diagnostics (OBD), particularly diagnostic trouble codes (DTCs) + ontology query tool
@@ -19,7 +18,6 @@ State-machine-based prototype of a vehicle diagnosis *[and recommendation]* syst
 $ mkdir diag
 $ cd diag
 $ git clone https://github.com/tbohne/vehicle_diag_smach.git
-$ git clone https://github.com/tbohne/AW_40_GUI.git
 $ git clone https://github.com/tbohne/OBDOntology.git
 $ git clone https://github.com/tbohne/oscillogram_classification.git
 $ git clone https://github.com/tbohne/CustomerXPS.git
