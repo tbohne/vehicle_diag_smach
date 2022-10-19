@@ -111,7 +111,7 @@ class EstablishInitialHypothesis(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['established_init_hypothesis', 'no_oscilloscope_required', 'no_OBD_and_no_CC'],
+                             outcomes=['established_init_hypothesis', 'no_OBD_and_no_CC'],
                              input_keys=['vehicle_specific_instance_data'],
                              output_keys=['context', 'hypothesis'])
 
@@ -120,7 +120,7 @@ class EstablishInitialHypothesis(smach.State):
         Execution of 'ESTABLISH_INITIAL_HYPOTHESIS' state.
 
         :param userdata: input of state
-        :return: outcome of the state ("established_init_hypothesis" | "no_oscilloscope_required" | "no_OBD_and_no_CC")
+        :return: outcome of the state ("established_init_hypothesis" | "no_OBD_and_no_CC")
         """
         print("############################################")
         print("executing ESTABLISH_INITIAL_HYPOTHESIS state..")
@@ -275,7 +275,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['provided_suggestions'],
+                             outcomes=['provided_suggestions', 'no_oscilloscope_required'],
                              input_keys=['processed_OBD_data'],
                              output_keys=[''])
 
@@ -284,7 +284,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
         Execution of 'SUGGEST_MEASURING_POS_OR_COMPONENTS' state.
 
         :param userdata:  input of state
-        :return: outcome of the state ("provided_suggestions")
+        :return: outcome of the state ("provided_suggestions" | "no_oscilloscope_required")
         """
         print("############################################")
         print("executing SUGGEST_MEASURING_POS_OR_COMPONENTS state..")
@@ -358,6 +358,34 @@ class PerformDataManagement(smach.State):
         if no_oscilloscope:
             return "performed_reduced_data_management"
         return "performed_data_management"
+
+
+class InspectComponents(smach.State):
+    """
+    State in high-level SMACH representing situations where manual inspection of suspect components for which
+    oscilloscope diagnosis is not appropriate is performed.
+    """
+
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['no_anomaly', 'detected_anomalies'],
+                             input_keys=[''],
+                             output_keys=[''])
+
+    def execute(self, userdata):
+        """
+        Execution of 'INSPECT_COMPONENTS' state.
+
+        :param userdata:  input of state
+        :return: outcome of the state ("no_anomaly" | "detected_anomalies")
+        """
+        print("############################################")
+        print("executing INSPECT_COMPONENTS state..")
+        print("############################################")
+        # TODO: to be implemented
+        if True:
+            return "no_anomaly"
+        return "detected_anomalies"
 
 
 class ClassifyOscillograms(smach.State):
@@ -451,7 +479,7 @@ class ProvideDiagAndShowTrace(smach.State):
         return "provided_diag_and_explanation"
 
 
-class ProvideInitialHypothesis(smach.State):
+class ProvideInitialHypothesisAndLogContext(smach.State):
     """
     State in the high-level SMACH that represents situations in which only the initial hypothesis is provided due to
     unmanageable uncertainty.
@@ -465,13 +493,13 @@ class ProvideInitialHypothesis(smach.State):
 
     def execute(self, userdata):
         """
-        Execution of 'PROVIDE_INITIAL_HYPOTHESIS' state.
+        Execution of 'PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT' state.
 
         :param userdata:  input of state
         :return: outcome of the state ("no_diag")
         """
         print("############################################")
-        print("executing PROVIDE_INITIAL_HYPOTHESIS state..")
+        print("executing PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT state..")
         print("############################################")
         return "no_diag"
 
@@ -525,7 +553,7 @@ class GenArtificialInstanceBasedOnCC(smach.State):
         return "generated_artificial_instance"
 
 
-class SelectBestUnusedInstance(smach.State):
+class SelectBestUnusedErrorCodeInstance(smach.State):
     """
     State in the high-level SMACH that represents situations in which a best-suited, unused ontology instance is
     selected for further processing.
@@ -540,14 +568,14 @@ class SelectBestUnusedInstance(smach.State):
 
     def execute(self, userdata):
         """
-        Execution of 'SELECT_BEST_UNUSED_INSTANCE' state.
+        Execution of 'SELECT_BEST_UNUSED_DTC_INSTANCE' state.
 
         :param userdata:  input of state
         :return: outcome of the state ("selected_matching_instance(OBD_CC)" | "no_matching_selected_best_instance" |
                                        "no_instance" | "no_instance_and_CC_already_used")
         """
         print("############################################")
-        print("executing SELECT_BEST_UNUSED_INSTANCE state..")
+        print("executing SELECT_BEST_UNUSED_DTC_INSTANCE state..")
         print("############################################")
         return "selected_matching_instance(OBD_CC)"
 
@@ -635,8 +663,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                                 'vehicle_specific_instance_data': 'sm_input'})
 
             self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(),
-                     transitions={'established_init_hypothesis': 'SELECT_BEST_UNUSED_INSTANCE',
-                                  'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT',
+                     transitions={'established_init_hypothesis': 'SELECT_BEST_UNUSED_DTC_INSTANCE',
                                   'no_OBD_and_no_CC': 'insufficient_data'},
                      remapping={'vehicle_specific_instance_data': 'sm_input',
                                 'hypothesis': 'sm_input'})
@@ -647,7 +674,8 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                                 'vehicle_specific_instance_data_out': 'sm_input'})
 
             self.add('SUGGEST_MEASURING_POS_OR_COMPONENTS', SuggestMeasuringPosOrComponents(),
-                     transitions={'provided_suggestions': 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS'},
+                     transitions={'provided_suggestions': 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS',
+                                  'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT'},
                      remapping={'processed_OBD_data': 'sm_input'})
 
             self.add('PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS', PerformSynchronizedSensorRecordings(),
@@ -656,11 +684,16 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
 
             self.add('PERFORM_DATA_MANAGEMENT', PerformDataManagement(),
                      transitions={'performed_data_management': 'CLASSIFY_OSCILLOGRAMS',
-                                  'performed_reduced_data_management': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
+                                  'performed_reduced_data_management': 'INSPECT_COMPONENTS'},
+                     remapping={})
+
+            self.add('INSPECT_COMPONENTS', InspectComponents(),
+                     transitions={':no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
+                                  'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
                      remapping={})
 
             self.add('CLASSIFY_OSCILLOGRAMS', ClassifyOscillograms(),
-                     transitions={'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_INSTANCE',
+                     transitions={'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_DTC_INSTANCE',
                                   'no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
                      remapping={'oscillogram': 'sm_input',
@@ -670,7 +703,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      transitions={'provided_diag_and_explanation': 'UPLOAD_DIAGNOSIS'},
                      remapping={'diagnosis': 'sm_input'})
 
-            self.add('PROVIDE_INITIAL_HYPOTHESIS', ProvideInitialHypothesis(),
+            self.add('PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT', ProvideInitialHypothesisAndLogContext(),
                      transitions={'no_diag': 'refuted_hypothesis'},
                      remapping={})
 
@@ -682,7 +715,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      transitions={'generated_artificial_instance': 'SUGGEST_MEASURING_POS_OR_COMPONENTS'},
                      remapping={})
 
-            self.add('SELECT_BEST_UNUSED_INSTANCE', SelectBestUnusedInstance(),
+            self.add('SELECT_BEST_UNUSED_DTC_INSTANCE', SelectBestUnusedErrorCodeInstance(),
                      transitions={'selected_matching_instance(OBD_CC)': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
                                   'no_matching_selected_best_instance': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
                                   'no_instance': 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC',
@@ -690,7 +723,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      remapping={})
 
             self.add('NO_PROBLEM_DETECTED_CHECK_SENSOR', NoProblemDetectedCheckSensor(),
-                     transitions={'sensor_works': 'PROVIDE_INITIAL_HYPOTHESIS',
+                     transitions={'sensor_works': 'PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT',
                                   'sensor_defective': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
                      remapping={})
 
