@@ -78,7 +78,7 @@ class ProcCustomerComplaints(smach.State):
         print("establish connection to customer XPS server..")
         gateway = JavaGateway()
         customer_xps = gateway.entry_point
-        return customer_xps.demo("../" + config.SESSION_DIR + "/xps_session.xml")
+        return customer_xps.demo("../" + config.SESSION_DIR + "/" + config.XPS_SESSION_FILE)
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -112,7 +112,7 @@ class EstablishInitialHypothesis(smach.State):
     def __init__(self):
         smach.State.__init__(self,
                              outcomes=['established_init_hypothesis', 'no_oscilloscope_required', 'no_OBD_and_no_CC'],
-                             input_keys=['interview_protocol_file'],
+                             input_keys=['vehicle_specific_instance_data'],
                              output_keys=['context', 'hypothesis'])
 
     def execute(self, userdata):
@@ -125,30 +125,43 @@ class EstablishInitialHypothesis(smach.State):
         print("############################################")
         print("executing ESTABLISH_INITIAL_HYPOTHESIS state..")
         print("############################################")
-        print("reading XML protocol..")
+        print("reading customer complaints session protocol..")
+        initial_hypothesis = ""
+        with open(config.SESSION_DIR + "/" + config.XPS_SESSION_FILE) as f:
+            data = f.read()
+            session_data = BeautifulSoup(data, 'xml')
+            for tag in session_data.find_all('rating', {'type': 'heuristic'}):
+                initial_hypothesis = tag.parent['objectName']
 
         # TODO: use historical information to deny certain hypotheses (e.g. repeated replacement of same component)
+        print("reading historical information..")
+        with open(config.SESSION_DIR + "/" + config.HISTORICAL_INFO_FILE) as f:
+            # TODO: do something with it
+            data = f.read()
 
-        if userdata.interview_protocol_file:
-            print("customer complaints available..")
-            with open(userdata.interview_protocol_file) as f:
-                data = f.read()
-            session_data = BeautifulSoup(data, 'xml')
-            # print(session_data.prettify())
-            for tag in session_data.find_all('rating', {'type': 'heuristic'}):
-                res = tag.parent['objectName']
-            print("RES:", res)
+        # decide whether oscilloscope required
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+        oscilloscope_usage = []
+        for dtc in userdata.vehicle_specific_instance_data['dtc_list']:
+            for comp in qt.query_suspect_component_by_dtc(dtc):
+                use = qt.query_oscilloscope_usage_by_suspect_component(comp)
+                print("comp:", comp, "use oscilloscope:", use)
+                oscilloscope_usage.append(use[0])
 
-            userdata.hypothesis = res
+        if True in oscilloscope_usage:
+            print("there's at least one suspect component that could be diagnosed with an oscilloscope..")
         else:
-            print("no customer complaints available..")
-
-        oscilloscope_required = True
-        if not oscilloscope_required:
+            print("none of the identified suspect components can be diagnosed with an oscilloscope..")
             return "no_oscilloscope_required"
 
+        if len(initial_hypothesis) > 0:
+            print("initial hypothesis based on customer complaints available..")
+            print("initial hypothesis:", initial_hypothesis)
+            userdata.hypothesis = initial_hypothesis
+        else:
+            print("no initial hypothesis based on customer complaints..")
+
         print("establish hypothesis..")
-        # time.sleep(10)
         return "established_init_hypothesis"
 
 
@@ -216,8 +229,8 @@ class RetrieveHistoricalData(smach.State):
     def __init__(self):
         smach.State.__init__(self,
                              outcomes=['processed_all_data'],
-                             input_keys=['vehicle_specific_instance_data'],
-                             output_keys=[''])
+                             input_keys=['vehicle_specific_instance_data_in'],
+                             output_keys=['vehicle_specific_instance_data_out'])
 
     def execute(self, userdata):
         """
@@ -234,8 +247,8 @@ class RetrieveHistoricalData(smach.State):
         print("executing RETRIEVE_HISTORICAL_DATA state..")
         print("############################################")
         qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
-        vin = userdata.vehicle_specific_instance_data['vin']
-        model = userdata.vehicle_specific_instance_data['model']
+        vin = userdata.vehicle_specific_instance_data_in['vin']
+        model = userdata.vehicle_specific_instance_data_in['model']
 
         # TODO: potentially retrieve more historical information (not only DTCs)
         print("VIN to retrieve historical data for:", vin)
@@ -245,9 +258,11 @@ class RetrieveHistoricalData(smach.State):
         historic_dtcs_by_model = qt.query_dtcs_by_model(model)
         print("DTCs previously recorded in model of present car:", historic_dtcs_by_model)
 
-        with open(config.SESSION_DIR + "/historical_info.txt", "w") as f:
+        with open(config.SESSION_DIR + "/" + config.HISTORICAL_INFO_FILE, "w") as f:
             f.write("DTCs previously recorded in car with VIN " + vin + ": " + str(historic_dtcs_by_vin) + "\n")
             f.write("DTCs previously recorded in cars of model " + model + ": " + str(historic_dtcs_by_model) + "\n")
+
+        userdata.vehicle_specific_instance_data_out = userdata.vehicle_specific_instance_data_in
 
         return "processed_all_data"
 
@@ -623,13 +638,13 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      transitions={'established_init_hypothesis': 'SELECT_BEST_UNUSED_INSTANCE',
                                   'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT',
                                   'no_OBD_and_no_CC': 'insufficient_data'},
-                     remapping={'interview_protocol_file': 'sm_input',
+                     remapping={'vehicle_specific_instance_data': 'sm_input',
                                 'hypothesis': 'sm_input'})
 
             self.add('RETRIEVE_HISTORICAL_DATA', RetrieveHistoricalData(),
                      transitions={'processed_all_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
-                     remapping={'vehicle_specific_instance_data': 'sm_input',
-                                'obd_and_hist_info': 'sm_input'})
+                     remapping={'vehicle_specific_instance_data_in': 'sm_input',
+                                'vehicle_specific_instance_data_out': 'sm_input'})
 
             self.add('SUGGEST_MEASURING_POS_OR_COMPONENTS', SuggestMeasuringPosOrComponents(),
                      transitions={'provided_suggestions': 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS'},
