@@ -688,7 +688,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      remapping={})
 
             self.add('INSPECT_COMPONENTS', InspectComponents(),
-                     transitions={':no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
+                     transitions={'no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
                      remapping={})
 
