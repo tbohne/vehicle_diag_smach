@@ -198,6 +198,9 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         if len(vehicle_specific_instance_data['dtc_list']) == 0:
             return "no_OBD_data"
 
+        with open(config.SESSION_DIR + "/" + config.OBD_INFO_FILE, "w") as f:
+            json.dump(vehicle_specific_instance_data, f, default=str)
+
         # extend knowledge graph with read OBD data (if the vehicle instance already exists, it will be extended)
         instance_gen = ontology_instance_generator.OntologyInstanceGenerator(config.OBD_ONTOLOGY_PATH, local_kb=False)
         for dtc in vehicle_specific_instance_data['dtc_list']:
@@ -560,7 +563,7 @@ class GenArtificialInstanceBasedOnCC(smach.State):
 
 class SelectBestUnusedErrorCodeInstance(smach.State):
     """
-    State in the high-level SMACH that represents situations in which a best-suited, unused ontology instance is
+    State in the high-level SMACH that represents situations in which a best-suited, unused DTC instance is
     selected for further processing.
     """
 
@@ -575,13 +578,19 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         """
         Execution of 'SELECT_BEST_UNUSED_DTC_INSTANCE' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("selected_matching_instance(OBD_CC)" | "no_matching_selected_best_instance" |
                                        "no_instance" | "no_instance_and_CC_already_used")
         """
         print("############################################")
         print("executing SELECT_BEST_UNUSED_DTC_INSTANCE state..")
         print("############################################")
+
+        # TODO: to decide this, we need to read the following information:
+        #   - DTCs, CC
+
+        # TODO: how do I store the info of whether I already used the CC?
+
         return "selected_matching_instance(OBD_CC)"
 
 

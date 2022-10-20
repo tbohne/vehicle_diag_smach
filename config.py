@@ -5,6 +5,7 @@
 SESSION_DIR = "session_files"
 XPS_SESSION_FILE = "xps_session.xml"
 HISTORICAL_INFO_FILE = "historical_info.txt"
+OBD_INFO_FILE = "obd_info.txt"
 OBD_ONTOLOGY_PATH = "OBDOntology/"
 ONTOLOGY_FILE = "static_obd_ontology.owl"
 TRAINED_MODEL = "vehicle_diag_smach/res/best_model.h5"
