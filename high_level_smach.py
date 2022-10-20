@@ -113,7 +113,7 @@ class EstablishInitialHypothesis(smach.State):
         smach.State.__init__(self,
                              outcomes=['established_init_hypothesis', 'no_OBD_and_no_CC'],
                              input_keys=['vehicle_specific_instance_data'],
-                             output_keys=['context', 'hypothesis'])
+                             output_keys=['hypothesis'])
 
     def execute(self, userdata):
         """
@@ -125,6 +125,7 @@ class EstablishInitialHypothesis(smach.State):
         print("############################################")
         print("executing ESTABLISH_INITIAL_HYPOTHESIS state..")
         print("############################################")
+
         print("reading customer complaints session protocol..")
         initial_hypothesis = ""
         with open(config.SESSION_DIR + "/" + config.XPS_SESSION_FILE) as f:
@@ -133,10 +134,12 @@ class EstablishInitialHypothesis(smach.State):
             for tag in session_data.find_all('rating', {'type': 'heuristic'}):
                 initial_hypothesis = tag.parent['objectName']
 
-        # TODO: use historical information to deny certain hypotheses (e.g. repeated replacement of same component)
+        if len(userdata.vehicle_specific_instance_data['dtc_list']) == 0 and len(initial_hypothesis) == 0:
+            # no OBD data + no customer complaints -> insufficient data
+            return "no_OBD_and_no_CC"
+
         print("reading historical information..")
         with open(config.SESSION_DIR + "/" + config.HISTORICAL_INFO_FILE) as f:
-            # TODO: do something with it
             data = f.read()
 
         if len(initial_hypothesis) > 0:
@@ -146,6 +149,8 @@ class EstablishInitialHypothesis(smach.State):
         else:
             print("no initial hypothesis based on customer complaints..")
 
+        # TODO: compare customer complaints with OBD data (matching?)
+        # TODO: use historical data to refine initial hypothesis (e.g. to deny certain hypotheses)
         print("establish hypothesis..")
         return "established_init_hypothesis"
 
