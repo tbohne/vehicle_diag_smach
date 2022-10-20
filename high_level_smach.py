@@ -139,21 +139,6 @@ class EstablishInitialHypothesis(smach.State):
             # TODO: do something with it
             data = f.read()
 
-        # decide whether oscilloscope required
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
-        oscilloscope_usage = []
-        for dtc in userdata.vehicle_specific_instance_data['dtc_list']:
-            for comp in qt.query_suspect_component_by_dtc(dtc):
-                use = qt.query_oscilloscope_usage_by_suspect_component(comp)
-                print("comp:", comp, "use oscilloscope:", use)
-                oscilloscope_usage.append(use[0])
-
-        if True in oscilloscope_usage:
-            print("there's at least one suspect component that could be diagnosed with an oscilloscope..")
-        else:
-            print("none of the identified suspect components can be diagnosed with an oscilloscope..")
-            return "no_oscilloscope_required"
-
         if len(initial_hypothesis) > 0:
             print("initial hypothesis based on customer complaints available..")
             print("initial hypothesis:", initial_hypothesis)
@@ -283,13 +268,28 @@ class SuggestMeasuringPosOrComponents(smach.State):
         """
         Execution of 'SUGGEST_MEASURING_POS_OR_COMPONENTS' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("provided_suggestions" | "no_oscilloscope_required")
         """
         print("############################################")
         print("executing SUGGEST_MEASURING_POS_OR_COMPONENTS state..")
         print("############################################")
         print(userdata.processed_OBD_data)
+
+        # decide whether oscilloscope required
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+        oscilloscope_usage = []
+        for dtc in userdata.vehicle_specific_instance_data['dtc_list']:
+            for comp in qt.query_suspect_component_by_dtc(dtc):
+                use = qt.query_oscilloscope_usage_by_suspect_component(comp)
+                print("comp:", comp, "use oscilloscope:", use)
+                oscilloscope_usage.append(use[0])
+        if True in oscilloscope_usage:
+            print("there's at least one suspect component that could be diagnosed with an oscilloscope..")
+        else:
+            print("none of the identified suspect components can be diagnosed with an oscilloscope..")
+            return "no_oscilloscope_required"
+
         # TODO: implement suggestion for measuring pos
         print("SUGGESTED MEASURING POS: X, Y, Z")
         # oqt = OntologyQueryTool()
