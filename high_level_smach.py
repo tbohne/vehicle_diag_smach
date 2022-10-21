@@ -277,7 +277,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
     def __init__(self):
         smach.State.__init__(self,
                              outcomes=['provided_suggestions', 'no_oscilloscope_required'],
-                             input_keys=['processed_OBD_data'],
+                             input_keys=['selected_instance', 'generated_instance'],
                              output_keys=[''])
 
     def execute(self, userdata):
@@ -290,7 +290,9 @@ class SuggestMeasuringPosOrComponents(smach.State):
         print("############################################")
         print("executing SUGGEST_MEASURING_POS_OR_COMPONENTS state..")
         print("############################################")
-        print(userdata.processed_OBD_data)
+
+        print("selected instance:", userdata.selected_instance)
+        print("generated instance:", userdata.generated_instance)
 
         # decide whether oscilloscope required
         qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
@@ -551,22 +553,25 @@ class GenArtificialInstanceBasedOnCC(smach.State):
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['generated_artificial_instance'],
                              input_keys=['customer_complaints'],
-                             output_keys=[''])
+                             output_keys=['generated_instance'])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("generated_artificial_instance")
         """
         print("############################################")
         print("executing GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC state..")
         print("############################################")
         print("CC:", userdata.customer_complaints)
+        # TODO: generate instance based on provided CC
+        userdata.generated_instance = "P2563"
         return "generated_artificial_instance"
 
 
@@ -748,7 +753,8 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
             self.add('SUGGEST_MEASURING_POS_OR_COMPONENTS', SuggestMeasuringPosOrComponents(),
                      transitions={'provided_suggestions': 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS',
                                   'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT'},
-                     remapping={'processed_OBD_data': 'sm_input'})
+                     remapping={'selected_instance': 'sm_input',
+                                'generated_instance': 'sm_input'})
 
             self.add('PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS', PerformSynchronizedSensorRecordings(),
                      transitions={'processed_sync_sensor_data': 'PERFORM_DATA_MANAGEMENT'},
@@ -785,7 +791,8 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
 
             self.add('GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC', GenArtificialInstanceBasedOnCC(),
                      transitions={'generated_artificial_instance': 'SUGGEST_MEASURING_POS_OR_COMPONENTS'},
-                     remapping={'customer_complaints': 'sm_input'})
+                     remapping={'customer_complaints': 'sm_input',
+                                'generated_instance': 'sm_input'})
 
             self.add('SELECT_BEST_UNUSED_DTC_INSTANCE', SelectBestUnusedErrorCodeInstance(),
                      transitions={'selected_matching_instance(OBD_CC)': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
