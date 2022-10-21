@@ -546,14 +546,14 @@ class UploadDiagnosis(smach.State):
 
 class GenArtificialInstanceBasedOnCC(smach.State):
     """
-    State in the high-level SMACH that represents situations in which an artificial OBD ontology instance is generated
+    State in the high-level SMACH that represents situations in which an artificial DTC instance is generated
     based on the customer complaints. Used for cases where no OBD information is available.
     """
 
     def __init__(self):
         smach.State.__init__(self,
                              outcomes=['generated_artificial_instance'],
-                             input_keys=[''],
+                             input_keys=['customer_complaints'],
                              output_keys=[''])
 
     def execute(self, userdata):
@@ -566,6 +566,7 @@ class GenArtificialInstanceBasedOnCC(smach.State):
         print("############################################")
         print("executing GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC state..")
         print("############################################")
+        print("CC:", userdata.customer_complaints)
         return "generated_artificial_instance"
 
 
@@ -580,7 +581,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
                              outcomes=['selected_matching_instance(OBD_CC)', 'no_matching_selected_best_instance',
                                        'no_instance', 'no_instance_and_CC_already_used'],
                              input_keys=[''],
-                             output_keys=['selected_instance'])
+                             output_keys=['selected_instance', 'customer_complaints'])
 
     @staticmethod
     def remove_dtc_instance_from_tmp_file(remaining_instances: list) -> None:
@@ -625,6 +626,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         if len(dtc_list) == 0 and len(customer_complaints_list) == 1:
             # this option leads to the customer complaints being used to generate an artificial DTC instance
             self.remove_cc_instance_from_tmp_file()
+            userdata.customer_complaints = customer_complaints_list[0]
             return "no_instance"
 
         # case 2: both available
@@ -783,14 +785,15 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
 
             self.add('GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC', GenArtificialInstanceBasedOnCC(),
                      transitions={'generated_artificial_instance': 'SUGGEST_MEASURING_POS_OR_COMPONENTS'},
-                     remapping={})
+                     remapping={'customer_complaints': 'sm_input'})
 
             self.add('SELECT_BEST_UNUSED_DTC_INSTANCE', SelectBestUnusedErrorCodeInstance(),
                      transitions={'selected_matching_instance(OBD_CC)': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
                                   'no_matching_selected_best_instance': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
                                   'no_instance': 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC',
                                   'no_instance_and_CC_already_used': 'NO_PROBLEM_DETECTED_CHECK_SENSOR'},
-                     remapping={})
+                     remapping={'selected_instance': 'sm_input',
+                                'customer_complaints': 'sm_input'})
 
             self.add('NO_PROBLEM_DETECTED_CHECK_SENSOR', NoProblemDetectedCheckSensor(),
                      transitions={'sensor_works': 'PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT',
