@@ -146,6 +146,9 @@ class EstablishInitialHypothesis(smach.State):
             print("initial hypothesis based on customer complaints available..")
             print("initial hypothesis:", initial_hypothesis)
             userdata.hypothesis = initial_hypothesis
+            unused_cc = {'list': [initial_hypothesis]}
+            with open(config.SESSION_DIR + "/" + config.CC_TMP_FILE, 'w') as f:
+                json.dump(unused_cc, f, default=str)
         else:
             print("no initial hypothesis based on customer complaints..")
 
@@ -198,8 +201,13 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         if len(vehicle_specific_instance_data['dtc_list']) == 0:
             return "no_OBD_data"
 
+        # write OBD data to session file
         with open(config.SESSION_DIR + "/" + config.OBD_INFO_FILE, "w") as f:
             json.dump(vehicle_specific_instance_data, f, default=str)
+        # also create tmp file for unused DTC instances
+        with open(config.SESSION_DIR + "/" + config.DTC_TMP_FILE, "w") as f:
+            dtc_tmp = {'list': vehicle_specific_instance_data['dtc_list']}
+            json.dump(dtc_tmp, f, default=str)
 
         # extend knowledge graph with read OBD data (if the vehicle instance already exists, it will be extended)
         instance_gen = ontology_instance_generator.OntologyInstanceGenerator(config.OBD_ONTOLOGY_PATH, local_kb=False)
@@ -572,9 +580,28 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
                              outcomes=['selected_matching_instance(OBD_CC)', 'no_matching_selected_best_instance',
                                        'no_instance', 'no_instance_and_CC_already_used'],
                              input_keys=[''],
-                             output_keys=[''])
+                             output_keys=['selected_instance'])
 
-    def execute(self, userdata):
+    @staticmethod
+    def remove_dtc_instance_from_tmp_file(remaining_instances: list) -> None:
+        """
+        Updates the list of unused DTC instances in the corresponding tmp file.
+
+        :param remaining_instances: updated list to save in tmp file
+        """
+        with open(config.SESSION_DIR + "/" + config.DTC_TMP_FILE, "w") as f:
+            json.dump({'list': remaining_instances}, f, default=str)
+
+    @staticmethod
+    def remove_cc_instance_from_tmp_file() -> None:
+        """
+        Clears the customer complaints tmp file.
+        """
+        with open(config.SESSION_DIR + "/" + config.CC_TMP_FILE, 'w') as f:
+            # clear list, already used now
+            json.dump({'list': []}, f, default=str)
+
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'SELECT_BEST_UNUSED_DTC_INSTANCE' state.
 
@@ -586,12 +613,41 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         print("executing SELECT_BEST_UNUSED_DTC_INSTANCE state..")
         print("############################################")
 
-        # TODO: to decide this, we need to read the following information:
-        #   - DTCs, CC
+        # load DTC instances from tmp file
+        with open(config.SESSION_DIR + "/" + config.DTC_TMP_FILE) as f:
+            dtc_list = json.load(f)['list']
 
-        # TODO: how do I store the info of whether I already used the CC?
+        # load customer complaints from tmp file
+        with open(config.SESSION_DIR + "/" + config.CC_TMP_FILE) as f:
+            customer_complaints_list = json.load(f)['list']
 
-        return "selected_matching_instance(OBD_CC)"
+        # case 1: no DTC instance provided, but CC still available
+        if len(dtc_list) == 0 and len(customer_complaints_list) == 1:
+            # this option leads to the customer complaints being used to generate an artificial DTC instance
+            self.remove_cc_instance_from_tmp_file()
+            return "no_instance"
+
+        # case 2: both available
+        elif len(dtc_list) > 0 and len(customer_complaints_list) == 1:
+            # sub-case 1: matching instance
+            for dtc in dtc_list:
+                # TODO: check whether DTC matches CC
+                match = True
+                if match:
+                    userdata.selected_instance = dtc
+                    dtc_list.remove(dtc)
+                    self.remove_dtc_instance_from_tmp_file(dtc_list)
+                    return "selected_matching_instance(OBD_CC)"
+            # sub-case 2: no matching instance -> select best instance
+            # TODO: select best remaining DTC instance based on some criteria
+            userdata.selected_instance = dtc_list[0]
+            dtc_list.remove(dtc_list[0])
+            self.remove_dtc_instance_from_tmp_file(dtc_list)
+            return "no_matching_selected_best_instance"
+
+        # case 3: no remaining instance and customer complaints already used
+        elif len(dtc_list) == 0 and len(customer_complaints_list) == 0:
+            return "no_instance_and_CC_already_used"
 
 
 class NoProblemDetectedCheckSensor(smach.State):
