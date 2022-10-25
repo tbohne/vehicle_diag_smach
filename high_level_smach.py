@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
-import shutil
 import json
 import os
+import shutil
 from datetime import date
 from pathlib import Path
 
@@ -401,19 +401,31 @@ class PerformDataManagement(smach.State):
         print("executing PERFORM_DATA_MANAGEMENT state..")
         print("############################################")
 
-        # TODO: first, determine whether oscillograms have been generated
+        # TODO: optionally retrieve latest version of trained classifier from server
+        print("retrieving latest version of trained classifier from server..")
 
-        # TODO: read all the session files
+        # TODO: actually read session data
+        print("reading customer complaints from session files..")
+        print("reading OBD data from session files..")
+        print("reading historical info from session files..")
+        print("reading user data from session files..")
+        print("reading XPS interview data from session files..")
+
+        # determine whether oscillograms have been generated
+        osci_session_dir = config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/"
+        if os.path.exists(osci_session_dir):
+            print("reading recorded oscillograms from session files..")
+            # TODO:
+            #   - EDC (Eclipse Dataspace Connector) communication
+            #   - consolidate + upload read session data to server
+            print("uploading session data to server..")
+            return "performed_data_management"
 
         # TODO:
         #   - EDC (Eclipse Dataspace Connector) communication
-        #   - consolidate + upload data (user info, customer complaints, OBD info, sensor data) to server
-        #   - optional: [retrieve latest version of trained NN from server]
-
-        no_oscilloscope = False
-        if no_oscilloscope:
-            return "performed_reduced_data_management"
-        return "performed_data_management"
+        #   - consolidate + upload read session data to server
+        print("uploading reduced session data to server..")
+        return "performed_reduced_data_management"
 
 
 class InspectComponents(smach.State):
