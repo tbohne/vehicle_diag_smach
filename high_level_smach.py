@@ -317,29 +317,45 @@ class SuggestMeasuringPosOrComponents(smach.State):
 
 class PerformSynchronizedSensorRecordings(smach.State):
     """
-    State in the high-level SMACH that represents situations in which the synchronized sensor recordings are performed.
+    State in the high-level SMACH that represents situations in which the synchronized sensor recordings are performed
+    at the suggested measuring pos / suspect components.
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['processed_sync_sensor_data'],
-                             input_keys=[''],
-                             output_keys=['oscillogram'])
+                             input_keys=['suggestion_list'],
+                             output_keys=[''])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("processed_sync_sensor_data")
         """
         print("############################################")
         print("executing PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS state..")
         print("############################################")
-        # TODO: perform sensor recording and process data -> generate oscillogram
-        userdata.oscillogram = ""
-        # time.sleep(10)
-        print("performed sensor recordings..")
+
+        components_to_be_recorded = [k for k, v in userdata.suggestion_list.items() if v]
+        components_to_be_manually_verified = [k for k, v in userdata.suggestion_list.items() if not v]
+        print("------------------------------------------")
+        print("components to be recorded:", components_to_be_recorded)
+        print("components to be manually verified:", components_to_be_manually_verified)
+        print("------------------------------------------")
+
+        # TODO: perform manual verification of components and let mechanic enter result + communicate
+        #       anomalies further for fault isolation
+
+        print("perform synchronized sensor recordings at:")
+        for comp in components_to_be_recorded:
+            print("-", comp)
+
+        val = ""
+        while val != "0":
+            val = input("\npress '0' when the recording phase is finished and the oscillograms are generated..")
         return "processed_sync_sensor_data"
 
 
@@ -757,7 +773,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
 
             self.add('PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS', PerformSynchronizedSensorRecordings(),
                      transitions={'processed_sync_sensor_data': 'PERFORM_DATA_MANAGEMENT'},
-                     remapping={'oscillogram': 'sm_input'})
+                     remapping={'suggestion_list': 'sm_input'})
 
             self.add('PERFORM_DATA_MANAGEMENT', PerformDataManagement(),
                      transitions={'performed_data_management': 'CLASSIFY_OSCILLOGRAMS',
