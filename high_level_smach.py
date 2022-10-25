@@ -463,59 +463,71 @@ class ClassifyOscillograms(smach.State):
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['detected_anomalies', 'no_anomaly',
                                        'no_anomaly_and_no_more_measuring_pos'],
-                             input_keys=['oscillogram'],
-                             output_keys=['diagnosis'])
+                             input_keys=[''],
+                             output_keys=['anomalous_components'])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'CLASSIFY_OSCILLOGRAMS' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_and_no_more_measuring_pos")
         """
         print("############################################")
         print("executing CLASSIFY_OSCILLOGRAMS state (apply trained CNN)..")
         print("############################################")
-
-        # net_input = userdata.oscillogram
-
-        _, voltages = preprocess.read_oscilloscope_recording(config.DUMMY_OSCILLOSCOPE)
-        voltages = preprocess.z_normalize_time_series(voltages)
-
         model = keras.models.load_model(config.TRAINED_MODEL)
+        anomalous_components = []
+        num_of_recordings = len(list(Path(config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/").rglob('*.csv')))
 
-        # fix input size
-        net_input_size = model.layers[0].output_shape[0][1]
-        if len(voltages) > net_input_size:
-            remove = len(voltages) - net_input_size
-            voltages = voltages[: len(voltages) - remove]
+        # iteratively process oscilloscope recordings
+        for osci_path in Path(config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/").rglob('*.csv'):
+            print("classifying:", osci_path)
+            _, voltages = preprocess.read_oscilloscope_recording(osci_path)
+            voltages = preprocess.z_normalize_time_series(voltages)
 
-        net_input = np.asarray(voltages).astype('float32')
-        net_input = net_input.reshape((net_input.shape[0], 1))
+            # fix input size
+            net_input_size = model.layers[0].output_shape[0][1]
+            if len(voltages) > net_input_size:
+                remove = len(voltages) - net_input_size
+                voltages = voltages[: len(voltages) - remove]
 
-        print("input shape:", net_input.shape)
+            net_input = np.asarray(voltages).astype('float32')
+            net_input = net_input.reshape((net_input.shape[0], 1))
 
-        prediction = model.predict(np.array([net_input]))
-        print("PREDICTION:", prediction)
-        print("shape of pred.:", prediction.shape)
+            prediction = model.predict(np.array([net_input]))
+            if np.argmax(prediction) == 0:
+                print("#####################################")
+                print("--> ANOMALY DETECTED")
+                print("#####################################")
+                anomalous_components.append(osci_path)
+            else:
+                print("#####################################")
+                print("--> NO ANOMALIES DETECTED")
+                print("#####################################")
+            heatmaps = {'gradcam': cam.generate_gradcam(np.array([net_input]), model)}
+            cam.plot_heatmaps(heatmaps, voltages, str(osci_path).split("/")[2].replace(".csv", ""))
 
-        heatmaps = {'gradcam': cam.generate_gradcam(np.array([net_input]), model)}
-        cam.plot_heatmaps(heatmaps, voltages)
+        userdata.anomalous_components = anomalous_components
 
-        userdata.diagnosis = ""
-        at_least_one_anomaly = True
-        remaining_measuring_pos_suggestions = True
-        # time.sleep(10)
-        print("mapped oscillogram to diagnosis..")
-        if at_least_one_anomaly:
-            return "detected_anomalies"
-        elif remaining_measuring_pos_suggestions:
-            return "no_anomaly"
-        else:
+        # there are three options:
+        #   1. there's only one recording at a time and thus only one classification
+        #   2. there are as many parallel recordings as there are suspect components for the DTC
+        #   3. there are multiple parallel recordings, but not as many as there are suspect components for the DTC
+
+        # TODO: are there remaining suspect components?
+        remaining_suspect_components = True
+
+        if len(anomalous_components) == 0 and not remaining_suspect_components:
             return "no_anomaly_and_no_more_measuring_pos"
+        elif len(anomalous_components) == 0 and remaining_suspect_components:
+            return "no_anomaly"
+        elif len(anomalous_components) > 0:
+            return "detected_anomalies"
 
 
 class ProvideDiagAndShowTrace(smach.State):
@@ -825,8 +837,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      transitions={'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_DTC_INSTANCE',
                                   'no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
-                     remapping={'oscillogram': 'sm_input',
-                                'diagnosis': 'sm_input'})
+                     remapping={'anomalous_components': 'sm_input'})
 
             self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(),
                      transitions={'provided_diag_and_explanation': 'UPLOAD_DIAGNOSIS'},
