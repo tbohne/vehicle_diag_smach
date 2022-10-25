@@ -2,9 +2,11 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+import shutil
 import json
 import os
 from datetime import date
+from pathlib import Path
 
 import numpy as np
 import smach
@@ -356,31 +358,53 @@ class PerformSynchronizedSensorRecordings(smach.State):
         val = ""
         while val != "0":
             val = input("\npress '0' when the recording phase is finished and the oscillograms are generated..")
+
+        # creating dummy oscillograms in '/session_files' for each suspect component
+        comp_idx = 0
+        for path in Path(config.DUMMY_OSCILLOGRAMS).rglob('*.csv'):
+            src = str(path)
+            osci_session_dir = config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/"
+
+            if not os.path.exists(osci_session_dir):
+                os.makedirs(osci_session_dir)
+
+            shutil.copy(src, osci_session_dir + components_to_be_recorded[comp_idx] + ".csv")
+            comp_idx += 1
+            if comp_idx == len(components_to_be_recorded):
+                break
+
         return "processed_sync_sensor_data"
 
 
 class PerformDataManagement(smach.State):
     """
-    State in the high-level SMACH that represents situations in which data management is performed.
+    State in the high-level SMACH that represents situations in which data management is performed, e.g.:
+        - upload all the generated session files (data) to the server
+        - retrieve the latest trained classification model from the server
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['performed_data_management', 'performed_reduced_data_management'],
                              input_keys=[''],
                              output_keys=[''])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'PERFORM_DATA_MANAGEMENT' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("performed_data_management" | "performed_reduced_data_management")
         """
         print("############################################")
         print("executing PERFORM_DATA_MANAGEMENT state..")
         print("############################################")
-        # time.sleep(10)
+
+        # TODO: first, determine whether oscillograms have been generated
+
+        # TODO: read all the session files
+
         # TODO:
         #   - EDC (Eclipse Dataspace Connector) communication
         #   - consolidate + upload data (user info, customer complaints, OBD info, sensor data) to server
