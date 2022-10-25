@@ -271,16 +271,17 @@ class RetrieveHistoricalData(smach.State):
 class SuggestMeasuringPosOrComponents(smach.State):
     """
     State in the high-level SMACH that represents situations in which measuring positions or at least suspect
-    components in the car are suggested in order to place the sensors (oscilloscopes) accordingly.
+    components in the car are suggested based on the available information (OBD, CC, etc.).
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['provided_suggestions', 'no_oscilloscope_required'],
                              input_keys=['selected_instance', 'generated_instance'],
-                             output_keys=[''])
+                             output_keys=['suggestion_list'])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'SUGGEST_MEASURING_POS_OR_COMPONENTS' state.
 
@@ -292,29 +293,26 @@ class SuggestMeasuringPosOrComponents(smach.State):
         print("############################################")
 
         print("selected instance:", userdata.selected_instance)
-        print("generated instance:", userdata.generated_instance)
+        # print("generated instance:", userdata.generated_instance)
+
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+        suspect_components = qt.query_suspect_component_by_dtc(userdata.selected_instance)
 
         # decide whether oscilloscope required
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
         oscilloscope_usage = []
-        for dtc in userdata.vehicle_specific_instance_data['dtc_list']:
-            for comp in qt.query_suspect_component_by_dtc(dtc):
-                use = qt.query_oscilloscope_usage_by_suspect_component(comp)
-                print("comp:", comp, "use oscilloscope:", use)
-                oscilloscope_usage.append(use[0])
+        for comp in suspect_components:
+            use = qt.query_oscilloscope_usage_by_suspect_component(comp)
+            print("comp:", comp, "use oscilloscope:", use)
+            oscilloscope_usage.append(use[0])
+
+        userdata.suggestion_list = {comp: osci for comp, osci in zip(suspect_components, oscilloscope_usage)}
+
         if True in oscilloscope_usage:
             print("there's at least one suspect component that could be diagnosed with an oscilloscope..")
-        else:
-            print("none of the identified suspect components can be diagnosed with an oscilloscope..")
-            return "no_oscilloscope_required"
+            return "provided_suggestions"
 
-        # TODO: implement suggestion for measuring pos
-        print("SUGGESTED MEASURING POS: X, Y, Z")
-        # oqt = OntologyQueryTool()
-        # measuring_pos = oqt.query_measuring_pos_by_dtc(read_dtc)
-        # print("determined measuring pos:", measuring_pos)
-        # time.sleep(10)
-        return "provided_suggestions"
+        print("none of the identified suspect components can be diagnosed with an oscilloscope..")
+        return "no_oscilloscope_required"
 
 
 class PerformSynchronizedSensorRecordings(smach.State):
@@ -754,7 +752,8 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      transitions={'provided_suggestions': 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS',
                                   'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT'},
                      remapping={'selected_instance': 'sm_input',
-                                'generated_instance': 'sm_input'})
+                                'generated_instance': 'sm_input',
+                                'suggestion_list': 'sm_input'})
 
             self.add('PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS', PerformSynchronizedSensorRecordings(),
                      transitions={'processed_sync_sensor_data': 'PERFORM_DATA_MANAGEMENT'},
