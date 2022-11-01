@@ -54,7 +54,12 @@ class RecVehicleAndProcUserData(smach.State):
         # if not present, create directory for session data
         if not os.path.exists(config.SESSION_DIR):
             print("creating session data directory..")
-            os.makedirs(config.SESSION_DIR)
+            os.makedirs(config.SESSION_DIR + "/")
+        else:
+            # if it already exists, clear outdated session data
+            print("clearing session data directory..")
+            shutil.rmtree(config.SESSION_DIR)
+            os.makedirs(config.SESSION_DIR + "/")
 
         # write user data to session directory
         with open(config.SESSION_DIR + '/user_data.json', 'w') as f:
@@ -296,18 +301,36 @@ class SuggestMeasuringPosOrComponents(smach.State):
 
         print("selected instance:", userdata.selected_instance)
         # print("generated instance:", userdata.generated_instance)
-
         qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
-        suspect_components = qt.query_suspect_component_by_dtc(userdata.selected_instance)
+
+        # should not be queried over and over again - just once for a session
+        # -> then suggest as many as possible per execution of the state (write to session files)
+        if not os.path.exists(config.SESSION_DIR + "/" + config.SUS_COMP_TMP_FILE):
+            suspect_components = qt.query_suspect_component_by_dtc(userdata.selected_instance)
+            # write suspect components to session file
+            with open(config.SESSION_DIR + "/" + config.SUS_COMP_TMP_FILE, 'w') as f:
+                json.dump(suspect_components, f, default=str)
+        else:
+            # read remaining suspect components from file
+            with open(config.SESSION_DIR + "/" + config.SUS_COMP_TMP_FILE) as f:
+                suspect_components = json.load(f)
+
+        print("SUSPECT COMPONENTS:", suspect_components)
 
         # decide whether oscilloscope required
         oscilloscope_usage = []
         for comp in suspect_components:
             use = qt.query_oscilloscope_usage_by_suspect_component(comp)
+            use = [False for i in use]
             print("comp:", comp, "use oscilloscope:", use)
             oscilloscope_usage.append(use[0])
 
-        userdata.suggestion_list = {comp: osci for comp, osci in zip(suspect_components, oscilloscope_usage)}
+        suggestion_list = {comp: osci for comp, osci in zip(suspect_components, oscilloscope_usage)}
+        userdata.suggestion_list = suggestion_list
+
+        # everything that is used here should be removed from the tmp file
+        with open(config.SESSION_DIR + "/" + config.SUS_COMP_TMP_FILE, 'w') as f:
+            json.dump([c for c in suspect_components if c not in suggestion_list.keys()], f, default=str)
 
         if True in oscilloscope_usage:
             print("there's at least one suspect component that could be diagnosed with an oscilloscope..")
@@ -387,8 +410,8 @@ class PerformDataManagement(smach.State):
 
         smach.State.__init__(self,
                              outcomes=['performed_data_management', 'performed_reduced_data_management'],
-                             input_keys=[''],
-                             output_keys=[''])
+                             input_keys=['suggestion_list'],
+                             output_keys=['suggestion_list'])
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -435,23 +458,30 @@ class InspectComponents(smach.State):
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
-                             outcomes=['no_anomaly', 'detected_anomalies'],
-                             input_keys=[''],
+                             outcomes=['no_anomaly', 'detected_anomalies', 'no_anomaly_and_no_more_measuring_pos'],
+                             input_keys=['suggestion_list'],
                              output_keys=[''])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'INSPECT_COMPONENTS' state.
 
-        :param userdata:  input of state
-        :return: outcome of the state ("no_anomaly" | "detected_anomalies")
+        :param userdata: input of state
+        :return: outcome of the state ("no_anomaly" | "detected_anomalies" | "no_anomaly_and_no_more_measuring_pos")
         """
         print("############################################")
         print("executing INSPECT_COMPONENTS state..")
         print("############################################")
+
+        print("SUGG LIST:", userdata.suggestion_list)
         # TODO: to be implemented
-        if True:
+        no_anomaly = True
+        no_more_measuring_pos = True
+        if no_anomaly and no_more_measuring_pos:
+            return "no_anomaly_and_no_more_measuring_pos"
+        elif no_anomaly:
             return "no_anomaly"
         return "detected_anomalies"
 
@@ -561,26 +591,28 @@ class ProvideDiagAndShowTrace(smach.State):
 
 class ProvideInitialHypothesisAndLogContext(smach.State):
     """
-    State in the high-level SMACH that represents situations in which only the initial hypothesis is provided due to
-    unmanageable uncertainty.
+    State in the high-level SMACH that represents situations in which only the refuted initial hypothesis as well as
+    the context of the diagnostic process is provided due to unmanageable uncertainty.
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['no_diag'],
                              input_keys=[''],
                              output_keys=[''])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("no_diag")
         """
         print("############################################")
         print("executing PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT state..")
         print("############################################")
+        # TODO: create log file for the failed diagnostic process to improve future diagnosis (missing knowledge etc.)
         return "no_diag"
 
 
@@ -836,12 +868,13 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
             self.add('PERFORM_DATA_MANAGEMENT', PerformDataManagement(),
                      transitions={'performed_data_management': 'CLASSIFY_OSCILLOGRAMS',
                                   'performed_reduced_data_management': 'INSPECT_COMPONENTS'},
-                     remapping={})
+                     remapping={'suggestion_list': 'sm_input'})
 
             self.add('INSPECT_COMPONENTS', InspectComponents(),
                      transitions={'no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
-                                  'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
-                     remapping={})
+                                  'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS',
+                                  'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_DTC_INSTANCE'},
+                     remapping={'suggestion_list': 'sm_input'})
 
             self.add('CLASSIFY_OSCILLOGRAMS', ClassifyOscillograms(),
                      transitions={'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_DTC_INSTANCE',
