@@ -48,7 +48,7 @@ class RecVehicleAndProcUserData(smach.State):
             "workshop_id": "00000",
             "mechanic_id": "99999",
             # how many parallel measurements are possible at most (based on workshop equipment / oscilloscope channels)
-            "max_number_of_parallel_recordings": "1",
+            "max_number_of_parallel_recordings": "4",
             "date": date.today()
         }
 
@@ -169,6 +169,11 @@ class EstablishInitialHypothesis(smach.State):
 
         # TODO: use historical data to refine initial hypothesis (e.g. to deny certain hypotheses)
         print("establish hypothesis..")
+
+        val = None
+        while val != "":
+            val = input("\n..............................")
+
         return "established_init_hypothesis"
 
 
@@ -201,9 +206,8 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         obd_data['tsn'] = "453948539"
         obd_data['vin'] = "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
 
-        print("parsing OBD data..")
         for k in obd_data.keys():
-            print(k + ":" + str(obd_data[k]))
+            print(k + ": " + str(obd_data[k]))
 
         return obd_data
 
@@ -236,6 +240,11 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
                 vehicle_specific_instance_data['model'], vehicle_specific_instance_data['hsn'],
                 vehicle_specific_instance_data['tsn'], vehicle_specific_instance_data['vin'], dtc
             )
+
+        val = None
+        while val != "":
+            val = input("\n..............................")
+
         userdata.vehicle_specific_instance_data = vehicle_specific_instance_data
         return "processed_OBD_data"
 
@@ -248,6 +257,7 @@ class RetrieveHistoricalData(smach.State):
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['processed_all_data'],
                              input_keys=['vehicle_specific_instance_data_in'],
@@ -272,7 +282,6 @@ class RetrieveHistoricalData(smach.State):
         model = userdata.vehicle_specific_instance_data_in['model']
 
         # TODO: potentially retrieve more historical information (not only DTCs)
-        print("VIN to retrieve historical data for:", vin)
         historic_dtcs_by_vin = qt.query_dtcs_by_vin(vin)
         print("DTCs previously recorded in present car:", historic_dtcs_by_vin)
         print("model to retrieve historical data for:", model)
@@ -284,6 +293,10 @@ class RetrieveHistoricalData(smach.State):
             f.write("DTCs previously recorded in cars of model " + model + ": " + str(historic_dtcs_by_model) + "\n")
 
         userdata.vehicle_specific_instance_data_out = userdata.vehicle_specific_instance_data_in
+
+        val = None
+        while val != "":
+            val = input("\n..............................")
 
         return "processed_all_data"
 
@@ -301,6 +314,12 @@ class SuggestMeasuringPosOrComponents(smach.State):
                              input_keys=['selected_instance', 'generated_instance'],
                              output_keys=['suggestion_list'])
 
+    @staticmethod
+    def manual_transition() -> None:
+        val = None
+        while val != "":
+            val = input("\n..............................")
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'SUGGEST_MEASURING_POS_OR_COMPONENTS' state.
@@ -312,7 +331,6 @@ class SuggestMeasuringPosOrComponents(smach.State):
         print("executing", colored("SUGGEST_MEASURING_POS_OR_COMPONENTS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
-        print("selected instance:", userdata.selected_instance)
         # print("generated instance:", userdata.generated_instance)
         qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
 
@@ -333,10 +351,9 @@ class SuggestMeasuringPosOrComponents(smach.State):
         # decide whether oscilloscope required
         oscilloscope_usage = []
         for comp in suspect_components:
-            use = qt.query_oscilloscope_usage_by_suspect_component(comp)
-            use = [False for i in use]
+            use = qt.query_oscilloscope_usage_by_suspect_component(comp)[0]
             print("comp:", comp, "use oscilloscope:", use)
-            oscilloscope_usage.append(use[0])
+            oscilloscope_usage.append(use)
 
         suggestion_list = {comp: osci for comp, osci in zip(suspect_components, oscilloscope_usage)}
         userdata.suggestion_list = suggestion_list
@@ -346,10 +363,12 @@ class SuggestMeasuringPosOrComponents(smach.State):
             json.dump([c for c in suspect_components if c not in suggestion_list.keys()], f, default=str)
 
         if True in oscilloscope_usage:
-            print("there's at least one suspect component that could be diagnosed with an oscilloscope..")
+            print("there's at least one suspect component that can be diagnosed using an oscilloscope..")
+            self.manual_transition()
             return "provided_suggestions"
 
         print("none of the identified suspect components can be diagnosed with an oscilloscope..")
+        self.manual_transition()
         return "no_oscilloscope_required"
 
 
@@ -718,6 +737,12 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             # clear list, already used now
             json.dump({'list': []}, f, default=str)
 
+    @staticmethod
+    def manual_transition() -> None:
+        val = None
+        while val != "":
+            val = input("\n..............................")
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'SELECT_BEST_UNUSED_DTC_INSTANCE' state.
@@ -740,13 +765,15 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             with open(config.SESSION_DIR + "/" + config.CC_TMP_FILE) as f:
                 customer_complaints_list = json.load(f)['list']
         except FileNotFoundError:
-            print("no customer complaints available..")
+            pass
 
         # case 1: no DTC instance provided, but CC still available
         if len(dtc_list) == 0 and len(customer_complaints_list) == 1:
             # this option leads to the customer complaints being used to generate an artificial DTC instance
             self.remove_cc_instance_from_tmp_file()
             userdata.customer_complaints = customer_complaints_list[0]
+            print("no DTCs provided, but customer complaints available..")
+            self.manual_transition()
             return "no_instance"
 
         # case 2: both available
@@ -759,24 +786,34 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
                     userdata.selected_instance = dtc
                     dtc_list.remove(dtc)
                     self.remove_dtc_instance_from_tmp_file(dtc_list)
+                    print("select matching instance (OBD, CC)..")
+                    self.manual_transition()
                     return "selected_matching_instance(OBD_CC)"
             # sub-case 2: no matching instance -> select best instance
             # TODO: select best remaining DTC instance based on some criteria
             userdata.selected_instance = dtc_list[0]
             dtc_list.remove(dtc_list[0])
             self.remove_dtc_instance_from_tmp_file(dtc_list)
+            print("DTCs and customer complaints available, but no matching instance..")
+            self.manual_transition()
             return "no_matching_selected_best_instance"
 
         # case 3: no remaining instance and customer complaints already used
         elif len(dtc_list) == 0 and len(customer_complaints_list) == 0:
+            print("no more DTC instances and customer complaints already considered..")
+            self.manual_transition()
             return "no_instance_and_CC_already_used"
 
         # case 4: no customer complaints, but remaining DTCs
         else:
             # TODO: select best remaining DTC instance based on some criteria
-            userdata.selected_instance = dtc_list[0]
-            dtc_list.remove(dtc_list[0])
+            selected_dtc = dtc_list[0]
+            userdata.selected_instance = selected_dtc
+            dtc_list.remove(selected_dtc)
             self.remove_dtc_instance_from_tmp_file(dtc_list)
+            print("no customer complaints available, selecting DTC instance..")
+            print("selected DTC instance:", selected_dtc)
+            self.manual_transition()
             return "no_matching_selected_best_instance"
 
 
