@@ -57,16 +57,17 @@ class RecVehicleAndProcUserData(smach.State):
 
         # if not present, create directory for session data
         if not os.path.exists(config.SESSION_DIR):
-            print("creating session data directory..")
+            print("------ creating session data directory..")
             os.makedirs(config.SESSION_DIR + "/")
         else:
             # if it already exists, clear outdated session data
-            print("clearing session data directory..")
+            print("------ clearing session data directory..")
             shutil.rmtree(config.SESSION_DIR)
             os.makedirs(config.SESSION_DIR + "/")
 
         # write user data to session directory
         with open(config.SESSION_DIR + '/user_data.json', 'w') as f:
+            print("------ writing user data to session directory..")
             json.dump(user_data, f, default=str)
 
         return "processed_user_data"
@@ -139,11 +140,14 @@ class EstablishInitialHypothesis(smach.State):
 
         print("reading customer complaints session protocol..")
         initial_hypothesis = ""
-        with open(config.SESSION_DIR + "/" + config.XPS_SESSION_FILE) as f:
-            data = f.read()
-            session_data = BeautifulSoup(data, 'xml')
-            for tag in session_data.find_all('rating', {'type': 'heuristic'}):
-                initial_hypothesis = tag.parent['objectName']
+        try:
+            with open(config.SESSION_DIR + "/" + config.XPS_SESSION_FILE) as f:
+                data = f.read()
+                session_data = BeautifulSoup(data, 'xml')
+                for tag in session_data.find_all('rating', {'type': 'heuristic'}):
+                    initial_hypothesis = tag.parent['objectName']
+        except FileNotFoundError:
+            print("no customer complaints available..")
 
         if len(userdata.vehicle_specific_instance_data['dtc_list']) == 0 and len(initial_hypothesis) == 0:
             # no OBD data + no customer complaints -> insufficient data
@@ -163,7 +167,6 @@ class EstablishInitialHypothesis(smach.State):
         else:
             print("no initial hypothesis based on customer complaints..")
 
-        # TODO: compare customer complaints with OBD data (matching?)
         # TODO: use historical data to refine initial hypothesis (e.g. to deny certain hypotheses)
         print("establish hypothesis..")
         return "established_init_hypothesis"
@@ -177,6 +180,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['processed_OBD_data', 'no_OBD_data'],
                              input_keys=[''],
@@ -196,6 +200,11 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         obd_data['hsn'] = "849357984"
         obd_data['tsn'] = "453948539"
         obd_data['vin'] = "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
+
+        print("parsing OBD data..")
+        for k in obd_data.keys():
+            print(k + ":" + str(obd_data[k]))
+
         return obd_data
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
@@ -725,9 +734,13 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         with open(config.SESSION_DIR + "/" + config.DTC_TMP_FILE) as f:
             dtc_list = json.load(f)['list']
 
-        # load customer complaints from tmp file
-        with open(config.SESSION_DIR + "/" + config.CC_TMP_FILE) as f:
-            customer_complaints_list = json.load(f)['list']
+        customer_complaints_list = []
+        try:
+            # load customer complaints from tmp file
+            with open(config.SESSION_DIR + "/" + config.CC_TMP_FILE) as f:
+                customer_complaints_list = json.load(f)['list']
+        except FileNotFoundError:
+            print("no customer complaints available..")
 
         # case 1: no DTC instance provided, but CC still available
         if len(dtc_list) == 0 and len(customer_complaints_list) == 1:
@@ -757,6 +770,14 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         # case 3: no remaining instance and customer complaints already used
         elif len(dtc_list) == 0 and len(customer_complaints_list) == 0:
             return "no_instance_and_CC_already_used"
+
+        # case 4: no customer complaints, but remaining DTCs
+        else:
+            # TODO: select best remaining DTC instance based on some criteria
+            userdata.selected_instance = dtc_list[0]
+            dtc_list.remove(dtc_list[0])
+            self.remove_dtc_instance_from_tmp_file(dtc_list)
+            return "no_matching_selected_best_instance"
 
 
 class NoProblemDetectedCheckSensor(smach.State):
