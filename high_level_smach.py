@@ -123,7 +123,7 @@ class EstablishInitialHypothesis(smach.State):
                              input_keys=['vehicle_specific_instance_data'],
                              output_keys=['hypothesis'])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ESTABLISH_INITIAL_HYPOTHESIS' state.
 
@@ -195,7 +195,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         obd_data['vin'] = "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
         return obd_data
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES' state.
 
@@ -241,7 +241,7 @@ class RetrieveHistoricalData(smach.State):
                              input_keys=['vehicle_specific_instance_data_in'],
                              output_keys=['vehicle_specific_instance_data_out'])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'RETRIEVE_HISTORICAL_DATA' state.
 
@@ -571,25 +571,24 @@ class ProvideDiagAndShowTrace(smach.State):
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['provided_diag_and_explanation'],
                              input_keys=['diagnosis'],
                              output_keys=[''])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'PROVIDE_DIAG_AND_SHOW_TRACE' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("provided_diag_and_explanation")
         """
         print("############################################")
         print("executing", colored("PROVIDE_DIAG_AND_SHOW_TRACE", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
         diag = userdata.diagnosis
-        # TODO: OPTIONAL: apply [XPS / ...] that recommends action based on diagnosis
-        #   - print action
-        #   - show trace
+        # TODO: show diagnosis + trace
         return "provided_diag_and_explanation"
 
 
@@ -626,21 +625,23 @@ class UploadDiagnosis(smach.State):
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['uploaded_diag'],
                              input_keys=[''],
                              output_keys=[''])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'UPLOAD_DIAGNOSIS' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("uploaded_diag")
         """
         print("############################################")
         print("executing", colored("UPLOAD_DIAGNOSIS", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
+        # TODO: upload diagnosis to server
         return "uploaded_diag"
 
 
@@ -794,25 +795,27 @@ class NoProblemDetectedCheckSensor(smach.State):
 class IsolateProblemCheckEffectiveRadius(smach.State):
     """
     State in the high-level SMACH that represents situations in which one or more anomalies have been detected, and the
-    task is to isolate the defective components based on the effective radius (structural knowledge).
+    task is to isolate the defective components based on their effective radius (structural knowledge).
     """
 
     def __init__(self):
+
         smach.State.__init__(self,
                              outcomes=['isolated_problem'],
                              input_keys=[''],
                              output_keys=[''])
 
-    def execute(self, userdata):
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
 
-        :param userdata:  input of state
+        :param userdata: input of state
         :return: outcome of the state ("isolated_problem")
         """
         print("############################################")
         print("executing", colored("ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
+        # TODO: implement search in causal graph (effective radius)
         return "isolated_problem"
 
 
