@@ -474,6 +474,11 @@ class PerformDataManagement(smach.State):
             #   - EDC (Eclipse Dataspace Connector) communication
             #   - consolidate + upload read session data to server
             print("uploading session data to server..")
+
+            val = None
+            while val != "":
+                val = input("\n..............................")
+
             return "performed_data_management"
 
         # TODO:
@@ -543,7 +548,7 @@ class ClassifyOscillograms(smach.State):
         :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_and_no_more_measuring_pos")
         """
         print("############################################")
-        print("executing", colored("CLASSIFY_OSCILLOGRAMS", "yellow", "on_grey", ["bold"]), "state (apply trained CNN)..")
+        print("executing", colored("CLASSIFY_OSCILLOGRAMS", "yellow", "on_grey", ["bold"]), "state (applying trained model)..")
         print("############################################")
         model = keras.models.load_model(config.TRAINED_MODEL)
         anomalous_components = []
@@ -551,7 +556,7 @@ class ClassifyOscillograms(smach.State):
 
         # iteratively process oscilloscope recordings
         for osci_path in Path(config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/").rglob('*.csv'):
-            print("classifying:", osci_path)
+            print("classifying:", str(osci_path).split("/")[2].replace(".csv", ""))
             _, voltages = preprocess.read_oscilloscope_recording(osci_path)
             voltages = preprocess.z_normalize_time_series(voltages)
 
@@ -574,8 +579,15 @@ class ClassifyOscillograms(smach.State):
                 print("#####################################")
                 print("--> NO ANOMALIES DETECTED")
                 print("#####################################")
-            heatmaps = {'gradcam': cam.generate_gradcam(np.array([net_input]), model)}
-            cam.plot_heatmaps(heatmaps, voltages, str(osci_path).split("/")[2].replace(".csv", ""))
+            heatmaps = {'gradcam': cam.generate_gradcam(np.array([net_input]), model),
+                        "tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
+                        "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
+                        "hirescam": cam.generate_hirescam(np.array([net_input]), model),
+                        "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
+                        "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction),
+                        "tf-keras-smoothgrad": cam.tf_keras_smooth_grad(np.array([net_input]), model, prediction)}
+
+            cam.plot_heatmaps_as_overlay(heatmaps, voltages, str(osci_path).split("/")[2].replace(".csv", ""))
 
         userdata.anomalous_components = anomalous_components
 
