@@ -52,4 +52,4 @@ $ python vehicle_diag_smach/high_level_smach.py
 
 ## State Machine Architecture
 
-![](img/smach_v10.jpg)
+![](img/smach_v11.jpg)
