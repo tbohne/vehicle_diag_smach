@@ -16,6 +16,7 @@ from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from py4j.java_gateway import JavaGateway
 from tensorflow import keras
+from termcolor import colored
 from vehicle_diag_smach import config
 
 
@@ -36,7 +37,7 @@ class RecVehicleAndProcUserData(smach.State):
         :return: outcome of the state ("processed_user_data")
         """
         print("############################################")
-        print("executing REC_VEHICLE_AND_PROC_USER_DATA state..")
+        print("executing", colored("REC_VEHICLE_AND_PROC_USER_DATA", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
 
         # TODO: read from updated GUI
@@ -95,7 +96,7 @@ class ProcCustomerComplaints(smach.State):
         :return: outcome of the state ("received_complaints" | "no_complaints")
         """
         print("############################################")
-        print("executing PROC_CUSTOMER_COMPLAINTS state..")
+        print("executing", colored("PROC_CUSTOMER_COMPLAINTS", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
         val = ""
         while val != "0" and val != "1":
@@ -130,7 +131,7 @@ class EstablishInitialHypothesis(smach.State):
         :return: outcome of the state ("established_init_hypothesis" | "no_OBD_and_no_CC")
         """
         print("############################################")
-        print("executing ESTABLISH_INITIAL_HYPOTHESIS state..")
+        print("executing", colored("ESTABLISH_INITIAL_HYPOTHESIS", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
 
         print("reading customer complaints session protocol..")
@@ -202,7 +203,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         :return: outcome of the state ("processed_OBD_data" | "no_OBD_data")
         """
         print("############################################")
-        print("executing READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES state..")
+        print("executing", colored("READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
         vehicle_specific_instance_data = self.parse_obd_logfile()
         if len(vehicle_specific_instance_data['dtc_list']) == 0:
@@ -252,7 +253,7 @@ class RetrieveHistoricalData(smach.State):
         :return: outcome of the state ("processed_all_data")
         """
         print("############################################")
-        print("executing RETRIEVE_HISTORICAL_DATA state..")
+        print("executing", colored("RETRIEVE_HISTORICAL_DATA", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
         qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
         vin = userdata.vehicle_specific_instance_data_in['vin']
@@ -296,7 +297,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
         :return: outcome of the state ("provided_suggestions" | "no_oscilloscope_required")
         """
         print("############################################")
-        print("executing SUGGEST_MEASURING_POS_OR_COMPONENTS state..")
+        print("executing", colored("SUGGEST_MEASURING_POS_OR_COMPONENTS", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
 
         print("selected instance:", userdata.selected_instance)
@@ -361,7 +362,7 @@ class PerformSynchronizedSensorRecordings(smach.State):
         :return: outcome of the state ("processed_sync_sensor_data")
         """
         print("############################################")
-        print("executing PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS state..")
+        print("executing", colored("PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
 
         components_to_be_recorded = [k for k, v in userdata.suggestion_list.items() if v]
@@ -421,7 +422,7 @@ class PerformDataManagement(smach.State):
         :return: outcome of the state ("performed_data_management" | "performed_reduced_data_management")
         """
         print("############################################")
-        print("executing PERFORM_DATA_MANAGEMENT state..")
+        print("executing", colored("PERFORM_DATA_MANAGEMENT", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
 
         # TODO: optionally retrieve latest version of trained classifier from server
@@ -472,13 +473,16 @@ class InspectComponents(smach.State):
         :return: outcome of the state ("no_anomaly" | "detected_anomalies" | "no_anomaly_and_no_more_measuring_pos")
         """
         print("############################################")
-        print("executing INSPECT_COMPONENTS state..")
+        print("executing", colored("INSPECT_COMPONENTS", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
 
-        print("SUGG LIST:", userdata.suggestion_list)
+        print("SUGGESTION LIST:", userdata.suggestion_list)
         # TODO: to be implemented
         no_anomaly = True
+
+        # TODO: are there remaining suspect components? (atm every component is suggested each case)
         no_more_measuring_pos = True
+
         if no_anomaly and no_more_measuring_pos:
             return "no_anomaly_and_no_more_measuring_pos"
         elif no_anomaly:
@@ -508,7 +512,7 @@ class ClassifyOscillograms(smach.State):
         :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_and_no_more_measuring_pos")
         """
         print("############################################")
-        print("executing CLASSIFY_OSCILLOGRAMS state (apply trained CNN)..")
+        print("executing", colored("CLASSIFY_OSCILLOGRAMS", "yellow", "on_grey", ["bold"]), " state (apply trained CNN)..")
         print("############################################")
         model = keras.models.load_model(config.TRAINED_MODEL)
         anomalous_components = []
@@ -580,7 +584,7 @@ class ProvideDiagAndShowTrace(smach.State):
         :return: outcome of the state ("provided_diag_and_explanation")
         """
         print("############################################")
-        print("executing PROVIDE_DIAG_AND_SHOW_TRACE state..")
+        print("executing", colored("PROVIDE_DIAG_AND_SHOW_TRACE", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
         diag = userdata.diagnosis
         # TODO: OPTIONAL: apply [XPS / ...] that recommends action based on diagnosis
@@ -610,7 +614,7 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
         :return: outcome of the state ("no_diag")
         """
         print("############################################")
-        print("executing PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT state..")
+        print("executing", colored("PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
         # TODO: create log file for the failed diagnostic process to improve future diagnosis (missing knowledge etc.)
         return "no_diag"
@@ -635,7 +639,7 @@ class UploadDiagnosis(smach.State):
         :return: outcome of the state ("uploaded_diag")
         """
         print("############################################")
-        print("executing UPLOAD_DIAGNOSIS state..")
+        print("executing", colored("UPLOAD_DIAGNOSIS", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
         return "uploaded_diag"
 
@@ -661,7 +665,7 @@ class GenArtificialInstanceBasedOnCC(smach.State):
         :return: outcome of the state ("generated_artificial_instance")
         """
         print("############################################")
-        print("executing GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC state..")
+        print("executing", colored("GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
         print("CC:", userdata.customer_complaints)
         # TODO: generate instance based on provided CC
@@ -710,7 +714,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
                                        "no_instance" | "no_instance_and_CC_already_used")
         """
         print("############################################")
-        print("executing SELECT_BEST_UNUSED_DTC_INSTANCE state..")
+        print("executing", colored("SELECT_BEST_UNUSED_DTC_INSTANCE", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
 
         # load DTC instances from tmp file
@@ -773,7 +777,7 @@ class NoProblemDetectedCheckSensor(smach.State):
         :return: outcome of the state ("sensor_works" | "sensor_defective")
         """
         print("############################################")
-        print("executing NO_PROBLEM_DETECTED_CHECK_SENSOR state..")
+        print("executing", colored("NO_PROBLEM_DETECTED_CHECK_SENSOR", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
 
         print("no anomaly identified -- check potential sensor malfunction..")
@@ -807,7 +811,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :return: outcome of the state ("isolated_problem")
         """
         print("############################################")
-        print("executing ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS state..")
+        print("executing", colored("ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "yellow", "on_grey", ["bold"]), " state..")
         print("############################################")
         return "isolated_problem"
 
