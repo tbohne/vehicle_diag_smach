@@ -556,7 +556,8 @@ class ClassifyOscillograms(smach.State):
 
         # iteratively process oscilloscope recordings
         for osci_path in Path(config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/").rglob('*.csv'):
-            print("classifying:", str(osci_path).split("/")[2].replace(".csv", ""))
+            comp_name = str(osci_path).split("/")[2].replace(".csv", "")
+            print("classifying:", comp_name)
             _, voltages = preprocess.read_oscilloscope_recording(osci_path)
             voltages = preprocess.z_normalize_time_series(voltages)
 
@@ -574,7 +575,7 @@ class ClassifyOscillograms(smach.State):
                 print("#####################################")
                 print("--> ANOMALY DETECTED")
                 print("#####################################")
-                anomalous_components.append(osci_path)
+                anomalous_components.append(comp_name)
             else:
                 print("#####################################")
                 print("--> NO ANOMALIES DETECTED")
@@ -587,7 +588,7 @@ class ClassifyOscillograms(smach.State):
                         "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction),
                         "tf-keras-smoothgrad": cam.tf_keras_smooth_grad(np.array([net_input]), model, prediction)}
 
-            cam.plot_heatmaps_as_overlay(heatmaps, voltages, str(osci_path).split("/")[2].replace(".csv", ""))
+            cam.plot_heatmaps_as_overlay(heatmaps, voltages, comp_name)
 
         userdata.anomalous_components = anomalous_components
 
@@ -875,7 +876,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         smach.State.__init__(self,
                              outcomes=['isolated_problem'],
-                             input_keys=[''],
+                             input_keys=['anomalous_components'],
                              output_keys=[''])
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
@@ -888,6 +889,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         print("############################################")
         print("executing", colored("ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
+
+        print("ISOLATE:", userdata.anomalous_components)
+
         # TODO: implement search in causal graph (effective radius)
         return "isolated_problem"
 
@@ -994,7 +998,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
 
             self.add('ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS', IsolateProblemCheckEffectiveRadius(),
                      transitions={'isolated_problem': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
-                     remapping={})
+                     remapping={'anomalous_components': 'sm_input'})
 
 
 def run():
