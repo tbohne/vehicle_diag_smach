@@ -890,7 +890,79 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         print("executing", colored("ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
-        print("ISOLATE:", userdata.anomalous_components)
+        # already checked components together with the corresponding results (true -> anomaly)
+        already_checked_components = {comp: True for comp in userdata.anomalous_components}
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+
+        for anomalous_comp in userdata.anomalous_components:
+            print("isolating", anomalous_comp, "..")
+            affecting_components = qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
+            print("component potentially affected by:", affecting_components)
+
+            # iterating over them
+            for affecting_comp in affecting_components:
+                print("component to be checked:", affecting_comp)
+
+                if affecting_comp in already_checked_components.keys():
+                    print("already checked this component - anomaly:", already_checked_components[affecting_comp])
+                    continue
+
+                use_oscilloscope = qt.query_oscilloscope_usage_by_suspect_component(affecting_comp)[0]
+
+                # create session data directory
+                osci_iso_session_dir = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/"
+                if not os.path.exists(osci_iso_session_dir):
+                    os.makedirs(osci_iso_session_dir)
+
+                if use_oscilloscope:
+                    print("use oscilloscope..")
+                    model = keras.models.load_model(config.TRAINED_MODEL)
+
+                    val = None
+                    while val != "":
+                        val = input("\npress 'ENTER' when the recording phase is finished and the" +
+                                    " oscillogram is generated..")
+
+                    shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM, osci_iso_session_dir + affecting_comp + ".csv")
+                    path = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/" + affecting_comp + ".csv"
+                    _, voltages = preprocess.read_oscilloscope_recording(path)
+                    voltages = preprocess.z_normalize_time_series(voltages)
+
+                    # fix input size
+                    net_input_size = model.layers[0].output_shape[0][1]
+                    if len(voltages) > net_input_size:
+                        remove = len(voltages) - net_input_size
+                        voltages = voltages[: len(voltages) - remove]
+
+                    net_input = np.asarray(voltages).astype('float32')
+                    net_input = net_input.reshape((net_input.shape[0], 1))
+
+                    prediction = model.predict(np.array([net_input]))
+                    if np.argmax(prediction) == 0:
+                        print("#####################################")
+                        print("--> ANOMALY DETECTED")
+                        print("#####################################")
+                    else:
+                        print("#####################################")
+                        print("--> NO ANOMALIES DETECTED")
+                        print("#####################################")
+                    heatmaps = {'gradcam': cam.generate_gradcam(np.array([net_input]), model),
+                                "tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
+                                "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model,
+                                                                                     prediction),
+                                "hirescam": cam.generate_hirescam(np.array([net_input]), model),
+                                "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model,
+                                                                           prediction),
+                                "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model,
+                                                                           prediction),
+                                "tf-keras-smoothgrad": cam.tf_keras_smooth_grad(np.array([net_input]), model,
+                                                                                prediction)}
+
+                    cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", ""))
+
+                else:
+                    print("manual inspection of component (no oscilloscope)..")
+                    pass
 
         # TODO: implement search in causal graph (effective radius)
         return "isolated_problem"
