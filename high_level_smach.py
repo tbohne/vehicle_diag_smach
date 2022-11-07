@@ -423,7 +423,7 @@ class PerformSynchronizedSensorRecordings(smach.State):
             if not os.path.exists(osci_session_dir):
                 os.makedirs(osci_session_dir)
 
-            shutil.copy(src, osci_session_dir + components_to_be_recorded[comp_idx] + ".csv")
+            shutil.copy(src, osci_session_dir + str(src.split("/")[-1]))
             comp_idx += 1
             if comp_idx == len(components_to_be_recorded):
                 break
