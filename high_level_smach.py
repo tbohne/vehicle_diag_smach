@@ -556,7 +556,8 @@ class ClassifyOscillograms(smach.State):
 
         # iteratively process oscilloscope recordings
         for osci_path in Path(config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/").rglob('*.csv'):
-            comp_name = str(osci_path).split("/")[2].replace(".csv", "")
+            label = str(osci_path).split("/")[2].replace(".csv", "")
+            comp_name = label.split("_")[-1]
             print("classifying:", comp_name)
             _, voltages = preprocess.read_oscilloscope_recording(osci_path)
             voltages = preprocess.z_normalize_time_series(voltages)
@@ -588,7 +589,7 @@ class ClassifyOscillograms(smach.State):
                         "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction),
                         "tf-keras-smoothgrad": cam.tf_keras_smooth_grad(np.array([net_input]), model, prediction)}
 
-            cam.plot_heatmaps_as_overlay(heatmaps, voltages, comp_name)
+            cam.plot_heatmaps_as_overlay(heatmaps, voltages, label)
 
         userdata.anomalous_components = anomalous_components
 
@@ -899,7 +900,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             affecting_components = qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
             print("component potentially affected by:", affecting_components)
 
-            # iterating over them
             for affecting_comp in affecting_components:
                 print("component to be checked:", affecting_comp)
 
@@ -923,7 +923,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         val = input("\npress 'ENTER' when the recording phase is finished and the" +
                                     " oscillogram is generated..")
 
-                    shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM, osci_iso_session_dir + affecting_comp + ".csv")
+                    # TODO: hard-coded for demo purposes - showing reasonable case (one NEG)
+                    if affecting_comp == "Ladedruck-Regelventil":
+                        shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_NEG, osci_iso_session_dir + affecting_comp + ".csv")
+                    else:
+                        shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_iso_session_dir + affecting_comp + ".csv")
                     path = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/" + affecting_comp + ".csv"
                     _, voltages = preprocess.read_oscilloscope_recording(path)
                     voltages = preprocess.z_normalize_time_series(voltages)
