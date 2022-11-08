@@ -982,17 +982,20 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     print("use oscilloscope..")
                     anomaly = self.classify_component(comp_to_be_checked)
                     already_checked_components[comp_to_be_checked] = anomaly
-                    if anomaly:
-                        causal_path.append(comp_to_be_checked)
-                        unisolated_anomalous_components += \
-                            qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
                 else:
                     print("manual inspection of component (no oscilloscope)..")
-                    # TODO: implement manual inspection
-                    pass
+                    val = ""
+                    while val not in ['0', '1']:
+                        val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
+                    anomaly = val == "0"
+                    already_checked_components[comp_to_be_checked] = anomaly
+
+                if anomaly:
+                    causal_path.append(comp_to_be_checked)
+                    unisolated_anomalous_components += \
+                        qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
 
             anomalous_paths[anomalous_comp] = causal_path
-
         return "isolated_problem"
 
 
