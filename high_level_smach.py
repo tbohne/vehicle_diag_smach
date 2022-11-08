@@ -970,6 +970,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
                 if comp_to_be_checked in already_checked_components.keys():
                     print("already checked this component - anomaly:", already_checked_components[comp_to_be_checked])
+                    if already_checked_components[comp_to_be_checked]:
+                        causal_path.append(comp_to_be_checked)
+                        unisolated_anomalous_components += \
+                            qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
                     continue
 
                 use_oscilloscope = qt.query_oscilloscope_usage_by_suspect_component(comp_to_be_checked)[0]
