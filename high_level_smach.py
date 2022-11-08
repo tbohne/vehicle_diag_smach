@@ -960,25 +960,39 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return self.construct_complete_graph(graph, components_to_process)
 
     @staticmethod
-    def graph_visualization(anomalous_paths, complete_graphs):
-        print("ISOLATION RESULT, i.e., CAUSAL PATHS:")
+    def visualize_causal_graph(anomalous_paths, complete_graphs):
+        """
+        Visualizes the causal graphs along with the actual paths to the root cause.
+
+        :param anomalous_paths: the paths to the root cause
+        :param complete_graphs: the causal graphs
+        """
+        print("isolation results, i.e., causal paths:")
         for key in anomalous_paths.keys():
             print(key, ":", anomalous_paths[key])
 
-        print("COMPLETE PATHS:")
         for key in complete_graphs.keys():
-            print("GRAPH FOR COMPONENT:", key)
+            print("visualizing graph for component:", key)
             plt.title("Causal Graph for " + key)
 
             from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
-            print("from relations:", from_relations)
-            to_relations = [complete_graphs[key][sub_key] for sub_key in complete_graphs[key].keys()]
+            to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
             to_relations = [item for lst in to_relations for item in lst]
-            print("to relations:", to_relations)
+
+            causal_links = []
+            for i in range(len(to_relations)):
+                for j in range(len(anomalous_paths[key]) - 1):
+                    # causal link check
+                    if anomalous_paths[key][j] == from_relations[i] and anomalous_paths[key][j + 1] == to_relations[i]:
+                        causal_links.append(i)
+                        break
+
+            colors = ['g' if i not in causal_links else 'r' for i in range(len(to_relations))]
+            widths = [5 if i not in causal_links else 10 for i in range(len(to_relations))]
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
 
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
-            nx.draw(g, with_labels=True, node_size=1500, alpha=0.3, arrows=True)
+            nx.draw(g, with_labels=True, node_size=40000, alpha=0.75, arrows=True, edge_color=colors, width=widths)
             plt.show()
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
@@ -1040,7 +1054,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             anomalous_paths[anomalous_comp] = causal_path
 
-        self.graph_visualization(anomalous_paths, complete_graphs)
+        self.visualize_causal_graph(anomalous_paths, complete_graphs)
         return "isolated_problem"
 
 
