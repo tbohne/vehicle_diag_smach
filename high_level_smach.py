@@ -881,6 +881,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                              output_keys=[''])
 
         self.model = keras.models.load_model(config.TRAINED_MODEL)
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
 
     def classify_component(self, affecting_comp: str) -> bool:
         """
@@ -900,7 +901,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         " oscillogram is generated..")
 
         # TODO: hard-coded for demo purposes - showing reasonable case (one NEG)
-        if affecting_comp == "Ladedruck-Regelventil":
+        if affecting_comp in ["Ladedruck-Regelventil", "Ladedrucksteller-Positionssensor"]:
             shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_NEG, osci_iso_session_dir + affecting_comp + ".csv")
         else:
             shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_iso_session_dir + affecting_comp + ".csv")
@@ -938,6 +939,23 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         return np.argmax(prediction) == 0
 
+    def construct_complete_graph(self, graph: dict, components_to_process: list) -> dict:
+        """
+        Recursive function that constructs the complete causal graph for the specified components.
+
+        :param graph: partial graph to be extended
+        :param components_to_process: components yet to be processed
+        :return: constructed causal graph
+        """
+        if len(components_to_process) == 0:
+            return graph
+
+        comp = components_to_process.pop(0)
+        affecting_comp = self.qt.query_affected_by_relations_by_suspect_component(comp)
+        components_to_process += affecting_comp
+        graph[comp] = affecting_comp
+        return self.construct_complete_graph(graph, components_to_process)
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
@@ -952,14 +970,14 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         # already checked components together with the corresponding results (true -> anomaly)
         already_checked_components = {comp: True for comp in userdata.anomalous_components}
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
-
         anomalous_paths = {}
+        complete_graphs = {anomalous_comp: self.construct_complete_graph({}, [anomalous_comp])
+                           for anomalous_comp in userdata.anomalous_components}
 
         for anomalous_comp in userdata.anomalous_components:
             print("isolating", anomalous_comp, "..")
 
-            affecting_components = qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
+            affecting_components = self.qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
             print("component potentially affected by:", affecting_components)
             unisolated_anomalous_components = affecting_components
             causal_path = [anomalous_comp]
@@ -972,11 +990,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     print("already checked this component - anomaly:", already_checked_components[comp_to_be_checked])
                     if already_checked_components[comp_to_be_checked]:
                         causal_path.append(comp_to_be_checked)
-                        unisolated_anomalous_components += \
-                            qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
+                        affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
+                        unisolated_anomalous_components += affecting_comps
                     continue
 
-                use_oscilloscope = qt.query_oscilloscope_usage_by_suspect_component(comp_to_be_checked)[0]
+                use_oscilloscope = self.qt.query_oscilloscope_usage_by_suspect_component(comp_to_be_checked)[0]
 
                 if use_oscilloscope:
                     print("use oscilloscope..")
@@ -992,10 +1010,21 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
                 if anomaly:
                     causal_path.append(comp_to_be_checked)
-                    unisolated_anomalous_components += \
-                        qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
+                    affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
+                    unisolated_anomalous_components += affecting_comps
 
             anomalous_paths[anomalous_comp] = causal_path
+
+        print("ISOLATION RESULT, i.e., CAUSAL PATHS:")
+        for key in anomalous_paths.keys():
+            print(key, ":", anomalous_paths[key])
+
+        print("COMPLETE PATHS:")
+        for key in complete_graphs.keys():
+            print("GRAPH FOR COMPONENT:", key)
+            for sub_key in complete_graphs[key].keys():
+                print(sub_key, ":", complete_graphs[key][sub_key])
+
         return "isolated_problem"
 
 
