@@ -880,6 +880,64 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                              input_keys=['anomalous_components'],
                              output_keys=[''])
 
+        self.model = keras.models.load_model(config.TRAINED_MODEL)
+
+    def classify_component(self, affecting_comp: str) -> bool:
+        """
+        Classifies the oscillogram for the specified vehicle component.
+
+        :param affecting_comp: component to classify oscillogram for
+        :return: whether an anomaly has been detected
+        """
+        # create session data directory
+        osci_iso_session_dir = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/"
+        if not os.path.exists(osci_iso_session_dir):
+            os.makedirs(osci_iso_session_dir)
+
+        val = None
+        while val != "":
+            val = input("\npress 'ENTER' when the recording phase is finished and the" +
+                        " oscillogram is generated..")
+
+        # TODO: hard-coded for demo purposes - showing reasonable case (one NEG)
+        if affecting_comp == "Ladedruck-Regelventil":
+            shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_NEG, osci_iso_session_dir + affecting_comp + ".csv")
+        else:
+            shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_iso_session_dir + affecting_comp + ".csv")
+        path = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/" + affecting_comp + ".csv"
+        _, voltages = preprocess.read_oscilloscope_recording(path)
+        voltages = preprocess.z_normalize_time_series(voltages)
+
+        # fix input size
+        net_input_size = self.model.layers[0].output_shape[0][1]
+        if len(voltages) > net_input_size:
+            remove = len(voltages) - net_input_size
+            voltages = voltages[: len(voltages) - remove]
+
+        net_input = np.asarray(voltages).astype('float32')
+        net_input = net_input.reshape((net_input.shape[0], 1))
+
+        prediction = self.model.predict(np.array([net_input]))
+        if np.argmax(prediction) == 0:
+            print("#####################################")
+            print("--> ANOMALY DETECTED")
+            print("#####################################")
+        else:
+            print("#####################################")
+            print("--> NO ANOMALIES DETECTED")
+            print("#####################################")
+
+        heatmaps = {"gradcam": cam.generate_gradcam(np.array([net_input]), self.model),
+                    "tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), self.model, prediction),
+                    "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), self.model, prediction),
+                    "hirescam": cam.generate_hirescam(np.array([net_input]), self.model),
+                    "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), self.model, prediction),
+                    "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), self.model, prediction),
+                    "tf-keras-smoothgrad": cam.tf_keras_smooth_grad(np.array([net_input]), self.model, prediction)}
+        cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", ""))
+
+        return np.argmax(prediction) == 0
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
@@ -909,60 +967,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
                 use_oscilloscope = qt.query_oscilloscope_usage_by_suspect_component(affecting_comp)[0]
 
-                # create session data directory
-                osci_iso_session_dir = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/"
-                if not os.path.exists(osci_iso_session_dir):
-                    os.makedirs(osci_iso_session_dir)
-
                 if use_oscilloscope:
                     print("use oscilloscope..")
-                    model = keras.models.load_model(config.TRAINED_MODEL)
-
-                    val = None
-                    while val != "":
-                        val = input("\npress 'ENTER' when the recording phase is finished and the" +
-                                    " oscillogram is generated..")
-
-                    # TODO: hard-coded for demo purposes - showing reasonable case (one NEG)
-                    if affecting_comp == "Ladedruck-Regelventil":
-                        shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_NEG, osci_iso_session_dir + affecting_comp + ".csv")
-                    else:
-                        shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_iso_session_dir + affecting_comp + ".csv")
-                    path = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/" + affecting_comp + ".csv"
-                    _, voltages = preprocess.read_oscilloscope_recording(path)
-                    voltages = preprocess.z_normalize_time_series(voltages)
-
-                    # fix input size
-                    net_input_size = model.layers[0].output_shape[0][1]
-                    if len(voltages) > net_input_size:
-                        remove = len(voltages) - net_input_size
-                        voltages = voltages[: len(voltages) - remove]
-
-                    net_input = np.asarray(voltages).astype('float32')
-                    net_input = net_input.reshape((net_input.shape[0], 1))
-
-                    prediction = model.predict(np.array([net_input]))
-                    if np.argmax(prediction) == 0:
-                        print("#####################################")
-                        print("--> ANOMALY DETECTED")
-                        print("#####################################")
-                    else:
-                        print("#####################################")
-                        print("--> NO ANOMALIES DETECTED")
-                        print("#####################################")
-                    heatmaps = {'gradcam': cam.generate_gradcam(np.array([net_input]), model),
-                                "tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
-                                "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model,
-                                                                                     prediction),
-                                "hirescam": cam.generate_hirescam(np.array([net_input]), model),
-                                "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model,
-                                                                           prediction),
-                                "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model,
-                                                                           prediction),
-                                "tf-keras-smoothgrad": cam.tf_keras_smooth_grad(np.array([net_input]), model,
-                                                                                prediction)}
-
-                    cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", ""))
+                    self.classify_component(affecting_comp)
 
                 else:
                     print("manual inspection of component (no oscilloscope)..")
