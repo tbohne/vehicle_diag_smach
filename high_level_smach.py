@@ -8,7 +8,10 @@ import shutil
 from datetime import date
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
+import pandas as pd
 import smach
 from OBDOntology import ontology_instance_generator, knowledge_graph_query_tool
 from bs4 import BeautifulSoup
@@ -956,6 +959,28 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         graph[comp] = affecting_comp
         return self.construct_complete_graph(graph, components_to_process)
 
+    @staticmethod
+    def graph_visualization(anomalous_paths, complete_graphs):
+        print("ISOLATION RESULT, i.e., CAUSAL PATHS:")
+        for key in anomalous_paths.keys():
+            print(key, ":", anomalous_paths[key])
+
+        print("COMPLETE PATHS:")
+        for key in complete_graphs.keys():
+            print("GRAPH FOR COMPONENT:", key)
+            plt.title("Causal Graph for " + key)
+
+            from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
+            print("from relations:", from_relations)
+            to_relations = [complete_graphs[key][sub_key] for sub_key in complete_graphs[key].keys()]
+            to_relations = [item for lst in to_relations for item in lst]
+            print("to relations:", to_relations)
+            df = pd.DataFrame({'from': from_relations, 'to': to_relations})
+
+            g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
+            nx.draw(g, with_labels=True, node_size=1500, alpha=0.3, arrows=True)
+            plt.show()
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
@@ -1015,16 +1040,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             anomalous_paths[anomalous_comp] = causal_path
 
-        print("ISOLATION RESULT, i.e., CAUSAL PATHS:")
-        for key in anomalous_paths.keys():
-            print(key, ":", anomalous_paths[key])
-
-        print("COMPLETE PATHS:")
-        for key in complete_graphs.keys():
-            print("GRAPH FOR COMPONENT:", key)
-            for sub_key in complete_graphs[key].keys():
-                print(sub_key, ":", complete_graphs[key][sub_key])
-
+        self.graph_visualization(anomalous_paths, complete_graphs)
         return "isolated_problem"
 
 
