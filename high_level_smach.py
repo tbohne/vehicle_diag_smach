@@ -941,6 +941,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
+        Implements the search in the causal graph (effect network).
 
         :param userdata: input of state
         :return: outcome of the state ("isolated_problem")
@@ -953,29 +954,41 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         already_checked_components = {comp: True for comp in userdata.anomalous_components}
         qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
 
+        anomalous_paths = {}
+
         for anomalous_comp in userdata.anomalous_components:
             print("isolating", anomalous_comp, "..")
+
             affecting_components = qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
             print("component potentially affected by:", affecting_components)
+            unisolated_anomalous_components = affecting_components
+            causal_path = [anomalous_comp]
 
-            for affecting_comp in affecting_components:
-                print("component to be checked:", affecting_comp)
+            while len(unisolated_anomalous_components) > 0:
+                comp_to_be_checked = unisolated_anomalous_components.pop(0)
+                print("component to be checked:", comp_to_be_checked)
 
-                if affecting_comp in already_checked_components.keys():
-                    print("already checked this component - anomaly:", already_checked_components[affecting_comp])
+                if comp_to_be_checked in already_checked_components.keys():
+                    print("already checked this component - anomaly:", already_checked_components[comp_to_be_checked])
                     continue
 
-                use_oscilloscope = qt.query_oscilloscope_usage_by_suspect_component(affecting_comp)[0]
+                use_oscilloscope = qt.query_oscilloscope_usage_by_suspect_component(comp_to_be_checked)[0]
 
                 if use_oscilloscope:
                     print("use oscilloscope..")
-                    self.classify_component(affecting_comp)
-
+                    anomaly = self.classify_component(comp_to_be_checked)
+                    already_checked_components[comp_to_be_checked] = anomaly
+                    if anomaly:
+                        causal_path.append(comp_to_be_checked)
+                        unisolated_anomalous_components += \
+                            qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
                 else:
                     print("manual inspection of component (no oscilloscope)..")
+                    # TODO: implement manual inspection
                     pass
 
-        # TODO: implement search in causal graph (effective radius)
+            anomalous_paths[anomalous_comp] = causal_path
+
         return "isolated_problem"
 
 
