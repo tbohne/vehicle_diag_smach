@@ -414,9 +414,9 @@ class PerformSynchronizedSensorRecordings(smach.State):
         for comp in components_to_be_recorded:
             print("-", comp)
 
-        val = ""
-        while val != "0":
-            val = input("\npress '0' when the recording phase is finished and the oscillograms are generated..")
+        val = None
+        while val != "":
+            val = input("\npress 'ENTER' when the recording phase is finished and the oscillograms are generated..")
 
         # creating dummy oscillograms in '/session_files' for each suspect component
         comp_idx = 0
