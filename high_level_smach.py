@@ -15,6 +15,7 @@ import pandas as pd
 import smach
 from OBDOntology import ontology_instance_generator, knowledge_graph_query_tool
 from bs4 import BeautifulSoup
+from matplotlib.lines import Line2D
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from py4j.java_gateway import JavaGateway
@@ -960,7 +961,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return self.construct_complete_graph(graph, components_to_process)
 
     @staticmethod
-    def visualize_causal_graph(anomalous_paths, complete_graphs):
+    def create_legend_lines(colors, **kwargs):
+        """
+        Creates the edge representations for the plot legend.
+
+        :param colors: colors for legend lines
+        :return: generated line representations
+        """
+        return Line2D([0, 1], [0, 1], color=colors, **kwargs)
+
+    def visualize_causal_graph(self, anomalous_paths, complete_graphs):
         """
         Visualizes the causal graphs along with the actual paths to the root cause.
 
@@ -973,7 +983,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         for key in complete_graphs.keys():
             print("visualizing graph for component:", key)
-            plt.title("Causal Graph for " + key)
+            plt.title("Causal Graph (Network of Effective Connections) for " + key)
 
             from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
             to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
@@ -993,6 +1003,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
             nx.draw(g, with_labels=True, node_size=40000, alpha=0.75, arrows=True, edge_color=colors, width=widths)
+
+            legend_lines = [self.create_legend_lines(clr, lw=5) for clr in ['r', 'g']]
+            labels = ["fault path", "non-anomalous links"]
+            plt.legend(legend_lines, labels)
             plt.show()
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
