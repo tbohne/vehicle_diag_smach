@@ -983,7 +983,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         for key in complete_graphs.keys():
             print("visualizing graph for component:", key)
-            plt.title("Causal Graph (Network of Effective Connections) for " + key)
+            plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=24, fontweight='bold')
 
             from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
             to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
@@ -1006,7 +1006,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             legend_lines = [self.create_legend_lines(clr, lw=5) for clr in ['r', 'g']]
             labels = ["fault path", "non-anomalous links"]
-            plt.legend(legend_lines, labels)
+            plt.legend(legend_lines, labels, fontsize=18)
             plt.show()
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
