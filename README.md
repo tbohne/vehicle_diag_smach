@@ -51,5 +51,7 @@ $ python vehicle_diag_smach/high_level_smach.py
 ```
 
 ## State Machine Architecture
-
 ![](img/smach_v11.jpg)
+
+## Fault Isolation Result Example
+![](img/isolation.png)
