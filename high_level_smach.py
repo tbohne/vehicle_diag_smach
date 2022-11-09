@@ -636,7 +636,14 @@ class ProvideDiagAndShowTrace(smach.State):
         print("############################################")
         print("executing", colored("PROVIDE_DIAG_AND_SHOW_TRACE", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
-        diag = userdata.diagnosis
+
+        for key in userdata.diagnosis.keys():
+            print("identified anomalous component:", key)
+            print("fault path:")
+            path = userdata.diagnosis[key][::-1]
+            path = [path[i] if i == len(path) - 1 else path[i] + " -> " for i in range(len(path))]
+            print(colored("".join(path), "red", "on_white", ["bold"]))
+
         # TODO: show diagnosis + trace
         return "provided_diag_and_explanation"
 
@@ -882,7 +889,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         smach.State.__init__(self,
                              outcomes=['isolated_problem'],
                              input_keys=['anomalous_components'],
-                             output_keys=[''])
+                             output_keys=['fault_paths'])
 
         self.model = keras.models.load_model(config.TRAINED_MODEL)
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
@@ -970,7 +977,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         """
         return Line2D([0, 1], [0, 1], color=colors, **kwargs)
 
-    def visualize_causal_graph(self, anomalous_paths, complete_graphs):
+    def visualize_causal_graphs(self, anomalous_paths, complete_graphs):
         """
         Visualizes the causal graphs along with the actual paths to the root cause.
 
@@ -1068,7 +1075,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             anomalous_paths[anomalous_comp] = causal_path
 
-        self.visualize_causal_graph(anomalous_paths, complete_graphs)
+        self.visualize_causal_graphs(anomalous_paths, complete_graphs)
+        userdata.fault_paths = anomalous_paths
         return "isolated_problem"
 
 
@@ -1174,7 +1182,8 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
 
             self.add('ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS', IsolateProblemCheckEffectiveRadius(),
                      transitions={'isolated_problem': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
-                     remapping={'anomalous_components': 'sm_input'})
+                     remapping={'anomalous_components': 'sm_input',
+                                'fault_paths': 'sm_input'})
 
 
 def run():
