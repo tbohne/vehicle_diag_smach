@@ -40,7 +40,7 @@ class RecVehicleAndProcUserData(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("processed_user_data")
         """
-        print("############################################")
+        print("\n\n############################################")
         print("executing", colored("REC_VEHICLE_AND_PROC_USER_DATA", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
@@ -74,6 +74,10 @@ class RecVehicleAndProcUserData(smach.State):
             print("------ writing user data to session directory..")
             json.dump(user_data, f, default=str)
 
+        val = None
+        while val != "":
+            val = input("\n..............................")
+
         return "processed_user_data"
 
 
@@ -103,7 +107,8 @@ class ProcCustomerComplaints(smach.State):
         :param userdata: input of state (provided user data)
         :return: outcome of the state ("received_complaints" | "no_complaints")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("PROC_CUSTOMER_COMPLAINTS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
         val = ""
@@ -138,7 +143,8 @@ class EstablishInitialHypothesis(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("established_init_hypothesis" | "no_OBD_and_no_CC")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("ESTABLISH_INITIAL_HYPOTHESIS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
@@ -222,7 +228,8 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("processed_OBD_data" | "no_OBD_data")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
         vehicle_specific_instance_data = self.parse_obd_logfile()
@@ -278,7 +285,8 @@ class RetrieveHistoricalData(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("processed_all_data")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("RETRIEVE_HISTORICAL_DATA", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
         qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
@@ -331,7 +339,8 @@ class SuggestMeasuringPosOrComponents(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("provided_suggestions" | "no_oscilloscope_required")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("SUGGEST_MEASURING_POS_OR_COMPONENTS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
@@ -396,7 +405,8 @@ class PerformSynchronizedSensorRecordings(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("processed_sync_sensor_data")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
@@ -456,7 +466,8 @@ class PerformDataManagement(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("performed_data_management" | "performed_reduced_data_management")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("PERFORM_DATA_MANAGEMENT", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
@@ -512,7 +523,8 @@ class InspectComponents(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("no_anomaly" | "detected_anomalies" | "no_anomaly_and_no_more_measuring_pos")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("INSPECT_COMPONENTS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
@@ -551,7 +563,8 @@ class ClassifyOscillograms(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_and_no_more_measuring_pos")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("CLASSIFY_OSCILLOGRAMS", "yellow", "on_grey", ["bold"]), "state (applying trained model)..")
         print("############################################")
         model = keras.models.load_model(config.TRAINED_MODEL)
@@ -633,7 +646,7 @@ class ProvideDiagAndShowTrace(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("provided_diag_and_explanation")
         """
-        print("############################################")
+        print("\n\n############################################")
         print("executing", colored("PROVIDE_DIAG_AND_SHOW_TRACE", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
@@ -668,7 +681,8 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("no_diag")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
         # TODO: create log file for the failed diagnostic process to improve future diagnosis (missing knowledge etc.)
@@ -694,7 +708,7 @@ class UploadDiagnosis(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("uploaded_diag")
         """
-        print("############################################")
+        print("\n\n############################################")
         print("executing", colored("UPLOAD_DIAGNOSIS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
         # TODO: upload diagnosis to server
@@ -721,7 +735,8 @@ class GenArtificialInstanceBasedOnCC(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("generated_artificial_instance")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
         print("CC:", userdata.customer_complaints)
@@ -776,7 +791,8 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         :return: outcome of the state ("selected_matching_instance(OBD_CC)" | "no_matching_selected_best_instance" |
                                        "no_instance" | "no_instance_and_CC_already_used")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("SELECT_BEST_UNUSED_DTC_INSTANCE", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
@@ -863,7 +879,8 @@ class NoProblemDetectedCheckSensor(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("sensor_works" | "sensor_defective")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("NO_PROBLEM_DETECTED_CHECK_SENSOR", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
@@ -1024,7 +1041,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("isolated_problem")
         """
-        print("############################################")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
         print("executing", colored("ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
