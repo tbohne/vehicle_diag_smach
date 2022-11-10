@@ -994,12 +994,13 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         """
         return Line2D([0, 1], [0, 1], color=colors, **kwargs)
 
-    def visualize_causal_graphs(self, anomalous_paths, complete_graphs):
+    def visualize_causal_graphs(self, anomalous_paths, complete_graphs, explicitly_considered_links):
         """
         Visualizes the causal graphs along with the actual paths to the root cause.
 
         :param anomalous_paths: the paths to the root cause
         :param complete_graphs: the causal graphs
+        :param explicitly_considered_links: links that have been verified explicitly
         """
         print("isolation results, i.e., causal paths:")
         for key in anomalous_paths.keys():
@@ -1022,6 +1023,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         break
 
             colors = ['g' if i not in causal_links else 'r' for i in range(len(to_relations))]
+            for i in range(len(from_relations)):
+                # if the from-to relation is not part of the actually considered links, it should be black
+                if to_relations[i] not in explicitly_considered_links[from_relations[i]]:
+                    colors[i] = 'black'
+
             widths = [5 if i not in causal_links else 10 for i in range(len(to_relations))]
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
 
@@ -1051,11 +1057,17 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         anomalous_paths = {}
         complete_graphs = {anomalous_comp: self.construct_complete_graph({}, [anomalous_comp])
                            for anomalous_comp in userdata.anomalous_components}
+        explicitly_considered_links = {}
 
         for anomalous_comp in userdata.anomalous_components:
             print("isolating", anomalous_comp, "..")
-
             affecting_components = self.qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
+
+            if anomalous_comp not in list(explicitly_considered_links.keys()):
+                explicitly_considered_links[anomalous_comp] = affecting_components.copy()
+            else:
+                explicitly_considered_links[anomalous_comp] += affecting_components.copy()
+
             print("component potentially affected by:", affecting_components)
             unisolated_anomalous_components = affecting_components
             causal_path = [anomalous_comp]
@@ -1063,6 +1075,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             while len(unisolated_anomalous_components) > 0:
                 comp_to_be_checked = unisolated_anomalous_components.pop(0)
                 print("component to be checked:", comp_to_be_checked)
+                if comp_to_be_checked not in list(explicitly_considered_links.keys()):
+                    explicitly_considered_links[comp_to_be_checked] = []
 
                 if comp_to_be_checked in already_checked_components.keys():
                     print("already checked this component - anomaly:", already_checked_components[comp_to_be_checked])
@@ -1070,6 +1084,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         causal_path.append(comp_to_be_checked)
                         affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
                         unisolated_anomalous_components += affecting_comps
+                        explicitly_considered_links[comp_to_be_checked] += affecting_comps.copy()
                     continue
 
                 use_oscilloscope = self.qt.query_oscilloscope_usage_by_suspect_component(comp_to_be_checked)[0]
@@ -1090,10 +1105,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     causal_path.append(comp_to_be_checked)
                     affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
                     unisolated_anomalous_components += affecting_comps
+                    explicitly_considered_links[comp_to_be_checked] += affecting_comps.copy()
 
             anomalous_paths[anomalous_comp] = causal_path
 
-        self.visualize_causal_graphs(anomalous_paths, complete_graphs)
+        self.visualize_causal_graphs(anomalous_paths, complete_graphs, explicitly_considered_links)
         userdata.fault_paths = anomalous_paths
         return "isolated_problem"
 
