@@ -1032,10 +1032,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
 
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
-            nx.draw(g, with_labels=True, node_size=40000, alpha=0.75, arrows=True, edge_color=colors, width=widths)
+            pos = nx.spring_layout(g, seed=68)
+            nx.draw(g, pos=pos, with_labels=True, node_size=40000, alpha=0.75, arrows=True, edge_color=colors, width=widths)
 
-            legend_lines = [self.create_legend_lines(clr, lw=5) for clr in ['r', 'g']]
-            labels = ["fault path", "non-anomalous links"]
+            legend_lines = [self.create_legend_lines(clr, lw=5) for clr in ['r', 'g', 'black']]
+            labels = ["fault path", "non-anomalous links", "disregarded"]
             plt.legend(legend_lines, labels, fontsize=18)
             plt.show()
 
