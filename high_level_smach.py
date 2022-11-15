@@ -3,6 +3,7 @@
 # @author Tim Bohne
 
 import json
+import logging
 import os
 import shutil
 from datetime import date
@@ -13,6 +14,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import smach
+import tensorflow as tf
 from OBDOntology import ontology_instance_generator, knowledge_graph_query_tool
 from bs4 import BeautifulSoup
 from matplotlib.lines import Line2D
@@ -376,7 +378,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
             json.dump([c for c in suspect_components if c not in suggestion_list.keys()], f, default=str)
 
         if True in oscilloscope_usage:
-            print("there's at least one suspect component that can be diagnosed using an oscilloscope..")
+            print("\n--> there is at least one suspect component that can be diagnosed using an oscilloscope..")
             self.manual_transition()
             return "provided_suggestions"
 
@@ -576,7 +578,7 @@ class ClassifyOscillograms(smach.State):
         for osci_path in Path(config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/").rglob('*.csv'):
             label = str(osci_path).split("/")[2].replace(".csv", "")
             comp_name = label.split("_")[-1]
-            print("classifying:", comp_name)
+            print("\n\nclassifying:", comp_name)
             _, voltages = preprocess.read_oscilloscope_recording(osci_path)
             voltages = preprocess.z_normalize_time_series(voltages)
 
@@ -596,15 +598,16 @@ class ClassifyOscillograms(smach.State):
 
             # addresses both models with one output neuron and those with several
             anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
+            pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
 
             if anomaly:
                 print("#####################################")
-                print("--> ANOMALY DETECTED")
+                print("--> ANOMALY DETECTED (", str(pred_value), ")")
                 print("#####################################")
                 anomalous_components.append(comp_name)
             else:
                 print("#####################################")
-                print("--> NO ANOMALIES DETECTED")
+                print("--> NO ANOMALIES DETECTED (", str(pred_value), ")")
                 print("#####################################")
                 non_anomalous_components.append(comp_name)
 
@@ -618,7 +621,7 @@ class ClassifyOscillograms(smach.State):
         # classifying the subset of components that are to be classified manually
         for comp in userdata.suggestion_list.keys():
             if not userdata.suggestion_list[comp]:
-                print("manual inspection of component", comp)
+                print("\n\nmanual inspection of component", comp)
                 val = ""
                 while val not in ['0', '1']:
                     val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
@@ -990,6 +993,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), self.model, prediction),
                     "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), self.model, prediction),
                     "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), self.model, prediction)}
+
         cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", ""))
 
         return np.argmax(prediction) == 0
@@ -1258,8 +1262,9 @@ def run():
     Runs the state machine.
     """
     sm = VehicleDiagnosisStateMachine()
+    tf.get_logger().setLevel(logging.ERROR)
     outcome = sm.execute()
-    print("OUTCOME:", outcome)
+    # print("OUTCOME:", outcome)
 
 
 if __name__ == '__main__':
