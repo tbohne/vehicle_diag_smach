@@ -985,9 +985,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             return graph
 
         comp = components_to_process.pop(0)
-        affecting_comp = self.qt.query_affected_by_relations_by_suspect_component(comp)
-        components_to_process += affecting_comp
-        graph[comp] = affecting_comp
+        if comp not in graph.keys():
+            affecting_comp = self.qt.query_affected_by_relations_by_suspect_component(comp, False)
+            components_to_process += affecting_comp
+            graph[comp] = affecting_comp
         return self.construct_complete_graph(graph, components_to_process)
 
     @staticmethod
@@ -1062,6 +1063,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         # already checked components together with the corresponding results (true -> anomaly)
         already_checked_components = {comp: True for comp in userdata.anomalous_components}
         anomalous_paths = {}
+        print("constructing causal graph, i.e., subgraph of structural component knowledge..")
         complete_graphs = {anomalous_comp: self.construct_complete_graph({}, [anomalous_comp])
                            for anomalous_comp in userdata.anomalous_components}
         explicitly_considered_links = {}
