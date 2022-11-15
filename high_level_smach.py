@@ -581,15 +581,22 @@ class ClassifyOscillograms(smach.State):
 
             # fix input size
             net_input_size = model.layers[0].output_shape[0][1]
-            if len(voltages) > net_input_size:
-                remove = len(voltages) - net_input_size
-                voltages = voltages[: len(voltages) - remove]
+
+            assert net_input_size == len(voltages)
+            # if len(voltages) > net_input_size:
+            #     remove = len(voltages) - net_input_size
+            #     voltages = voltages[: len(voltages) - remove]
 
             net_input = np.asarray(voltages).astype('float32')
             net_input = net_input.reshape((net_input.shape[0], 1))
 
             prediction = model.predict(np.array([net_input]))
-            if np.argmax(prediction) == 0:
+            num_classes = len(prediction[0])
+
+            # addresses both models with one output neuron and those with several
+            anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
+
+            if anomaly:
                 print("#####################################")
                 print("--> ANOMALY DETECTED")
                 print("#####################################")
@@ -598,13 +605,11 @@ class ClassifyOscillograms(smach.State):
                 print("#####################################")
                 print("--> NO ANOMALIES DETECTED")
                 print("#####################################")
-            heatmaps = {'gradcam': cam.generate_gradcam(np.array([net_input]), model),
-                        "tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
+
+            heatmaps = {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
                         "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
-                        "hirescam": cam.generate_hirescam(np.array([net_input]), model),
                         "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
-                        "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction),
-                        "tf-keras-smoothgrad": cam.tf_keras_smooth_grad(np.array([net_input]), model, prediction)}
+                        "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
 
             cam.plot_heatmaps_as_overlay(heatmaps, voltages, label)
 
