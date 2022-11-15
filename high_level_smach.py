@@ -554,7 +554,7 @@ class ClassifyOscillograms(smach.State):
                              outcomes=['detected_anomalies', 'no_anomaly',
                                        'no_anomaly_and_no_more_measuring_pos'],
                              input_keys=[''],
-                             output_keys=['anomalous_components'])
+                             output_keys=['classified_components'])
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -569,6 +569,7 @@ class ClassifyOscillograms(smach.State):
         print("############################################")
         model = keras.models.load_model(config.TRAINED_MODEL)
         anomalous_components = []
+        non_anomalous_components = []
         num_of_recordings = len(list(Path(config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/").rglob('*.csv')))
 
         # iteratively process oscilloscope recordings
@@ -605,6 +606,7 @@ class ClassifyOscillograms(smach.State):
                 print("#####################################")
                 print("--> NO ANOMALIES DETECTED")
                 print("#####################################")
+                non_anomalous_components.append(comp_name)
 
             heatmaps = {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
                         "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
@@ -613,7 +615,13 @@ class ClassifyOscillograms(smach.State):
 
             cam.plot_heatmaps_as_overlay(heatmaps, voltages, label)
 
-        userdata.anomalous_components = anomalous_components
+        classified_components = {}
+        for comp in non_anomalous_components:
+            classified_components[comp] = False
+        for comp in anomalous_components:
+            classified_components[comp] = True
+
+        userdata.classified_components = classified_components
 
         # there are three options:
         #   1. there's only one recording at a time and thus only one classification
@@ -910,7 +918,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         smach.State.__init__(self,
                              outcomes=['isolated_problem'],
-                             input_keys=['anomalous_components'],
+                             input_keys=['classified_components'],
                              output_keys=['fault_paths'])
 
         self.model = keras.models.load_model(config.TRAINED_MODEL)
@@ -1061,14 +1069,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         print("############################################")
 
         # already checked components together with the corresponding results (true -> anomaly)
-        already_checked_components = {comp: True for comp in userdata.anomalous_components}
+        already_checked_components = userdata.classified_components.copy()
         anomalous_paths = {}
         print("constructing causal graph, i.e., subgraph of structural component knowledge..")
-        complete_graphs = {anomalous_comp: self.construct_complete_graph({}, [anomalous_comp])
-                           for anomalous_comp in userdata.anomalous_components}
+        complete_graphs = {comp: self.construct_complete_graph({}, [comp])
+                           for comp in userdata.classified_components.keys() if userdata.classified_components[comp]}
         explicitly_considered_links = {}
 
-        for anomalous_comp in userdata.anomalous_components:
+        for anomalous_comp in userdata.classified_components.keys():
+            if not userdata.classified_components[anomalous_comp]:
+                continue
             print("isolating", anomalous_comp, "..")
             affecting_components = self.qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
 
@@ -1191,7 +1201,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      transitions={'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_DTC_INSTANCE',
                                   'no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
-                     remapping={'anomalous_components': 'sm_input'})
+                     remapping={'classified_components': 'sm_input'})
 
             self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(),
                      transitions={'provided_diag_and_explanation': 'UPLOAD_DIAGNOSIS'},
@@ -1225,7 +1235,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
 
             self.add('ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS', IsolateProblemCheckEffectiveRadius(),
                      transitions={'isolated_problem': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
-                     remapping={'anomalous_components': 'sm_input',
+                     remapping={'classified_components': 'sm_input',
                                 'fault_paths': 'sm_input'})
 
 
