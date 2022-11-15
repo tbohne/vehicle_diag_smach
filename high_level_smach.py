@@ -553,7 +553,7 @@ class ClassifyOscillograms(smach.State):
         smach.State.__init__(self,
                              outcomes=['detected_anomalies', 'no_anomaly',
                                        'no_anomaly_and_no_more_measuring_pos'],
-                             input_keys=[''],
+                             input_keys=['suggestion_list'],
                              output_keys=['classified_components'])
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
@@ -614,6 +614,19 @@ class ClassifyOscillograms(smach.State):
                         "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
 
             cam.plot_heatmaps_as_overlay(heatmaps, voltages, label)
+
+        # classifying the subset of components that are to be classified manually
+        for comp in userdata.suggestion_list.keys():
+            if not userdata.suggestion_list[comp]:
+                print("manual inspection of component", comp)
+                val = ""
+                while val not in ['0', '1']:
+                    val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
+                anomaly = val == "0"
+                if anomaly:
+                    anomalous_components.append(comp)
+                else:
+                    non_anomalous_components.append(comp)
 
         classified_components = {}
         for comp in non_anomalous_components:
@@ -1201,7 +1214,8 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      transitions={'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_DTC_INSTANCE',
                                   'no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
-                     remapping={'classified_components': 'sm_input'})
+                     remapping={'suggestion_list': 'sm_input',
+                                'classified_components': 'sm_input'})
 
             self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(),
                      transitions={'provided_diag_and_explanation': 'UPLOAD_DIAGNOSIS'},
