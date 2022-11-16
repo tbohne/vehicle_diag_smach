@@ -63,17 +63,17 @@ class RecVehicleAndProcUserData(smach.State):
 
         # if not present, create directory for session data
         if not os.path.exists(config.SESSION_DIR):
-            print("------ creating session data directory..")
+            print(colored("------ creating session data directory..", "green", "on_grey", ["bold"]))
             os.makedirs(config.SESSION_DIR + "/")
         else:
             # if it already exists, clear outdated session data
-            print("------ clearing session data directory..")
+            print(colored("------ clearing session data directory..", "green", "on_grey", ["bold"]))
             shutil.rmtree(config.SESSION_DIR)
             os.makedirs(config.SESSION_DIR + "/")
 
         # write user data to session directory
         with open(config.SESSION_DIR + '/user_data.json', 'w') as f:
-            print("------ writing user data to session directory..")
+            print(colored("------ writing user data to session directory..", "green", "on_grey", ["bold"]))
             json.dump(user_data, f, default=str)
 
         val = None
@@ -220,6 +220,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
 
         for k in obd_data.keys():
             print(k + ": " + str(obd_data[k]))
+        print()
 
         return obd_data
 
@@ -290,7 +291,7 @@ class RetrieveHistoricalData(smach.State):
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
         print("executing", colored("RETRIEVE_HISTORICAL_DATA", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
+        print("############################################\n")
         qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
         vin = userdata.vehicle_specific_instance_data_in['vin']
         model = userdata.vehicle_specific_instance_data_in['model']
@@ -298,7 +299,7 @@ class RetrieveHistoricalData(smach.State):
         # TODO: potentially retrieve more historical information (not only DTCs)
         historic_dtcs_by_vin = qt.query_dtcs_by_vin(vin)
         print("DTCs previously recorded in present car:", historic_dtcs_by_vin)
-        print("model to retrieve historical data for:", model)
+        print("model to retrieve historical data for:", model, "\n")
         historic_dtcs_by_model = qt.query_dtcs_by_model(model)
         print("DTCs previously recorded in model of present car:", historic_dtcs_by_model)
 
@@ -361,7 +362,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
             with open(config.SESSION_DIR + "/" + config.SUS_COMP_TMP_FILE) as f:
                 suspect_components = json.load(f)
 
-        print("SUSPECT COMPONENTS:", suspect_components)
+        print(colored("SUSPECT COMPONENTS: " + str(suspect_components) + "\n", "green", "on_grey", ["bold"]))
 
         # decide whether oscilloscope required
         oscilloscope_usage = []
@@ -422,9 +423,9 @@ class PerformSynchronizedSensorRecordings(smach.State):
         # TODO: perform manual verification of components and let mechanic enter result + communicate
         #       anomalies further for fault isolation
 
-        print("perform synchronized sensor recordings at:")
+        print(colored("perform synchronized sensor recordings at:", "green", "on_grey", ["bold"]))
         for comp in components_to_be_recorded:
-            print("-", comp)
+            print(colored("- " + comp, "green", "on_grey", ["bold"]))
 
         val = None
         while val != "":
@@ -578,7 +579,8 @@ class ClassifyOscillograms(smach.State):
         for osci_path in Path(config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/").rglob('*.csv'):
             label = str(osci_path).split("/")[2].replace(".csv", "")
             comp_name = label.split("_")[-1]
-            print("\n\nclassifying:", comp_name)
+
+            print(colored("\n\nclassifying:" + comp_name, "green", "on_grey", ["bold"]))
             _, voltages = preprocess.read_oscilloscope_recording(osci_path)
             voltages = preprocess.z_normalize_time_series(voltages)
 
@@ -602,12 +604,12 @@ class ClassifyOscillograms(smach.State):
 
             if anomaly:
                 print("#####################################")
-                print("--> ANOMALY DETECTED (", str(pred_value), ")")
+                print(colored("--> ANOMALY DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
                 print("#####################################")
                 anomalous_components.append(comp_name)
             else:
                 print("#####################################")
-                print("--> NO ANOMALIES DETECTED (", str(pred_value), ")")
+                print(colored("--> NO ANOMALIES DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
                 print("#####################################")
                 non_anomalous_components.append(comp_name)
 
@@ -621,7 +623,7 @@ class ClassifyOscillograms(smach.State):
         # classifying the subset of components that are to be classified manually
         for comp in userdata.suggestion_list.keys():
             if not userdata.suggestion_list[comp]:
-                print("\n\nmanual inspection of component", comp)
+                print(colored("\n\nmanual inspection of component " + comp, "green", "on_grey", ["bold"]))
                 val = ""
                 while val not in ['0', '1']:
                     val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
@@ -882,7 +884,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             dtc_list.remove(selected_dtc)
             self.remove_dtc_instance_from_tmp_file(dtc_list)
             print("no customer complaints available, selecting DTC instance..")
-            print("selected DTC instance:", selected_dtc)
+            print(colored("selected DTC instance: " + selected_dtc, "green", "on_grey", ["bold"]))
             self.manual_transition()
             return "no_matching_selected_best_instance"
 
@@ -1088,7 +1090,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         # already checked components together with the corresponding results (true -> anomaly)
         already_checked_components = userdata.classified_components.copy()
         anomalous_paths = {}
-        print("constructing causal graph, i.e., subgraph of structural component knowledge..")
+        print(colored("constructing causal graph, i.e., subgraph of structural component knowledge..\n",
+                      "green", "on_grey", ["bold"]))
+
         complete_graphs = {comp: self.construct_complete_graph({}, [comp])
                            for comp in userdata.classified_components.keys() if userdata.classified_components[comp]}
         explicitly_considered_links = {}
@@ -1096,7 +1100,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         for anomalous_comp in userdata.classified_components.keys():
             if not userdata.classified_components[anomalous_comp]:
                 continue
-            print("isolating", anomalous_comp, "..")
+
+            print(colored("isolating " + anomalous_comp + "..", "green", "on_grey", ["bold"]))
             affecting_components = self.qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
 
             if anomalous_comp not in list(explicitly_considered_links.keys()):
@@ -1110,7 +1115,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             while len(unisolated_anomalous_components) > 0:
                 comp_to_be_checked = unisolated_anomalous_components.pop(0)
-                print("component to be checked:", comp_to_be_checked)
+
+                print(colored("\ncomponent to be checked: " + comp_to_be_checked, "green", "on_grey", ["bold"]))
                 if comp_to_be_checked not in list(explicitly_considered_links.keys()):
                     explicitly_considered_links[comp_to_be_checked] = []
 
