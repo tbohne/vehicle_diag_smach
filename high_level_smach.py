@@ -679,6 +679,7 @@ class ProvideDiagAndShowTrace(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("provided_diag_and_explanation")
         """
+        os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
         print("executing", colored("PROVIDE_DIAG_AND_SHOW_TRACE", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
@@ -944,6 +945,12 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         self.model = keras.models.load_model(config.TRAINED_MODEL)
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
 
+    @staticmethod
+    def manual_transition() -> None:
+        val = None
+        while val != "":
+            val = input("\n..............................")
+
     def classify_component(self, affecting_comp: str) -> bool:
         """
         Classifies the oscillogram for the specified vehicle component.
@@ -1042,12 +1049,12 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param complete_graphs: the causal graphs
         :param explicitly_considered_links: links that have been verified explicitly
         """
-        print("isolation results, i.e., causal paths:")
         for key in anomalous_paths.keys():
+            print("isolation results, i.e., causal path:")
             print(key, ":", anomalous_paths[key])
 
         for key in complete_graphs.keys():
-            print("visualizing graph for component:", key)
+            print("visualizing graph for component:", key, "\n")
             plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=24, fontweight='bold')
 
             from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
@@ -1105,6 +1112,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         complete_graphs = {comp: self.construct_complete_graph({}, [comp])
                            for comp in userdata.classified_components.keys() if userdata.classified_components[comp]}
         explicitly_considered_links = {}
+
+        self.manual_transition()
         # visualizing the initial graph (without highlighted edges / pre isolation)
         self.visualize_causal_graphs(anomalous_paths, complete_graphs, explicitly_considered_links)
 
