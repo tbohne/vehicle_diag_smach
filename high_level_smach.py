@@ -960,8 +960,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         " oscillogram is generated..")
 
         # TODO: hard-coded for demo purposes - showing reasonable case (one NEG)
-        if affecting_comp in ["Ladedruck-Regelventil", "Ladedrucksteller-Positionssensor"]:
-            shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_NEG, osci_iso_session_dir + affecting_comp + ".csv")
+        if affecting_comp == "Ladedruck-Regelventil":
+            shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_iso_session_dir + affecting_comp + ".csv")
+        elif affecting_comp == "Ladedrucksteller-Positionssensor":
+            shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_NEG2, osci_iso_session_dir + affecting_comp + ".csv")
         else:
             shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_iso_session_dir + affecting_comp + ".csv")
         path = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/" + affecting_comp + ".csv"
