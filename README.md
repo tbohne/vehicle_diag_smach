@@ -42,7 +42,7 @@ Additionally, to use the customer XPS, create a .jar file with the py4j and d3we
 
 ## Usage
 
-Run server from Apache Jena Fuseki root directory (runs at `localhost:3030`) - for configuration cf. [OBDOntology](https://github.com/tbohne/OBDOntology):
+Run server (knowledge graph) from Apache Jena Fuseki root directory (runs at `localhost:3030`) - for configuration cf. [OBDOntology](https://github.com/tbohne/OBDOntology):
 ```
 $ ./fuseki-server
 ```
