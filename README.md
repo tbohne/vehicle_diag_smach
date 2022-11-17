@@ -11,6 +11,7 @@ State-machine-based prototype of a vehicle diagnosis *[and recommendation]* syst
 - [**oscillogram_classification**](https://github.com/tbohne/oscillogram_classification): neural network based anomaly detection for vehicle components using oscilloscope recordings
 - [**CustomerXPS**](https://github.com/tbohne/CustomerXPS): expert system that deals with customer complaints
 - [**py4j**](https://www.py4j.org/): bridge between Python and Java
+- [**Apache Jena Fuseki**](https://jena.apache.org/documentation/fuseki2/): SPARQL server hosting / maintaining the knowledge graph
 
 ## Installation
 
@@ -41,6 +42,10 @@ Additionally, to use the customer XPS, create a .jar file with the py4j and d3we
 
 ## Usage
 
+Run server from Apache Jena Fuseki root directory (runs at `localhost:3030`) - for configuration cf. [OBDOntology](https://github.com/tbohne/OBDOntology):
+```
+$ ./fuseki-server
+```
 Run customer XPS server (in `CustomerXPS/`):
 ```
 $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
