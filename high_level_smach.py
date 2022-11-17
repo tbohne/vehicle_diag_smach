@@ -1052,16 +1052,17 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             causal_links = []
             for i in range(len(to_relations)):
-                for j in range(len(anomalous_paths[key]) - 1):
-                    # causal link check
-                    if anomalous_paths[key][j] == from_relations[i] and anomalous_paths[key][j + 1] == to_relations[i]:
-                        causal_links.append(i)
-                        break
+                if key in anomalous_paths.keys():
+                    for j in range(len(anomalous_paths[key]) - 1):
+                        # causal link check
+                        if anomalous_paths[key][j] == from_relations[i] and anomalous_paths[key][j + 1] == to_relations[i]:
+                            causal_links.append(i)
+                            break
 
             colors = ['g' if i not in causal_links else 'r' for i in range(len(to_relations))]
             for i in range(len(from_relations)):
                 # if the from-to relation is not part of the actually considered links, it should be black
-                if to_relations[i] not in explicitly_considered_links[from_relations[i]]:
+                if from_relations[i] not in explicitly_considered_links.keys() or to_relations[i] not in explicitly_considered_links[from_relations[i]]:
                     colors[i] = 'black'
 
             widths = [5 if i not in causal_links else 10 for i in range(len(to_relations))]
@@ -1073,7 +1074,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             legend_lines = [self.create_legend_lines(clr, lw=5) for clr in ['r', 'g', 'black']]
             labels = ["fault path", "non-anomalous links", "disregarded"]
-            plt.legend(legend_lines, labels, fontsize=18)
+            # initial preview does not require a legend
+            if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
+                plt.legend(legend_lines, labels, fontsize=18)
             plt.show()
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
@@ -1098,6 +1101,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         complete_graphs = {comp: self.construct_complete_graph({}, [comp])
                            for comp in userdata.classified_components.keys() if userdata.classified_components[comp]}
         explicitly_considered_links = {}
+        # visualizing the initial graph (without highlighted edges / pre isolation)
+        self.visualize_causal_graphs(anomalous_paths, complete_graphs, explicitly_considered_links)
 
         for anomalous_comp in userdata.classified_components.keys():
             if not userdata.classified_components[anomalous_comp]:
