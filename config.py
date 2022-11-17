@@ -14,6 +14,7 @@ SUS_COMP_TMP_FILE = "sus_comp_tmp.json"
 OBD_ONTOLOGY_PATH = "OBDOntology/"
 ONTOLOGY_FILE = "static_obd_ontology.owl"
 TRAINED_MODEL = "vehicle_diag_smach/res/trained_models/FCN_two_output_neurons_raw_12_batch.h5"
+Z_NORMALIZATION = False
 DUMMY_OSCILLOGRAMS = "vehicle_diag_smach/res/dummy_oscillograms/"
 DUMMY_ISOLATION_OSCILLOGRAM_POS = "vehicle_diag_smach/res/dummy_isolation_oscillogram/dummy_isolation_POS.csv"
 DUMMY_ISOLATION_OSCILLOGRAM_NEG1 = "vehicle_diag_smach/res/dummy_isolation_oscillogram/dummy_isolation_NEG1.csv"

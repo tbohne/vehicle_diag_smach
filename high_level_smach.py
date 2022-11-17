@@ -582,7 +582,9 @@ class ClassifyOscillograms(smach.State):
 
             print(colored("\n\nclassifying:" + comp_name, "green", "on_grey", ["bold"]))
             _, voltages = preprocess.read_oscilloscope_recording(osci_path)
-            voltages = preprocess.z_normalize_time_series(voltages)
+
+            if config.Z_NORMALIZATION:
+                voltages = preprocess.z_normalize_time_series(voltages)
 
             # fix input size
             net_input_size = model.layers[0].output_shape[0][1]
@@ -968,7 +970,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_iso_session_dir + affecting_comp + ".csv")
         path = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/" + affecting_comp + ".csv"
         _, voltages = preprocess.read_oscilloscope_recording(path)
-        voltages = preprocess.z_normalize_time_series(voltages)
+
+        if config.Z_NORMALIZATION:
+            voltages = preprocess.z_normalize_time_series(voltages)
 
         net_input_size = self.model.layers[0].output_shape[0][1]
         assert net_input_size == len(voltages)
