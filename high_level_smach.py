@@ -45,7 +45,7 @@ class RecVehicleAndProcUserData(smach.State):
         print("\n\n############################################")
         print("executing", colored("REC_VEHICLE_AND_PROC_USER_DATA", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
-
+        print()
         # TODO: read from updated GUI
         # GUI.run_gui()
         user_data = {
@@ -115,7 +115,7 @@ class ProcCustomerComplaints(smach.State):
         print("############################################")
         val = ""
         while val != "0" and val != "1":
-            val = input("starting diagnosis with [0] / without [1] customer complaints")
+            val = input("\nstarting diagnosis with [0] / without [1] customer complaints")
 
         if val == "0":
             print("result of customer xps: ", self.launch_customer_xps())
@@ -205,7 +205,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
 
     @staticmethod
     def parse_obd_logfile() -> dict:
-        print("processing OBD log file..")
+        print("\nprocessing OBD log file..")
         obd_data = {"dtc_list": [], "model": "", "hsn": "", "tsn": "", "vin": ""}
 
         with open(config.SAMPLE_OBD_LOG) as f:
@@ -345,7 +345,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
         print("executing", colored("SUGGEST_MEASURING_POS_OR_COMPONENTS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
+        print("############################################\n")
 
         # print("generated instance:", userdata.generated_instance)
         qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
@@ -411,19 +411,19 @@ class PerformSynchronizedSensorRecordings(smach.State):
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
         print("executing", colored("PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
+        print("############################################\n")
 
         components_to_be_recorded = [k for k, v in userdata.suggestion_list.items() if v]
         components_to_be_manually_verified = [k for k, v in userdata.suggestion_list.items() if not v]
         print("------------------------------------------")
         print("components to be recorded:", components_to_be_recorded)
-        print("components to be manually verified:", components_to_be_manually_verified)
+        print("components to be verified manually:", components_to_be_manually_verified)
         print("------------------------------------------")
 
         # TODO: perform manual verification of components and let mechanic enter result + communicate
         #       anomalies further for fault isolation
 
-        print(colored("perform synchronized sensor recordings at:", "green", "on_grey", ["bold"]))
+        print(colored("\nperform synchronized sensor recordings at:", "green", "on_grey", ["bold"]))
         for comp in components_to_be_recorded:
             print(colored("- " + comp, "green", "on_grey", ["bold"]))
 
@@ -685,7 +685,7 @@ class ProvideDiagAndShowTrace(smach.State):
         print("############################################")
 
         for key in userdata.diagnosis.keys():
-            print("identified anomalous component:", key)
+            print("\nidentified anomalous component:", key)
             print("fault path:")
             path = userdata.diagnosis[key][::-1]
             path = [path[i] if i == len(path) - 1 else path[i] + " -> " for i in range(len(path))]
@@ -1101,7 +1101,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
         print("executing", colored("ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
+        print("############################################\n")
 
         # already checked components together with the corresponding results (true -> anomaly)
         already_checked_components = userdata.classified_components.copy()
