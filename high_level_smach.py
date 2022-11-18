@@ -63,11 +63,11 @@ class RecVehicleAndProcUserData(smach.State):
 
         # if not present, create directory for session data
         if not os.path.exists(config.SESSION_DIR):
-            print(colored("------ creating session data directory..", "green", "on_grey", ["bold"]))
+            print(colored("\n------ creating session data directory..", "green", "on_grey", ["bold"]))
             os.makedirs(config.SESSION_DIR + "/")
         else:
             # if it already exists, clear outdated session data
-            print(colored("------ clearing session data directory..", "green", "on_grey", ["bold"]))
+            print(colored("\n------ clearing session data directory..", "green", "on_grey", ["bold"]))
             shutil.rmtree(config.SESSION_DIR)
             os.makedirs(config.SESSION_DIR + "/")
 
@@ -150,7 +150,7 @@ class EstablishInitialHypothesis(smach.State):
         print("executing", colored("ESTABLISH_INITIAL_HYPOTHESIS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
-        print("reading customer complaints session protocol..")
+        print("\nreading customer complaints session protocol..")
         initial_hypothesis = ""
         try:
             with open(config.SESSION_DIR + "/" + config.XPS_SESSION_FILE) as f:
@@ -299,7 +299,7 @@ class RetrieveHistoricalData(smach.State):
         # TODO: potentially retrieve more historical information (not only DTCs)
         historic_dtcs_by_vin = qt.query_dtcs_by_vin(vin)
         print("DTCs previously recorded in present car:", historic_dtcs_by_vin)
-        print("model to retrieve historical data for:", model, "\n")
+        print("\nmodel to retrieve historical data for:", model, "\n")
         historic_dtcs_by_model = qt.query_dtcs_by_model(model)
         print("DTCs previously recorded in model of present car:", historic_dtcs_by_model)
 
@@ -475,7 +475,7 @@ class PerformDataManagement(smach.State):
         print("############################################")
 
         # TODO: optionally retrieve latest version of trained classifier from server
-        print("retrieving latest version of trained classifier from server..")
+        print("\nretrieving latest version of trained classifier from server..")
 
         # TODO: actually read session data
         print("reading customer complaints from session files..")
@@ -886,7 +886,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             userdata.selected_instance = selected_dtc
             dtc_list.remove(selected_dtc)
             self.remove_dtc_instance_from_tmp_file(dtc_list)
-            print("no customer complaints available, selecting DTC instance..")
+            print("\nno customer complaints available, selecting DTC instance..")
             print(colored("selected DTC instance: " + selected_dtc, "green", "on_grey", ["bold"]))
             self.manual_transition()
             return "no_matching_selected_best_instance"
@@ -1080,7 +1080,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
 
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
-            pos = nx.spring_layout(g, seed=68)
+            pos = nx.spring_layout(g, seed=5)
             nx.draw(g, pos=pos, with_labels=True, node_size=40000, alpha=0.75, arrows=True, edge_color=colors, width=widths)
 
             legend_lines = [self.create_legend_lines(clr, lw=5) for clr in ['r', 'g', 'black']]
