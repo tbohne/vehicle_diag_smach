@@ -368,7 +368,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
         oscilloscope_usage = []
         for comp in suspect_components:
             use = qt.query_oscilloscope_usage_by_suspect_component(comp)[0]
-            print("comp:", comp, "use oscilloscope:", use)
+            print("comp:", comp, "// use oscilloscope:", use)
             oscilloscope_usage.append(use)
 
         suggestion_list = {comp: osci for comp, osci in zip(suspect_components, oscilloscope_usage)}
