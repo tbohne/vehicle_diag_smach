@@ -997,12 +997,12 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         if anomaly:
             print("#####################################")
-            print("--> ANOMALY DETECTED")
-            print("#####################################")
+            print(colored("--> ANOMALY DETECTED (" + str(prediction[0]) + ")", "green", "on_grey", ["bold"]))
+            print("#####################################\n")
         else:
             print("#####################################")
-            print("--> NO ANOMALIES DETECTED")
-            print("#####################################")
+            print(colored("--> NO ANOMALIES DETECTED (" + str(prediction[0]) + ")", "green", "on_grey", ["bold"]))
+            print("#####################################\n")
 
         heatmaps = {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), self.model, prediction),
                     "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), self.model, prediction),
@@ -1166,6 +1166,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 if anomaly:
                     causal_path.append(comp_to_be_checked)
                     affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
+                    print("component potentially affected by:", affecting_comps)
                     unisolated_anomalous_components += affecting_comps
                     explicitly_considered_links[comp_to_be_checked] += affecting_comps.copy()
 
