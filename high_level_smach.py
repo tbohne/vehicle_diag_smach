@@ -744,7 +744,7 @@ class UploadDiagnosis(smach.State):
         """
         print("\n\n############################################")
         print("executing", colored("UPLOAD_DIAGNOSIS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
+        print("############################################\n\n")
         # TODO: upload diagnosis to server
         return "uploaded_diag"
 
