@@ -1,0 +1,6 @@
+standalone-smach
+beautifulsoup4
+tensorflow
+py4j
+git+https://github.com/tbohne/OBDOntology.git
+git+https://github.com/tbohne/oscillogram_classification.git
