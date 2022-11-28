@@ -12,6 +12,7 @@ State-machine-based prototype of a vehicle diagnosis *[and recommendation]* syst
 - [**CustomerXPS**](https://github.com/tbohne/CustomerXPS): expert system that deals with customer complaints
 - [**py4j**](https://www.py4j.org/): bridge between Python and Java
 - [**Apache Jena Fuseki**](https://jena.apache.org/documentation/fuseki2/): SPARQL server hosting / maintaining the knowledge graph
+- [**networkx**](https://pypi.org/project/networkx/): Python package for creating and manipulating graphs and networks
 
 ## Installation
 
