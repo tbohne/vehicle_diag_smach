@@ -1,13 +1,15 @@
-FROM python:3.10-buster
+FROM python:3.8.15-buster
 
 WORKDIR /code
 
 COPY ./requirements.txt /code/requirements.txt
 
-COPY ./high_level_smach.py /code/high_level_smach.py
+COPY ./vehicle_diag_smach/ /code/vehicle_diag_smach/
 
-COPY ./config.py /code/config.py
+COPY ./res/ /code/res/
 
 RUN pip install -r /code/requirements.txt
 
-CMD ["python3", "high_level_smach.py"]
+ENV TF_CPP_MIN_LOG_LEVEL=3
+
+CMD ["python3", "/code/vehicle_diag_smach/high_level_smach.py"]
