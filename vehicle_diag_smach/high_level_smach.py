@@ -15,15 +15,19 @@ import numpy as np
 import pandas as pd
 import smach
 import tensorflow as tf
-from OBDOntology import ontology_instance_generator, knowledge_graph_query_tool
 from bs4 import BeautifulSoup
 from matplotlib.lines import Line2D
+from obd_ontology import ontology_instance_generator, knowledge_graph_query_tool
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from py4j.java_gateway import JavaGateway
 from tensorflow import keras
 from termcolor import colored
-from vehicle_diag_smach import config
+
+from config import SESSION_DIR, XPS_SESSION_FILE, HISTORICAL_INFO_FILE, CC_TMP_FILE, DTC_TMP_FILE, \
+    OBD_INFO_FILE, OBD_ONTOLOGY_PATH, SAMPLE_OBD_LOG, DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, TRAINED_MODEL, \
+    SUS_COMP_TMP_FILE, Z_NORMALIZATION, DUMMY_ISOLATION_OSCILLOGRAM_NEG1, DUMMY_ISOLATION_OSCILLOGRAM_NEG2, \
+    OSCI_ISOLATION_SESSION_FILES, DUMMY_ISOLATION_OSCILLOGRAM_POS
 
 
 class RecVehicleAndProcUserData(smach.State):
@@ -62,17 +66,17 @@ class RecVehicleAndProcUserData(smach.State):
             print(k + ": " + str(user_data[k]))
 
         # if not present, create directory for session data
-        if not os.path.exists(config.SESSION_DIR):
+        if not os.path.exists(SESSION_DIR):
             print(colored("\n------ creating session data directory..", "green", "on_grey", ["bold"]))
-            os.makedirs(config.SESSION_DIR + "/")
+            os.makedirs(SESSION_DIR + "/")
         else:
             # if it already exists, clear outdated session data
             print(colored("\n------ clearing session data directory..", "green", "on_grey", ["bold"]))
-            shutil.rmtree(config.SESSION_DIR)
-            os.makedirs(config.SESSION_DIR + "/")
+            shutil.rmtree(SESSION_DIR)
+            os.makedirs(SESSION_DIR + "/")
 
         # write user data to session directory
-        with open(config.SESSION_DIR + '/user_data.json', 'w') as f:
+        with open(SESSION_DIR + '/user_data.json', 'w') as f:
             print(colored("------ writing user data to session directory..", "green", "on_grey", ["bold"]))
             json.dump(user_data, f, default=str)
 
@@ -100,7 +104,7 @@ class ProcCustomerComplaints(smach.State):
         print("establish connection to customer XPS server..")
         gateway = JavaGateway()
         customer_xps = gateway.entry_point
-        return customer_xps.demo("../" + config.SESSION_DIR + "/" + config.XPS_SESSION_FILE)
+        return customer_xps.demo("../" + SESSION_DIR + "/" + XPS_SESSION_FILE)
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -153,7 +157,7 @@ class EstablishInitialHypothesis(smach.State):
         print("\nreading customer complaints session protocol..")
         initial_hypothesis = ""
         try:
-            with open(config.SESSION_DIR + "/" + config.XPS_SESSION_FILE) as f:
+            with open(SESSION_DIR + "/" + XPS_SESSION_FILE) as f:
                 data = f.read()
                 session_data = BeautifulSoup(data, 'xml')
                 for tag in session_data.find_all('rating', {'type': 'heuristic'}):
@@ -166,7 +170,7 @@ class EstablishInitialHypothesis(smach.State):
             return "no_OBD_and_no_CC"
 
         print("reading historical information..")
-        with open(config.SESSION_DIR + "/" + config.HISTORICAL_INFO_FILE) as f:
+        with open(SESSION_DIR + "/" + HISTORICAL_INFO_FILE) as f:
             data = f.read()
 
         if len(initial_hypothesis) > 0:
@@ -174,7 +178,7 @@ class EstablishInitialHypothesis(smach.State):
             print("initial hypothesis:", initial_hypothesis)
             userdata.hypothesis = initial_hypothesis
             unused_cc = {'list': [initial_hypothesis]}
-            with open(config.SESSION_DIR + "/" + config.CC_TMP_FILE, 'w') as f:
+            with open(SESSION_DIR + "/" + CC_TMP_FILE, 'w') as f:
                 json.dump(unused_cc, f, default=str)
         else:
             print("no initial hypothesis based on customer complaints..")
@@ -208,7 +212,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         print("\nprocessing OBD log file..")
         obd_data = {"dtc_list": [], "model": "", "hsn": "", "tsn": "", "vin": ""}
 
-        with open(config.SAMPLE_OBD_LOG) as f:
+        with open(SAMPLE_OBD_LOG) as f:
             obd_lines = f.readlines()
 
         # TODO: parse DTCs from OBD log (above)
@@ -233,22 +237,23 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         """
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
-        print("executing", colored("READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "yellow", "on_grey", ["bold"]), "state..")
+        print("executing", colored("READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "yellow", "on_grey", ["bold"]),
+              "state..")
         print("############################################")
         vehicle_specific_instance_data = self.parse_obd_logfile()
         if len(vehicle_specific_instance_data['dtc_list']) == 0:
             return "no_OBD_data"
 
         # write OBD data to session file
-        with open(config.SESSION_DIR + "/" + config.OBD_INFO_FILE, "w") as f:
+        with open(SESSION_DIR + "/" + OBD_INFO_FILE, "w") as f:
             json.dump(vehicle_specific_instance_data, f, default=str)
         # also create tmp file for unused DTC instances
-        with open(config.SESSION_DIR + "/" + config.DTC_TMP_FILE, "w") as f:
+        with open(SESSION_DIR + "/" + DTC_TMP_FILE, "w") as f:
             dtc_tmp = {'list': vehicle_specific_instance_data['dtc_list']}
             json.dump(dtc_tmp, f, default=str)
 
         # extend knowledge graph with read OBD data (if the vehicle instance already exists, it will be extended)
-        instance_gen = ontology_instance_generator.OntologyInstanceGenerator(config.OBD_ONTOLOGY_PATH, local_kb=False)
+        instance_gen = ontology_instance_generator.OntologyInstanceGenerator(OBD_ONTOLOGY_PATH, local_kb=False)
         for dtc in vehicle_specific_instance_data['dtc_list']:
             instance_gen.extend_knowledge_graph(
                 vehicle_specific_instance_data['model'], vehicle_specific_instance_data['hsn'],
@@ -271,7 +276,6 @@ class RetrieveHistoricalData(smach.State):
     """
 
     def __init__(self):
-
         smach.State.__init__(self,
                              outcomes=['processed_all_data'],
                              input_keys=['vehicle_specific_instance_data_in'],
@@ -303,7 +307,7 @@ class RetrieveHistoricalData(smach.State):
         historic_dtcs_by_model = qt.query_dtcs_by_model(model)
         print("DTCs previously recorded in model of present car:", historic_dtcs_by_model)
 
-        with open(config.SESSION_DIR + "/" + config.HISTORICAL_INFO_FILE, "w") as f:
+        with open(SESSION_DIR + "/" + HISTORICAL_INFO_FILE, "w") as f:
             f.write("DTCs previously recorded in car with VIN " + vin + ": " + str(historic_dtcs_by_vin) + "\n")
             f.write("DTCs previously recorded in cars of model " + model + ": " + str(historic_dtcs_by_model) + "\n")
 
@@ -352,14 +356,14 @@ class SuggestMeasuringPosOrComponents(smach.State):
 
         # should not be queried over and over again - just once for a session
         # -> then suggest as many as possible per execution of the state (write to session files)
-        if not os.path.exists(config.SESSION_DIR + "/" + config.SUS_COMP_TMP_FILE):
+        if not os.path.exists(SESSION_DIR + "/" + SUS_COMP_TMP_FILE):
             suspect_components = qt.query_suspect_component_by_dtc(userdata.selected_instance)
             # write suspect components to session file
-            with open(config.SESSION_DIR + "/" + config.SUS_COMP_TMP_FILE, 'w') as f:
+            with open(SESSION_DIR + "/" + SUS_COMP_TMP_FILE, 'w') as f:
                 json.dump(suspect_components, f, default=str)
         else:
             # read remaining suspect components from file
-            with open(config.SESSION_DIR + "/" + config.SUS_COMP_TMP_FILE) as f:
+            with open(SESSION_DIR + "/" + SUS_COMP_TMP_FILE) as f:
                 suspect_components = json.load(f)
 
         print(colored("SUSPECT COMPONENTS: " + str(suspect_components) + "\n", "green", "on_grey", ["bold"]))
@@ -375,7 +379,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
         userdata.suggestion_list = suggestion_list
 
         # everything that is used here should be removed from the tmp file
-        with open(config.SESSION_DIR + "/" + config.SUS_COMP_TMP_FILE, 'w') as f:
+        with open(SESSION_DIR + "/" + SUS_COMP_TMP_FILE, 'w') as f:
             json.dump([c for c in suspect_components if c not in suggestion_list.keys()], f, default=str)
 
         if True in oscilloscope_usage:
@@ -433,9 +437,9 @@ class PerformSynchronizedSensorRecordings(smach.State):
 
         # creating dummy oscillograms in '/session_files' for each suspect component
         comp_idx = 0
-        for path in Path(config.DUMMY_OSCILLOGRAMS).rglob('*.csv'):
+        for path in Path(DUMMY_OSCILLOGRAMS).rglob('*.csv'):
             src = str(path)
-            osci_session_dir = config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/"
+            osci_session_dir = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/"
 
             if not os.path.exists(osci_session_dir):
                 os.makedirs(osci_session_dir)
@@ -485,7 +489,7 @@ class PerformDataManagement(smach.State):
         print("reading XPS interview data from session files..")
 
         # determine whether oscillograms have been generated
-        osci_session_dir = config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/"
+        osci_session_dir = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/"
         if os.path.exists(osci_session_dir):
             print("reading recorded oscillograms from session files..")
             # TODO:
@@ -568,22 +572,23 @@ class ClassifyOscillograms(smach.State):
         """
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
-        print("executing", colored("CLASSIFY_OSCILLOGRAMS", "yellow", "on_grey", ["bold"]), "state (applying trained model)..")
+        print("executing", colored("CLASSIFY_OSCILLOGRAMS", "yellow", "on_grey", ["bold"]),
+              "state (applying trained model)..")
         print("############################################")
-        model = keras.models.load_model(config.TRAINED_MODEL)
+        model = keras.models.load_model(TRAINED_MODEL)
         anomalous_components = []
         non_anomalous_components = []
-        num_of_recordings = len(list(Path(config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/").rglob('*.csv')))
+        num_of_recordings = len(list(Path(SESSION_DIR + "/" + OSCI_SESSION_FILES + "/").rglob('*.csv')))
 
         # iteratively process oscilloscope recordings
-        for osci_path in Path(config.SESSION_DIR + "/" + config.OSCI_SESSION_FILES + "/").rglob('*.csv'):
+        for osci_path in Path(SESSION_DIR + "/" + OSCI_SESSION_FILES + "/").rglob('*.csv'):
             label = str(osci_path).split("/")[2].replace(".csv", "")
             comp_name = label.split("_")[-1]
 
             print(colored("\n\nclassifying:" + comp_name, "green", "on_grey", ["bold"]))
             _, voltages = preprocess.read_oscilloscope_recording(osci_path)
 
-            if config.Z_NORMALIZATION:
+            if Z_NORMALIZATION:
                 voltages = preprocess.z_normalize_time_series(voltages)
 
             # fix input size
@@ -666,7 +671,6 @@ class ProvideDiagAndShowTrace(smach.State):
     """
 
     def __init__(self):
-
         smach.State.__init__(self,
                              outcomes=['provided_diag_and_explanation'],
                              input_keys=['diagnosis'],
@@ -702,7 +706,6 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
     """
 
     def __init__(self):
-
         smach.State.__init__(self,
                              outcomes=['no_diag'],
                              input_keys=[''],
@@ -717,7 +720,8 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
         """
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
-        print("executing", colored("PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT", "yellow", "on_grey", ["bold"]), "state..")
+        print("executing", colored("PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT", "yellow", "on_grey", ["bold"]),
+              "state..")
         print("############################################")
         # TODO: create log file for the failed diagnostic process to improve future diagnosis (missing knowledge etc.)
         return "no_diag"
@@ -729,7 +733,6 @@ class UploadDiagnosis(smach.State):
     """
 
     def __init__(self):
-
         smach.State.__init__(self,
                              outcomes=['uploaded_diag'],
                              input_keys=[''],
@@ -756,7 +759,6 @@ class GenArtificialInstanceBasedOnCC(smach.State):
     """
 
     def __init__(self):
-
         smach.State.__init__(self,
                              outcomes=['generated_artificial_instance'],
                              input_keys=['customer_complaints'],
@@ -799,7 +801,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
 
         :param remaining_instances: updated list to save in tmp file
         """
-        with open(config.SESSION_DIR + "/" + config.DTC_TMP_FILE, "w") as f:
+        with open(SESSION_DIR + "/" + DTC_TMP_FILE, "w") as f:
             json.dump({'list': remaining_instances}, f, default=str)
 
     @staticmethod
@@ -807,7 +809,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         """
         Clears the customer complaints tmp file.
         """
-        with open(config.SESSION_DIR + "/" + config.CC_TMP_FILE, 'w') as f:
+        with open(SESSION_DIR + "/" + CC_TMP_FILE, 'w') as f:
             # clear list, already used now
             json.dump({'list': []}, f, default=str)
 
@@ -831,13 +833,13 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         print("############################################")
 
         # load DTC instances from tmp file
-        with open(config.SESSION_DIR + "/" + config.DTC_TMP_FILE) as f:
+        with open(SESSION_DIR + "/" + DTC_TMP_FILE) as f:
             dtc_list = json.load(f)['list']
 
         customer_complaints_list = []
         try:
             # load customer complaints from tmp file
-            with open(config.SESSION_DIR + "/" + config.CC_TMP_FILE) as f:
+            with open(SESSION_DIR + "/" + CC_TMP_FILE) as f:
                 customer_complaints_list = json.load(f)['list']
         except FileNotFoundError:
             pass
@@ -942,7 +944,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                              input_keys=['classified_components'],
                              output_keys=['fault_paths'])
 
-        self.model = keras.models.load_model(config.TRAINED_MODEL)
+        self.model = keras.models.load_model(TRAINED_MODEL)
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
 
     @staticmethod
@@ -959,7 +961,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :return: whether an anomaly has been detected
         """
         # create session data directory
-        osci_iso_session_dir = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/"
+        osci_iso_session_dir = SESSION_DIR + "/" + OSCI_ISOLATION_SESSION_FILES + "/"
         if not os.path.exists(osci_iso_session_dir):
             os.makedirs(osci_iso_session_dir)
 
@@ -970,15 +972,15 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         # TODO: hard-coded for demo purposes - showing reasonable case (one NEG)
         if affecting_comp == "Ladedruck-Regelventil":
-            shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_iso_session_dir + affecting_comp + ".csv")
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_iso_session_dir + affecting_comp + ".csv")
         elif affecting_comp == "Ladedrucksteller-Positionssensor":
-            shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_NEG2, osci_iso_session_dir + affecting_comp + ".csv")
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG2, osci_iso_session_dir + affecting_comp + ".csv")
         else:
-            shutil.copy(config.DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_iso_session_dir + affecting_comp + ".csv")
-        path = config.SESSION_DIR + "/" + config.OSCI_ISOLATION_SESSION_FILES + "/" + affecting_comp + ".csv"
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_iso_session_dir + affecting_comp + ".csv")
+        path = SESSION_DIR + "/" + OSCI_ISOLATION_SESSION_FILES + "/" + affecting_comp + ".csv"
         _, voltages = preprocess.read_oscilloscope_recording(path)
 
-        if config.Z_NORMALIZATION:
+        if Z_NORMALIZATION:
             voltages = preprocess.z_normalize_time_series(voltages)
 
         net_input_size = self.model.layers[0].output_shape[0][1]
@@ -1066,14 +1068,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 if key in anomalous_paths.keys():
                     for j in range(len(anomalous_paths[key]) - 1):
                         # causal link check
-                        if anomalous_paths[key][j] == from_relations[i] and anomalous_paths[key][j + 1] == to_relations[i]:
+                        if anomalous_paths[key][j] == from_relations[i] and anomalous_paths[key][j + 1] == to_relations[
+                            i]:
                             causal_links.append(i)
                             break
 
             colors = ['g' if i not in causal_links else 'r' for i in range(len(to_relations))]
             for i in range(len(from_relations)):
                 # if the from-to relation is not part of the actually considered links, it should be black
-                if from_relations[i] not in explicitly_considered_links.keys() or to_relations[i] not in explicitly_considered_links[from_relations[i]]:
+                if from_relations[i] not in explicitly_considered_links.keys() or to_relations[i] not in \
+                        explicitly_considered_links[from_relations[i]]:
                     colors[i] = 'black'
 
             widths = [5 if i not in causal_links else 10 for i in range(len(to_relations))]
@@ -1081,7 +1085,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
             pos = nx.spring_layout(g, seed=5)
-            nx.draw(g, pos=pos, with_labels=True, node_size=40000, alpha=0.75, arrows=True, edge_color=colors, width=widths)
+            nx.draw(g, pos=pos, with_labels=True, node_size=40000, alpha=0.75, arrows=True, edge_color=colors,
+                    width=widths)
 
             legend_lines = [self.create_legend_lines(clr, lw=5) for clr in ['r', 'g', 'black']]
             labels = ["fault path", "non-anomalous links", "disregarded"]
@@ -1284,10 +1289,29 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                                 'fault_paths': 'sm_input'})
 
 
+def log_info(msg):
+    pass
+
+
+def log_warn(msg):
+    pass
+
+
+def log_debug(msg):
+    pass
+
+
+def log_err(msg):
+    print("[ ERROR ] : " + str(msg))
+
+
 def run():
     """
     Runs the state machine.
     """
+    # set custom logging functions
+    smach.set_loggers(log_info, log_debug, log_warn, log_err)
+
     sm = VehicleDiagnosisStateMachine()
     tf.get_logger().setLevel(logging.ERROR)
     outcome = sm.execute()
