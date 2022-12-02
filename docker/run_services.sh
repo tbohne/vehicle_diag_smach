@@ -1,4 +1,4 @@
 #!/bin/bash
 
-/usr/bin/java -Xms4g -Xmx8g -Dlog4j2.formatMsgNoLookups=true -XX:-UseGCOverheadLimit -XX:+UseParallelGC -jar fuseki-server.jar --loc=/code/fuseki &
+./apache-jena-fuseki-4.6.1/fuseki-server &
 python3 /code/vehicle_diag_smach/high_level_smach.py
