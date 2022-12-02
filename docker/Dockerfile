@@ -58,23 +58,26 @@ RUN curl -L $TRIPLES_URL > $DATA_FILE
 ARG VERSION=4.6.1
 
 # jena - build TDB database
-ENV TDB_LOC=/code/fuseki
-ENV JENA_URL=https://repository.apache.org/content/repositories/releases/org/apache/jena/apache-jena/${VERSION}/apache-jena-${VERSION}.tar.gz
-RUN curl -L $JENA_URL > /code/apache-jena.tar.gz
-RUN tar -xvzf /code/apache-jena.tar.gz
+# ENV TDB_LOC=/code/fuseki
 
-RUN cat ${DATA_FILE}
+# ENV JENA_URL=https://repository.apache.org/content/repositories/releases/org/apache/jena/apache-jena/${VERSION}/apache-jena-${VERSION}.tar.gz
 
-RUN apache-jena-${VERSION}/bin/tdb2.xloader --loc $TDB_LOC $DATA_FILE
+ENV JENA_URL=https://dlcdn.apache.org/jena/binaries/apache-jena-fuseki-4.6.1.tar.gz
+RUN curl -L $JENA_URL > /code/apache-jena-fuseki.tar.gz
+RUN tar -xvzf /code/apache-jena-fuseki.tar.gz
+
+RUN chmod +x /code/apache-jena-fuseki-4.6.1/fuseki-server
+
+# RUN apache-jena-${VERSION}/bin/tdb2.xloader --loc $TDB_LOC $DATA_FILE
 
 # fuseki
-ENV URL=https://repository.apache.org/content/repositories/releases/org/apache/jena/jena-fuseki-server/${VERSION}/jena-fuseki-server-${VERSION}.jar
+# ENV URL=https://repository.apache.org/content/repositories/releases/org/apache/jena/jena-fuseki-server/${VERSION}/jena-fuseki-server-${VERSION}.jar
 
-ENV BASE=/code/apache-fuseki
+# ENV BASE=/code/apache-fuseki
 
-RUN mkdir -p $BASE
+# RUN mkdir -p $BASE
 
-RUN curl --silent --show-error --output fuseki-server.jar $URL
+# RUN curl --silent --show-error --output fuseki-server.jar $URL
 
 EXPOSE 3030
 
