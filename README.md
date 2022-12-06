@@ -13,6 +13,8 @@ State-machine-based prototype of a vehicle diagnosis *[and recommendation]* syst
 - [**py4j**](https://www.py4j.org/): bridge between Python and Java
 - [**Apache Jena Fuseki**](https://jena.apache.org/documentation/fuseki2/): SPARQL server hosting / maintaining the knowledge graph
 - [**networkx**](https://pypi.org/project/networkx/): Python package for creating and manipulating graphs and networks
+- [**termcolor**](https://pypi.org/project/termcolor/): ANSI color formatting for output in terminal
+- [**matplotlib**](https://matplotlib.org/): visualization with Python
 
 ## Installation
 
