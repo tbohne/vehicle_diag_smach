@@ -73,7 +73,9 @@ RUN chmod +x /code/apache-jena-fuseki-4.6.1/fuseki-server
 # fuseki
 # ENV URL=https://repository.apache.org/content/repositories/releases/org/apache/jena/jena-fuseki-server/${VERSION}/jena-fuseki-server-${VERSION}.jar
 
-# ENV BASE=/code/apache-fuseki
+ENV FUSEKI_BASE=/code/apache-jena-fuseki-4.6.1
+
+COPY ./shiro.ini $FUSEKI_BASE/shiro.ini
 
 # RUN mkdir -p $BASE
 
