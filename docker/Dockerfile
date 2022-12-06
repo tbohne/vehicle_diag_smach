@@ -13,6 +13,7 @@ RUN pip install --upgrade pip
 RUN apt-get install -y git
 RUN apt-get install -y jq
 RUN apt-get install -y curl
+RUN apt-get install -y tmux
 
 RUN pip install Cython
 RUN pip install -r /code/requirements.txt
