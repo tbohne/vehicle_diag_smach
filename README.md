@@ -16,32 +16,23 @@ State-machine-based prototype of a vehicle diagnosis *[and recommendation]* syst
 - [**termcolor**](https://pypi.org/project/termcolor/): ANSI color formatting for output in terminal
 - [**matplotlib**](https://matplotlib.org/): visualization with Python
 
-## Installation
+## Installation (from source)
 
+Install state machine and dependencies:
 ```
-$ mkdir diag
-$ cd diag
 $ git clone https://github.com/tbohne/vehicle_diag_smach.git
-$ git clone https://github.com/tbohne/OBDOntology.git
-$ git clone https://github.com/tbohne/oscillogram_classification.git
-$ git clone https://github.com/tbohne/CustomerXPS.git
-$ touch __init__.py setup.py
+$ cd vehicle_diag_smach
+$ pip install .
 ```
-Open `setup.py` and enter the following:
-```python
-from setuptools import setup, find_packages
-setup(
-    name='diag',
-    packages=find_packages(),
-    package_data={'': ['img/*.ico', 'img/*.png', '*.owl', 'res/*']},
-    include_package_data=True,
-)
+Install Apache Jena Fuseki server:
 ```
-Install:
+$ cd ..
+$ curl -L https://dlcdn.apache.org/jena/binaries/apache-jena-fuseki-4.6.1.tar.gz
+$ tar -xvzf apache-jena-fuseki-4.6.1.tar.gz
+$ chmod +x apache-jena-fuseki-4.6.1/fuseki-server
 ```
-$ pip install . --user
-```
-Additionally, to use the customer XPS, create a .jar file with the py4j and d3web dependencies (cf. [CustomerXPS](https://github.com/tbohne/CustomerXPS)).
+
+Optionally, to use the customer XPS, create a .jar file with the py4j and d3web dependencies (cf. [CustomerXPS](https://github.com/tbohne/CustomerXPS)).
 
 ## Usage
 
