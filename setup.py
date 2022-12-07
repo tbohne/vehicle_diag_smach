@@ -6,6 +6,12 @@ URL = 'https://github.com/tbohne/vehicle_diag_smach'
 with open('requirements.txt') as f:
     required = f.read().splitlines()
 
+for i in range(len(required)):
+    # adapt the repo references for setup.py usage
+    if "https" in required[i]:
+        pkg = required[i].split(".git")[0].split("/")[-1]
+        required[i] = pkg + "@" + required[i]
+
 setup(
     name='vehicle_diag_smach',
     version=__version__,
