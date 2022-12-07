@@ -18,35 +18,36 @@ State-machine-based prototype of a vehicle diagnosis *[and recommendation]* syst
 
 ## Installation (from source)
 
-Install state machine and dependencies:
+Install diagnosis state machine and dependencies:
 ```
 $ git clone https://github.com/tbohne/vehicle_diag_smach.git
-$ cd vehicle_diag_smach
+$ cd vehicle_diag_smach/
 $ pip install .
 ```
-Install Apache Jena Fuseki server:
+Set up *Apache Jena Fuseki* server:
 ```
 $ cd ..
-$ curl -L https://dlcdn.apache.org/jena/binaries/apache-jena-fuseki-4.6.1.tar.gz
+$ curl -L https://dlcdn.apache.org/jena/binaries/apache-jena-fuseki-4.6.1.tar.gz > apache-jena-fuseki-4.6.1.tar.gz
 $ tar -xvzf apache-jena-fuseki-4.6.1.tar.gz
 $ chmod +x apache-jena-fuseki-4.6.1/fuseki-server
 ```
+For configuration, i.e., hosting the knowledge graph, cf. [OBDOntology](https://github.com/tbohne/OBDOntology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
 
-Optionally, to use the customer XPS, create a .jar file with the py4j and d3web dependencies (cf. [CustomerXPS](https://github.com/tbohne/CustomerXPS)).
+[*Optionally, to use the customer XPS, create a `.jar` file with the py4j and d3web dependencies (cf. [CustomerXPS](https://github.com/tbohne/CustomerXPS)).*]
 
 ## Usage
 
-Run server (knowledge graph) from Apache Jena Fuseki root directory (runs at `localhost:3030`) - for configuration cf. [OBDOntology](https://github.com/tbohne/OBDOntology):
+Run server (knowledge graph) from *Apache Jena Fuseki* root directory (runs at `localhost:3030`):
 ```
-$ ./fuseki-server
+$ ./apache-jena-fuseki-4.6.1/fuseki-server
 ```
-Run customer XPS server (in `CustomerXPS/`):
-```
-$ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
-```
-Run state machine (in `diag/`):
+Run state machine (in `vehicle_diag_smach/`):
 ```
 $ python vehicle_diag_smach/high_level_smach.py
+```
+Optionally run customer XPS server (in `CustomerXPS/`):
+```
+$ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 ```
 
 ## State Machine Architecture
