@@ -39,11 +39,6 @@ RUN apt-get update && \
 ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64/
 RUN export JAVA_HOME
 
-# APACHE JENA FUSEKI
-ARG KNOWLEDGE_GRAPH_URL=https://raw.githubusercontent.com/tbohne/OBDOntology/main/knowledge_base/obd_knowledge_graph.owl
-ENV KNOWLEDGE_GRAPH_FILE=/code/obd_knowledge_graph.owl
-RUN curl -L $KNOWLEDGE_GRAPH_URL > $KNOWLEDGE_GRAPH_FILE
-
 ARG VERSION=4.6.1
 ENV JENA_URL=https://dlcdn.apache.org/jena/binaries/apache-jena-fuseki-${VERSION}.tar.gz
 RUN curl -L $JENA_URL > /code/apache-jena-fuseki.tar.gz
