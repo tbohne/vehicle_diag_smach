@@ -33,9 +33,18 @@ $ chmod +x apache-jena-fuseki-4.6.1/fuseki-server
 ```
 For configuration, i.e., hosting the knowledge graph, cf. [OBDOntology](https://github.com/tbohne/OBDOntology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
 
-[*Optionally, to use the customer XPS, create a `.jar` file with the py4j and d3web dependencies (cf. [CustomerXPS](https://github.com/tbohne/CustomerXPS)).*]
+## Installation (Docker)
+```
+$ git clone https://github.com/tbohne/vehicle_diag_smach.git
+$ cd vehicle_diag_smach/
+$ docker build -t diag_system -f docker/Dockerfile .
+```
 
-## Usage
+## Optional Installation of Customer XPS
+
+Optionally, to use the customer XPS, create a `.jar` file with the *py4j* and *d3web* dependencies (cf. [CustomerXPS](https://github.com/tbohne/CustomerXPS)).
+
+## Source Usage
 
 Run server (knowledge graph) from *Apache Jena Fuseki* root directory (runs at `localhost:3030`):
 ```
@@ -45,6 +54,19 @@ Run state machine (in `vehicle_diag_smach/`):
 ```
 $ python vehicle_diag_smach/high_level_smach.py
 ```
+Optionally run customer XPS server (in `CustomerXPS/`):
+```
+$ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
+```
+
+## Docker Usage
+
+Run docker container (*Apache Jena Fuseki* server runs at `CONTAINER_IP:3030`):
+```
+$ docker run -ti diag_system
+```
+For configuration, i.e., hosting the knowledge graph, cf. [OBDOntology](https://github.com/tbohne/OBDOntology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
+
 Optionally run customer XPS server (in `CustomerXPS/`):
 ```
 $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
