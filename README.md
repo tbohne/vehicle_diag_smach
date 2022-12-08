@@ -67,7 +67,7 @@ $ xhost +local:docker
 ```
 Run docker container with visualizations on host system (*Apache Jena Fuseki* server runs at `CONTAINER_IP:3030`):
 ```
-$ docker run -v /tmp/.X11-unix/:/tmp/.X11-unix -e DISPLAY=unix:0.0 -ti diag_system
+$ docker run -v /tmp/.X11-unix/:/tmp/.X11-unix -e DISPLAY=unix$DISPLAY -ti diag_system
 ```
 For configuration, i.e., hosting the knowledge graph, cf. [OBDOntology](https://github.com/tbohne/OBDOntology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
 
