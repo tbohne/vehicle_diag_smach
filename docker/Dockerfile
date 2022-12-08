@@ -15,13 +15,16 @@ RUN apt-get install -y jq
 RUN apt-get install -y curl
 RUN apt-get install -y tmux
 
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get install -y libx11-dev
+RUN apt-get install -y python3-tk
+
 RUN pip install Cython
 RUN pip install -r /code/requirements.txt
 
 # silence tensorflow logs
 ENV TF_CPP_MIN_LOG_LEVEL=3
-
-ENV DEBIAN_FRONTEND=noninteractive
 
 # install OpenJDK
 RUN apt-get update && \
