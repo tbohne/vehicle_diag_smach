@@ -2,3 +2,6 @@
 __pycache__/
 KB/
 *.owl
+build/
+session_files/
+*egg-info/
