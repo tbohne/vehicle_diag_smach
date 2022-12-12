@@ -61,15 +61,24 @@ $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 
 ## Docker Usage
 
+### <u>Initial run (only for initial setup)</u>
+
 Allow local docker container to display visualizations on host system (connection to *XServer*):
 ```
 $ xhost +local:docker
 ```
-Run docker container with visualizations on host system (*Apache Jena Fuseki* server runs at `CONTAINER_IP:3030`):
+Create and start docker container with visualizations on host system (*Apache Jena Fuseki* server runs at `CONTAINER_IP:3030`):
 ```
 $ docker run -v /tmp/.X11-unix/:/tmp/.X11-unix -e DISPLAY=unix$DISPLAY -ti diag_system
 ```
 For configuration, i.e., hosting the knowledge graph, cf. [OBDOntology](https://github.com/tbohne/OBDOntology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
+
+### <u>Run existing container</u>
+
+Start already existing container (with persistent knowledge graph hosted on `CONTAINER_IP:3030`):
+```
+$ docker start -i CONTAINER_ID
+```
 
 Optionally run customer XPS server (in `CustomerXPS/`):
 ```
