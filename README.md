@@ -75,7 +75,7 @@ For configuration, i.e., hosting the knowledge graph, cf. [OBDOntology](https://
 
 ### <u>Run existing container</u>
 
-Start already existing container (with persistent knowledge graph hosted on `CONTAINER_IP:3030`):
+After restarts, repeat the above *XServer* settings if necessary.  Start already existing container (with persistent knowledge graph hosted on `CONTAINER_IP:3030`):
 ```
 $ docker start -i CONTAINER_ID
 ```
