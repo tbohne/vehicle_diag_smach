@@ -625,7 +625,8 @@ class ClassifyOscillograms(smach.State):
                         "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
                         "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
 
-            cam.plot_heatmaps_as_overlay(heatmaps, voltages, label)
+            res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
+            cam.plot_heatmaps_as_overlay(heatmaps, voltages, label + res_str)
 
         # classifying the subset of components that are to be classified manually
         for comp in userdata.suggestion_list.keys():
@@ -1011,7 +1012,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), self.model, prediction),
                     "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), self.model, prediction)}
 
-        cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", ""))
+        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0]) + "]"
+        cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", "") + res_str)
 
         return np.argmax(prediction) == 0
 
