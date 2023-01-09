@@ -1000,11 +1000,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         if anomaly:
             print("#####################################")
-            print(colored("--> ANOMALY DETECTED (" + str(prediction[0]) + ")", "green", "on_grey", ["bold"]))
+            print(colored("--> ANOMALY DETECTED (" + str(prediction[0][0]) + ")", "green", "on_grey", ["bold"]))
             print("#####################################\n")
         else:
             print("#####################################")
-            print(colored("--> NO ANOMALIES DETECTED (" + str(prediction[0]) + ")", "green", "on_grey", ["bold"]))
+            print(colored("--> NO ANOMALIES DETECTED (" + str(prediction[0][0]) + ")", "green", "on_grey", ["bold"]))
             print("#####################################\n")
 
         heatmaps = {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), self.model, prediction),
@@ -1012,7 +1012,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), self.model, prediction),
                     "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), self.model, prediction)}
 
-        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0]) + "]"
+        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
         cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", "") + res_str)
 
         return np.argmax(prediction) == 0
