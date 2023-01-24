@@ -591,10 +591,16 @@ class ClassifyOscillograms(smach.State):
             if Z_NORMALIZATION:
                 voltages = preprocess.z_normalize_time_series(voltages)
 
-            # selecting trained model based on component name
-            trained_model_file = TRAINED_MODEL_POOL + comp_name + ".h5"
-            print("loading trained model:", trained_model_file)
-            model = keras.models.load_model(trained_model_file)
+            try:
+                # selecting trained model based on component name
+                trained_model_file = TRAINED_MODEL_POOL + comp_name + ".h5"
+                print("loading trained model:", trained_model_file)
+                model = keras.models.load_model(trained_model_file)
+            except OSError as e:
+                print("no trained model available for the signal (component) to be classified:", comp_name)
+                print("adding it to the list of components to be verified manually..")
+                userdata.suggestion_list[comp_name] = False
+                continue
 
             # fix input size
             net_input_size = model.layers[0].output_shape[0][1]
@@ -988,9 +994,13 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             voltages = preprocess.z_normalize_time_series(voltages)
 
         # selecting trained model based on component name
-        trained_model_file = TRAINED_MODEL_POOL + affecting_comp + ".h5"
-        print("loading trained model:", trained_model_file)
-        model = keras.models.load_model(trained_model_file)
+        try:
+            trained_model_file = TRAINED_MODEL_POOL + affecting_comp + ".h5"
+            print("loading trained model:", trained_model_file)
+            model = keras.models.load_model(trained_model_file)
+        except OSError as e:
+            print("no trained model available for the signal (component) to be classified:", affecting_comp)
+            return
 
         net_input_size = model.layers[0].output_shape[0][1]
         assert net_input_size == len(voltages)
@@ -1105,6 +1115,19 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 plt.legend(legend_lines, labels, fontsize=18)
             plt.show()
 
+    @staticmethod
+    def manual_inspection_of_component() -> bool:
+        """
+        Guides a manual inspection of the component by the mechanic.
+
+        :return: true -> anomaly / false -> no anomaly
+        """
+        print("manual inspection of component (no oscilloscope)..")
+        val = ""
+        while val not in ['0', '1']:
+            val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
+        return val == "0"
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
@@ -1169,13 +1192,12 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 if use_oscilloscope:
                     print("use oscilloscope..")
                     anomaly = self.classify_component(comp_to_be_checked)
-                    already_checked_components[comp_to_be_checked] = anomaly
+                    if anomaly is None:
+                        anomaly = self.manual_inspection_of_component()
+                    else:
+                        already_checked_components[comp_to_be_checked] = anomaly
                 else:
-                    print("manual inspection of component (no oscilloscope)..")
-                    val = ""
-                    while val not in ['0', '1']:
-                        val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
-                    anomaly = val == "0"
+                    anomaly = self.manual_inspection_of_component()
                     already_checked_components[comp_to_be_checked] = anomaly
 
                 if anomaly:
