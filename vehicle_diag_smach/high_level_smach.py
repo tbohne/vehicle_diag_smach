@@ -25,7 +25,7 @@ from tensorflow import keras
 from termcolor import colored
 
 from config import SESSION_DIR, XPS_SESSION_FILE, HISTORICAL_INFO_FILE, CC_TMP_FILE, DTC_TMP_FILE, \
-    OBD_INFO_FILE, OBD_ONTOLOGY_PATH, SAMPLE_OBD_LOG, DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, TRAINED_MODEL, \
+    OBD_INFO_FILE, OBD_ONTOLOGY_PATH, SAMPLE_OBD_LOG, DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, TRAINED_MODEL_POOL, \
     SUS_COMP_TMP_FILE, Z_NORMALIZATION, DUMMY_ISOLATION_OSCILLOGRAM_NEG1, DUMMY_ISOLATION_OSCILLOGRAM_NEG2, \
     OSCI_ISOLATION_SESSION_FILES, DUMMY_ISOLATION_OSCILLOGRAM_POS
 
@@ -575,7 +575,7 @@ class ClassifyOscillograms(smach.State):
         print("executing", colored("CLASSIFY_OSCILLOGRAMS", "yellow", "on_grey", ["bold"]),
               "state (applying trained model)..")
         print("############################################")
-        model = keras.models.load_model(TRAINED_MODEL)
+
         anomalous_components = []
         non_anomalous_components = []
         num_of_recordings = len(list(Path(SESSION_DIR + "/" + OSCI_SESSION_FILES + "/").rglob('*.csv')))
@@ -590,6 +590,11 @@ class ClassifyOscillograms(smach.State):
 
             if Z_NORMALIZATION:
                 voltages = preprocess.z_normalize_time_series(voltages)
+
+            # selecting trained model based on component name
+            trained_model_file = TRAINED_MODEL_POOL + comp_name + ".h5"
+            print("loading trained model:", trained_model_file)
+            model = keras.models.load_model(trained_model_file)
 
             # fix input size
             net_input_size = model.layers[0].output_shape[0][1]
@@ -944,8 +949,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                              outcomes=['isolated_problem'],
                              input_keys=['classified_components'],
                              output_keys=['fault_paths'])
-
-        self.model = keras.models.load_model(TRAINED_MODEL)
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
 
     @staticmethod
@@ -984,7 +987,12 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if Z_NORMALIZATION:
             voltages = preprocess.z_normalize_time_series(voltages)
 
-        net_input_size = self.model.layers[0].output_shape[0][1]
+        # selecting trained model based on component name
+        trained_model_file = TRAINED_MODEL_POOL + affecting_comp + ".h5"
+        print("loading trained model:", trained_model_file)
+        model = keras.models.load_model(trained_model_file)
+
+        net_input_size = model.layers[0].output_shape[0][1]
         assert net_input_size == len(voltages)
         # if len(voltages) > net_input_size:
         #     remove = len(voltages) - net_input_size
@@ -993,7 +1001,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         net_input = np.asarray(voltages).astype('float32')
         net_input = net_input.reshape((net_input.shape[0], 1))
 
-        prediction = self.model.predict(np.array([net_input]))
+        prediction = model.predict(np.array([net_input]))
         num_classes = len(prediction[0])
         # addresses both models with one output neuron and those with several
         anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
@@ -1007,10 +1015,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             print(colored("--> NO ANOMALIES DETECTED (" + str(prediction[0][0]) + ")", "green", "on_grey", ["bold"]))
             print("#####################################\n")
 
-        heatmaps = {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), self.model, prediction),
-                    "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), self.model, prediction),
-                    "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), self.model, prediction),
-                    "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), self.model, prediction)}
+        heatmaps = {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
+                    "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
+                    "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
+                    "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
 
         res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
         cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", "") + res_str)
