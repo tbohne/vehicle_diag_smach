@@ -357,7 +357,7 @@ class SuggestMeasuringPosOrComponents(smach.State):
         # should not be queried over and over again - just once for a session
         # -> then suggest as many as possible per execution of the state (write to session files)
         if not os.path.exists(SESSION_DIR + "/" + SUS_COMP_TMP_FILE):
-            suspect_components = qt.query_suspect_component_by_dtc(userdata.selected_instance)
+            suspect_components = qt.query_suspect_components_by_dtc(userdata.selected_instance)
             # write suspect components to session file
             with open(SESSION_DIR + "/" + SUS_COMP_TMP_FILE, 'w') as f:
                 json.dump(suspect_components, f, default=str)
@@ -1070,8 +1070,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 if key in anomalous_paths.keys():
                     for j in range(len(anomalous_paths[key]) - 1):
                         # causal link check
-                        if anomalous_paths[key][j] == from_relations[i] and anomalous_paths[key][j + 1] == to_relations[
-                            i]:
+                        if anomalous_paths[key][j] == from_relations[i] \
+                                and anomalous_paths[key][j + 1] == to_relations[i]:
                             causal_links.append(i)
                             break
 
