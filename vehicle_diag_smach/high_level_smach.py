@@ -761,6 +761,11 @@ class UploadDiagnosis(smach.State):
         print("executing", colored("UPLOAD_DIAGNOSIS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################\n\n")
         # TODO: upload diagnosis to server
+        #   - it's important to log the whole context - everything that could be meaningful
+        #   - in the long run, this is where we collect the data that we initially lacked, e.g., for automated
+        #     data-driven RCA
+        #   - to be logged (diagnosis together with):
+        #       - associated symptoms, DTCs, components (distinguishing root causes and side effects) etc.
         return "uploaded_diag"
 
 
