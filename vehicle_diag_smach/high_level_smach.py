@@ -651,6 +651,11 @@ class ClassifyOscillograms(smach.State):
             dtc = list(suggestions.keys())[0]
             print("DTC to set heatmap for:", dtc)
             print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+            # extend KG with generated heatmap
+            knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("")
+            # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+            knowledge_enhancer.extend_kg_with_heatmap_facts(dtc, comp_name, heatmaps["tf-keras-gradcam"].tolist())
+
             cam.plot_heatmaps_as_overlay(heatmaps, voltages, label + res_str)
 
         # classifying the subset of components that are to be classified manually
