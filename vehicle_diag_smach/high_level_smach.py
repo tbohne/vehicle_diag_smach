@@ -1059,6 +1059,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         print("DTC to set heatmap for:", dtc)
         print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+        # extend KG with generated heatmap
+        knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("")
+        # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+        knowledge_enhancer.extend_kg_with_heatmap_facts(dtc, affecting_comp, heatmaps["tf-keras-gradcam"].tolist())
 
         cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", "") + res_str)
 
