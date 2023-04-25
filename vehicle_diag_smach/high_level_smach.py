@@ -358,6 +358,13 @@ class SuggestMeasuringPosOrComponents(smach.State):
         # -> then suggest as many as possible per execution of the state (write to session files)
         if not os.path.exists(SESSION_DIR + "/" + SUS_COMP_TMP_FILE):
             suspect_components = qt.query_suspect_components_by_dtc(userdata.selected_instance)
+            # sort suspect components
+            ordered_sus_comp = {
+                int(qt.query_priority_id_by_dtc_and_sus_comp(userdata.selected_instance, comp, False)[0]):
+                    comp for comp in suspect_components
+            }
+            suspect_components = [ordered_sus_comp[i] for i in range(len(suspect_components))]
+
             # write suspect components to session file
             with open(SESSION_DIR + "/" + SUS_COMP_TMP_FILE, 'w') as f:
                 json.dump(suspect_components, f, default=str)
