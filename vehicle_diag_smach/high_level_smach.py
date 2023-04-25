@@ -17,7 +17,7 @@ import smach
 import tensorflow as tf
 from bs4 import BeautifulSoup
 from matplotlib.lines import Line2D
-from obd_ontology import ontology_instance_generator, knowledge_graph_query_tool
+from obd_ontology import ontology_instance_generator, knowledge_graph_query_tool, expert_knowledge_enhancer
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from py4j.java_gateway import JavaGateway
@@ -27,7 +27,7 @@ from termcolor import colored
 from config import SESSION_DIR, XPS_SESSION_FILE, HISTORICAL_INFO_FILE, CC_TMP_FILE, DTC_TMP_FILE, \
     OBD_INFO_FILE, OBD_ONTOLOGY_PATH, SAMPLE_OBD_LOG, DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, TRAINED_MODEL_POOL, \
     SUS_COMP_TMP_FILE, Z_NORMALIZATION, DUMMY_ISOLATION_OSCILLOGRAM_NEG1, DUMMY_ISOLATION_OSCILLOGRAM_NEG2, \
-    OSCI_ISOLATION_SESSION_FILES, DUMMY_ISOLATION_OSCILLOGRAM_POS
+    OSCI_ISOLATION_SESSION_FILES, DUMMY_ISOLATION_OSCILLOGRAM_POS, SUGGESTION_SESSION_FILE
 
 
 class RecVehicleAndProcUserData(smach.State):
@@ -368,6 +368,11 @@ class SuggestMeasuringPosOrComponents(smach.State):
 
         print(colored("SUSPECT COMPONENTS: " + str(suspect_components) + "\n", "green", "on_grey", ["bold"]))
 
+        # write suggestions to session file - always the latest ones
+        suggestion = {userdata.selected_instance: str(suspect_components)}
+        with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE, 'w') as f:
+            json.dump(suggestion, f, default=str)
+
         # decide whether oscilloscope required
         oscilloscope_usage = []
         for comp in suspect_components:
@@ -637,6 +642,15 @@ class ClassifyOscillograms(smach.State):
                         "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
 
             res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
+
+            # read suggestion - assumption: it is always the latest suggestion
+            with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
+                suggestions = json.load(f)
+            assert comp_name in list(suggestions.values())[0]
+            assert len(suggestions.keys()) == 1
+            dtc = list(suggestions.keys())[0]
+            print("DTC to set heatmap for:", dtc)
+            print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
             cam.plot_heatmaps_as_overlay(heatmaps, voltages, label + res_str)
 
         # classifying the subset of components that are to be classified manually
