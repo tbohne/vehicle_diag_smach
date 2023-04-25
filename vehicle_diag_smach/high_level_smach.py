@@ -982,11 +982,12 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         while val != "":
             val = input("\n..............................")
 
-    def classify_component(self, affecting_comp: str) -> bool:
+    def classify_component(self, affecting_comp: str, dtc: str) -> bool:
         """
         Classifies the oscillogram for the specified vehicle component.
 
         :param affecting_comp: component to classify oscillogram for
+        :param dtc: DTC the original component suggestion was based on
         :return: whether an anomaly has been detected
         """
         # create session data directory
@@ -1050,6 +1051,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
 
         res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
+
+        print("DTC to set heatmap for:", dtc)
+        print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+
         cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", "") + res_str)
 
         return np.argmax(prediction) == 0
@@ -1178,6 +1183,13 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             if not userdata.classified_components[anomalous_comp]:
                 continue
 
+            # read suggestion - assumption: it is always the latest suggestion
+            with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
+                suggestions = json.load(f)
+            assert anomalous_comp in list(suggestions.values())[0]
+            assert len(suggestions.keys()) == 1
+            dtc = list(suggestions.keys())[0]
+
             print(colored("isolating " + anomalous_comp + "..", "green", "on_grey", ["bold"]))
             affecting_components = self.qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
 
@@ -1210,7 +1222,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
                 if use_oscilloscope:
                     print("use oscilloscope..")
-                    anomaly = self.classify_component(comp_to_be_checked)
+                    anomaly = self.classify_component(comp_to_be_checked, dtc)
                     if anomaly is None:
                         anomaly = self.manual_inspection_of_component()
                     else:
