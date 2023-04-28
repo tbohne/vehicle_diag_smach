@@ -4,9 +4,9 @@
 
 from abc import ABC, abstractmethod
 
-from vehicle_diag_smach.onboard_diagnosis_data import OnboardDiagnosisData
-from vehicle_diag_smach.oscillogram_data import OscillogramData
-from vehicle_diag_smach.workshop_data import WorkshopData
+from vehicle_diag_smach.data_types.onboard_diagnosis_data import OnboardDiagnosisData
+from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
+from vehicle_diag_smach.data_types.workshop_data import WorkshopData
 
 
 class DataAccessor(ABC):
