@@ -24,35 +24,7 @@ from config import DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, TRAINED_MODEL_POOL, S
 from low_level_states.select_best_unused_error_code_instance import SelectBestUnusedErrorCodeInstance
 from low_level_states.isolate_problem_check_effective_radius import IsolateProblemCheckEffectiveRadius
 from low_level_states.no_problem_detected_check_sensor import NoProblemDetectedCheckSensor
-
-
-class GenArtificialInstanceBasedOnCC(smach.State):
-    """
-    State in the high-level SMACH that represents situations in which an artificial DTC instance is generated
-    based on the customer complaints. Used for cases where no OBD information is available.
-    """
-
-    def __init__(self):
-        smach.State.__init__(self,
-                             outcomes=['generated_artificial_instance'],
-                             input_keys=['customer_complaints'],
-                             output_keys=['generated_instance'])
-
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
-        """
-        Execution of 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC' state.
-
-        :param userdata: input of state
-        :return: outcome of the state ("generated_artificial_instance")
-        """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
-        print("CC:", userdata.customer_complaints)
-        # TODO: generate instance based on provided CC
-        userdata.generated_instance = "P2563"
-        return "generated_artificial_instance"
+from low_level_states.gen_artificial_instance_based_on_cc import GenArtificialInstanceBasedOnCC
 
 
 class UploadDiagnosis(smach.State):
