@@ -7,8 +7,6 @@ import os
 import shutil
 from pathlib import Path
 
-
-
 import numpy as np
 import smach
 
@@ -25,34 +23,7 @@ from low_level_states.select_best_unused_error_code_instance import SelectBestUn
 from low_level_states.isolate_problem_check_effective_radius import IsolateProblemCheckEffectiveRadius
 from low_level_states.no_problem_detected_check_sensor import NoProblemDetectedCheckSensor
 from low_level_states.gen_artificial_instance_based_on_cc import GenArtificialInstanceBasedOnCC
-
-
-class ProvideInitialHypothesisAndLogContext(smach.State):
-    """
-    State in the high-level SMACH that represents situations in which only the refuted initial hypothesis as well as
-    the context of the diagnostic process is provided due to unmanageable uncertainty.
-    """
-
-    def __init__(self):
-        smach.State.__init__(self,
-                             outcomes=['no_diag'],
-                             input_keys=[''],
-                             output_keys=[''])
-
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
-        """
-        Execution of 'PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT' state.
-
-        :param userdata: input of state
-        :return: outcome of the state ("no_diag")
-        """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT", "yellow", "on_grey", ["bold"]),
-              "state..")
-        print("############################################")
-        # TODO: create log file for the failed diagnostic process to improve future diagnosis (missing knowledge etc.)
-        return "no_diag"
+from low_level_states.provide_initial_hypothesis_and_log_context import ProvideInitialHypothesisAndLogContext
 
 
 class ProvideDiagAndShowTrace(smach.State):
