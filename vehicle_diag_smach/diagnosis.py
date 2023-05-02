@@ -23,43 +23,7 @@ from config import DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, TRAINED_MODEL_POOL, S
     SUGGESTION_SESSION_FILE, SESSION_DIR
 from low_level_states.select_best_unused_error_code_instance import SelectBestUnusedErrorCodeInstance
 from low_level_states.isolate_problem_check_effective_radius import IsolateProblemCheckEffectiveRadius
-
-
-class NoProblemDetectedCheckSensor(smach.State):
-    """
-    State in the high-level SMACH that represents situations in which no actual anomaly was detected and the indirect
-    conclusion of a potential sensor malfunction is provided. This conclusion should be verified / refuted in this
-    state.
-    """
-
-    def __init__(self):
-
-        smach.State.__init__(self,
-                             outcomes=['sensor_works', 'sensor_defective'],
-                             input_keys=[''],
-                             output_keys=[''])
-
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
-        """
-        Execution of 'NO_PROBLEM_DETECTED_CHECK_SENSOR' state.
-
-        :param userdata: input of state
-        :return: outcome of the state ("sensor_works" | "sensor_defective")
-        """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("NO_PROBLEM_DETECTED_CHECK_SENSOR", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
-
-        print("no anomaly identified -- check potential sensor malfunction..")
-
-        val = ""
-        while val not in ['0', '1']:
-            val = input("\npress '0' for sensor malfunction and '1' for working sensor..")
-
-        if val == "0":
-            return "sensor_defective"
-        return "sensor_works"
+from low_level_states.no_problem_detected_check_sensor import NoProblemDetectedCheckSensor
 
 
 class GenArtificialInstanceBasedOnCC(smach.State):
