@@ -27,36 +27,6 @@ from low_level_states.no_problem_detected_check_sensor import NoProblemDetectedC
 from low_level_states.gen_artificial_instance_based_on_cc import GenArtificialInstanceBasedOnCC
 
 
-class UploadDiagnosis(smach.State):
-    """
-    State in the high-level SMACH that represents situations in which the diagnosis is uploaded to the server.
-    """
-
-    def __init__(self):
-        smach.State.__init__(self,
-                             outcomes=['uploaded_diag'],
-                             input_keys=[''],
-                             output_keys=[''])
-
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
-        """
-        Execution of 'UPLOAD_DIAGNOSIS' state.
-
-        :param userdata: input of state
-        :return: outcome of the state ("uploaded_diag")
-        """
-        print("\n\n############################################")
-        print("executing", colored("UPLOAD_DIAGNOSIS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################\n\n")
-        # TODO: upload diagnosis to server
-        #   - it's important to log the whole context - everything that could be meaningful
-        #   - in the long run, this is where we collect the data that we initially lacked, e.g., for automated
-        #     data-driven RCA
-        #   - to be logged (diagnosis together with):
-        #       - associated symptoms, DTCs, components (distinguishing root causes and side effects) etc.
-        return "uploaded_diag"
-
-
 class ProvideInitialHypothesisAndLogContext(smach.State):
     """
     State in the high-level SMACH that represents situations in which only the refuted initial hypothesis as well as
@@ -87,13 +57,14 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
 
 class ProvideDiagAndShowTrace(smach.State):
     """
-    State in the high-level SMACH that represents situations in which the diagnosis is provided in combination with
-    a detailed trace of all the relevant information that lead to it.
+    State in the low-level SMACH that represents situations in which the diagnosis is provided in combination with
+    a detailed trace of all the relevant information that lead to it. Additionally, the diagnosis is uploaded to the
+    server.
     """
 
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['provided_diag_and_explanation'],
+                             outcomes=['uploaded_diag'],
                              input_keys=['diagnosis'],
                              output_keys=[''])
 
@@ -102,12 +73,19 @@ class ProvideDiagAndShowTrace(smach.State):
         Execution of 'PROVIDE_DIAG_AND_SHOW_TRACE' state.
 
         :param userdata: input of state
-        :return: outcome of the state ("provided_diag_and_explanation")
+        :return: outcome of the state ("uploaded_diag")
         """
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
         print("executing", colored("PROVIDE_DIAG_AND_SHOW_TRACE", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
+
+        # TODO: upload diagnosis to server
+        #   - it's important to log the whole context - everything that could be meaningful
+        #   - in the long run, this is where we collect the data that we initially lacked, e.g., for automated
+        #     data-driven RCA
+        #   - to be logged (diagnosis together with):
+        #       - associated symptoms, DTCs, components (distinguishing root causes and side effects) etc.
 
         for key in userdata.diagnosis.keys():
             print("\nidentified anomalous component:", key)
@@ -117,7 +95,7 @@ class ProvideDiagAndShowTrace(smach.State):
             print(colored("".join(path), "red", "on_white", ["bold"]))
 
         # TODO: show diagnosis + trace
-        return "provided_diag_and_explanation"
+        return "uploaded_diag"
 
 
 class ClassifyOscillograms(smach.State):
@@ -541,16 +519,12 @@ class DiagnosisStateMachine(smach.StateMachine):
                      remapping={'customer_complaints': 'sm_input',
                                 'generated_instance': 'sm_input'})
 
-            self.add('UPLOAD_DIAGNOSIS', UploadDiagnosis(),
-                     transitions={'uploaded_diag': 'diag'},
-                     remapping={})
-
             self.add('PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT', ProvideInitialHypothesisAndLogContext(),
                      transitions={'no_diag': 'refuted_hypothesis'},
                      remapping={})
 
             self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(),
-                     transitions={'provided_diag_and_explanation': 'UPLOAD_DIAGNOSIS'},
+                     transitions={'uploaded_diag': 'diag'},
                      remapping={'diagnosis': 'sm_input'})
 
             self.add('CLASSIFY_OSCILLOGRAMS', ClassifyOscillograms(),
