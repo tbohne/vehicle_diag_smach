@@ -7,12 +7,12 @@ import logging
 import smach
 import tensorflow as tf
 
-from vehicle_diag_smach.diagnosis import DiagnosisStateMachine
-from high_level_states.rec_vehicle_and_proc_metadata import RecVehicleAndProcMetadata
+from high_level_states.establish_initial_hypothesis import EstablishInitialHypothesis
 from high_level_states.proc_customer_complaints import ProcCustomerComplaints
 from high_level_states.read_obd_data_and_gen_ontology_instances import ReadOBDDataAndGenOntologyInstances
-from high_level_states.establish_initial_hypothesis import EstablishInitialHypothesis
+from high_level_states.rec_vehicle_and_proc_metadata import RecVehicleAndProcMetadata
 from high_level_states.retrieve_historical_data import RetrieveHistoricalData
+from vehicle_diag_smach.diagnosis import DiagnosisStateMachine
 
 
 class VehicleDiagnosisStateMachine(smach.StateMachine):
@@ -29,7 +29,6 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
         self.userdata.sm_input = []
 
         with self:
-
             self.add('REC_VEHICLE_AND_PROC_METADATA', RecVehicleAndProcMetadata(),
                      transitions={'processed_metadata': 'PROC_CUSTOMER_COMPLAINTS'},
                      remapping={'input': 'sm_input',
@@ -89,7 +88,7 @@ def run():
     sm = VehicleDiagnosisStateMachine()
     tf.get_logger().setLevel(logging.ERROR)
     outcome = sm.execute()
-    # print("OUTCOME:", outcome)
+    print("OUTCOME:", outcome)
 
 
 if __name__ == '__main__':
