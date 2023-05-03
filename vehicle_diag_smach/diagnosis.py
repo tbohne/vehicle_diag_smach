@@ -4,7 +4,6 @@
 
 import json
 import os
-import shutil
 from pathlib import Path
 
 import numpy as np
@@ -16,7 +15,7 @@ from oscillogram_classification import preprocess
 from tensorflow import keras
 from termcolor import colored
 
-from config import DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, TRAINED_MODEL_POOL, SUS_COMP_TMP_FILE, Z_NORMALIZATION, \
+from config import OSCI_SESSION_FILES, TRAINED_MODEL_POOL, Z_NORMALIZATION, \
     SUGGESTION_SESSION_FILE, SESSION_DIR
 from low_level_states.select_best_unused_error_code_instance import SelectBestUnusedErrorCodeInstance
 from low_level_states.isolate_problem_check_effective_radius import IsolateProblemCheckEffectiveRadius
@@ -24,6 +23,7 @@ from low_level_states.no_problem_detected_check_sensor import NoProblemDetectedC
 from low_level_states.gen_artificial_instance_based_on_cc import GenArtificialInstanceBasedOnCC
 from low_level_states.provide_initial_hypothesis_and_log_context import ProvideInitialHypothesisAndLogContext
 from low_level_states.suggest_suspect_components import SuggestSuspectComponents
+from low_level_states.perform_synchronized_sensor_recordings import PerformSynchronizedSensorRecordings
 
 
 class ProvideDiagAndShowTrace(smach.State):
@@ -305,66 +305,6 @@ class PerformDataManagement(smach.State):
         #   - consolidate + upload read session data to server
         print("uploading reduced session data to server..")
         return "performed_reduced_data_management"
-
-
-class PerformSynchronizedSensorRecordings(smach.State):
-    """
-    State in the high-level SMACH that represents situations in which the synchronized sensor recordings are performed
-    at the suggested measuring pos / suspect components.
-    """
-
-    def __init__(self):
-
-        smach.State.__init__(self,
-                             outcomes=['processed_sync_sensor_data'],
-                             input_keys=['suggestion_list'],
-                             output_keys=[''])
-
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
-        """
-        Execution of 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS' state.
-
-        :param userdata: input of state
-        :return: outcome of the state ("processed_sync_sensor_data")
-        """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################\n")
-
-        components_to_be_recorded = [k for k, v in userdata.suggestion_list.items() if v]
-        components_to_be_manually_verified = [k for k, v in userdata.suggestion_list.items() if not v]
-        print("------------------------------------------")
-        print("components to be recorded:", components_to_be_recorded)
-        print("components to be verified manually:", components_to_be_manually_verified)
-        print("------------------------------------------")
-
-        # TODO: perform manual verification of components and let mechanic enter result + communicate
-        #       anomalies further for fault isolation
-
-        print(colored("\nperform synchronized sensor recordings at:", "green", "on_grey", ["bold"]))
-        for comp in components_to_be_recorded:
-            print(colored("- " + comp, "green", "on_grey", ["bold"]))
-
-        val = None
-        while val != "":
-            val = input("\npress 'ENTER' when the recording phase is finished and the oscillograms are generated..")
-
-        # creating dummy oscillograms in '/session_files' for each suspect component
-        comp_idx = 0
-        for path in Path(DUMMY_OSCILLOGRAMS).rglob('*.csv'):
-            src = str(path)
-            osci_session_dir = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/"
-
-            if not os.path.exists(osci_session_dir):
-                os.makedirs(osci_session_dir)
-
-            shutil.copy(src, osci_session_dir + str(src.split("/")[-1]))
-            comp_idx += 1
-            if comp_idx == len(components_to_be_recorded):
-                break
-
-        return "processed_sync_sensor_data"
 
 
 class DiagnosisStateMachine(smach.StateMachine):
