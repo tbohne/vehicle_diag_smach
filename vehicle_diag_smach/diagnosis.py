@@ -24,6 +24,7 @@ from low_level_states.gen_artificial_instance_based_on_cc import GenArtificialIn
 from low_level_states.provide_initial_hypothesis_and_log_context import ProvideInitialHypothesisAndLogContext
 from low_level_states.suggest_suspect_components import SuggestSuspectComponents
 from low_level_states.perform_synchronized_sensor_recordings import PerformSynchronizedSensorRecordings
+from low_level_states.perform_data_management import PerformDataManagement
 
 
 class ProvideDiagAndShowTrace(smach.State):
@@ -247,64 +248,6 @@ class InspectComponents(smach.State):
         elif no_anomaly:
             return "no_anomaly"
         return "detected_anomalies"
-
-
-class PerformDataManagement(smach.State):
-    """
-    State in the high-level SMACH that represents situations in which data management is performed, e.g.:
-        - upload all the generated session files (data) to the server
-        - retrieve the latest trained classification model from the server
-    """
-
-    def __init__(self):
-
-        smach.State.__init__(self,
-                             outcomes=['performed_data_management', 'performed_reduced_data_management'],
-                             input_keys=['suggestion_list'],
-                             output_keys=['suggestion_list'])
-
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
-        """
-        Execution of 'PERFORM_DATA_MANAGEMENT' state.
-
-        :param userdata: input of state
-        :return: outcome of the state ("performed_data_management" | "performed_reduced_data_management")
-        """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("PERFORM_DATA_MANAGEMENT", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
-
-        # TODO: optionally retrieve latest version of trained classifier from server
-        print("\nretrieving latest version of trained classifier from server..")
-
-        # TODO: actually read session data
-        print("reading customer complaints from session files..")
-        print("reading OBD data from session files..")
-        print("reading historical info from session files..")
-        print("reading user data from session files..")
-        print("reading XPS interview data from session files..")
-
-        # determine whether oscillograms have been generated
-        osci_session_dir = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/"
-        if os.path.exists(osci_session_dir):
-            print("reading recorded oscillograms from session files..")
-            # TODO:
-            #   - EDC (Eclipse Dataspace Connector) communication
-            #   - consolidate + upload read session data to server
-            print("uploading session data to server..")
-
-            val = None
-            while val != "":
-                val = input("\n..............................")
-
-            return "performed_data_management"
-
-        # TODO:
-        #   - EDC (Eclipse Dataspace Connector) communication
-        #   - consolidate + upload read session data to server
-        print("uploading reduced session data to server..")
-        return "performed_reduced_data_management"
 
 
 class DiagnosisStateMachine(smach.StateMachine):
