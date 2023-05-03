@@ -11,7 +11,6 @@ import numpy as np
 import smach
 
 from obd_ontology import expert_knowledge_enhancer
-from obd_ontology import knowledge_graph_query_tool
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from tensorflow import keras
@@ -24,6 +23,7 @@ from low_level_states.isolate_problem_check_effective_radius import IsolateProbl
 from low_level_states.no_problem_detected_check_sensor import NoProblemDetectedCheckSensor
 from low_level_states.gen_artificial_instance_based_on_cc import GenArtificialInstanceBasedOnCC
 from low_level_states.provide_initial_hypothesis_and_log_context import ProvideInitialHypothesisAndLogContext
+from low_level_states.suggest_suspect_components import SuggestSuspectComponents
 
 
 class ProvideDiagAndShowTrace(smach.State):
@@ -367,90 +367,6 @@ class PerformSynchronizedSensorRecordings(smach.State):
         return "processed_sync_sensor_data"
 
 
-class SuggestMeasuringPosOrComponents(smach.State):
-    """
-    State in the high-level SMACH that represents situations in which measuring positions or at least suspect
-    components in the car are suggested based on the available information (OBD, CC, etc.).
-    """
-
-    def __init__(self):
-
-        smach.State.__init__(self,
-                             outcomes=['provided_suggestions', 'no_oscilloscope_required'],
-                             input_keys=['selected_instance', 'generated_instance'],
-                             output_keys=['suggestion_list'])
-
-    @staticmethod
-    def manual_transition() -> None:
-        val = None
-        while val != "":
-            val = input("\n..............................")
-
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
-        """
-        Execution of 'SUGGEST_MEASURING_POS_OR_COMPONENTS' state.
-
-        :param userdata: input of state
-        :return: outcome of the state ("provided_suggestions" | "no_oscilloscope_required")
-        """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("SUGGEST_MEASURING_POS_OR_COMPONENTS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################\n")
-
-        # print("generated instance:", userdata.generated_instance)
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
-
-        # should not be queried over and over again - just once for a session
-        # -> then suggest as many as possible per execution of the state (write to session files)
-        if not os.path.exists(SESSION_DIR + "/" + SUS_COMP_TMP_FILE):
-            suspect_components = qt.query_suspect_components_by_dtc(userdata.selected_instance)
-            # sort suspect components
-            ordered_sus_comp = {
-                int(qt.query_priority_id_by_dtc_and_sus_comp(userdata.selected_instance, comp, False)[0]):
-                    comp for comp in suspect_components
-            }
-            suspect_components = [ordered_sus_comp[i] for i in range(len(suspect_components))]
-
-            # write suspect components to session file
-            with open(SESSION_DIR + "/" + SUS_COMP_TMP_FILE, 'w') as f:
-                json.dump(suspect_components, f, default=str)
-        else:
-            # read remaining suspect components from file
-            with open(SESSION_DIR + "/" + SUS_COMP_TMP_FILE) as f:
-                suspect_components = json.load(f)
-
-        print(colored("SUSPECT COMPONENTS: " + str(suspect_components) + "\n", "green", "on_grey", ["bold"]))
-
-        # write suggestions to session file - always the latest ones
-        suggestion = {userdata.selected_instance: str(suspect_components)}
-        with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE, 'w') as f:
-            json.dump(suggestion, f, default=str)
-
-        # decide whether oscilloscope required
-        oscilloscope_usage = []
-        for comp in suspect_components:
-            use = qt.query_oscilloscope_usage_by_suspect_component(comp)[0]
-            print("comp:", comp, "// use oscilloscope:", use)
-            oscilloscope_usage.append(use)
-
-        suggestion_list = {comp: osci for comp, osci in zip(suspect_components, oscilloscope_usage)}
-        userdata.suggestion_list = suggestion_list
-
-        # everything that is used here should be removed from the tmp file
-        with open(SESSION_DIR + "/" + SUS_COMP_TMP_FILE, 'w') as f:
-            json.dump([c for c in suspect_components if c not in suggestion_list.keys()], f, default=str)
-
-        if True in oscilloscope_usage:
-            print("\n--> there is at least one suspect component that can be diagnosed using an oscilloscope..")
-            self.manual_transition()
-            return "provided_suggestions"
-
-        print("none of the identified suspect components can be diagnosed with an oscilloscope..")
-        self.manual_transition()
-        return "no_oscilloscope_required"
-
-
 class DiagnosisStateMachine(smach.StateMachine):
     """
     Low-level diagnosis state machine responsible for the details of the diagnostic process.
@@ -468,8 +384,8 @@ class DiagnosisStateMachine(smach.StateMachine):
         # defines states and transitions of the low-level diagnosis SMACH
         with self:
             self.add('SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE', SelectBestUnusedErrorCodeInstance(),
-                     transitions={'selected_matching_instance(OBD_CC)': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
-                                  'no_matching_selected_best_instance': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
+                     transitions={'selected_matching_instance(OBD_CC)': 'SUGGEST_SUSPECT_COMPONENTS',
+                                  'no_matching_selected_best_instance': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'no_instance': 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC',
                                   'no_instance_and_CC_already_used': 'NO_PROBLEM_DETECTED_CHECK_SENSOR'},
                      remapping={'selected_instance': 'sm_input',
@@ -486,7 +402,7 @@ class DiagnosisStateMachine(smach.StateMachine):
                      remapping={})
 
             self.add('GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC', GenArtificialInstanceBasedOnCC(),
-                     transitions={'generated_artificial_instance': 'SUGGEST_MEASURING_POS_OR_COMPONENTS'},
+                     transitions={'generated_artificial_instance': 'SUGGEST_SUSPECT_COMPONENTS'},
                      remapping={'customer_complaints': 'sm_input',
                                 'generated_instance': 'sm_input'})
 
@@ -500,13 +416,13 @@ class DiagnosisStateMachine(smach.StateMachine):
 
             self.add('CLASSIFY_OSCILLOGRAMS', ClassifyOscillograms(),
                      transitions={'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE',
-                                  'no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
+                                  'no_anomaly': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
                      remapping={'suggestion_list': 'sm_input',
                                 'classified_components': 'sm_input'})
 
             self.add('INSPECT_COMPONENTS', InspectComponents(),
-                     transitions={'no_anomaly': 'SUGGEST_MEASURING_POS_OR_COMPONENTS',
+                     transitions={'no_anomaly': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS',
                                   'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE'},
                      remapping={'suggestion_list': 'sm_input'})
@@ -520,7 +436,7 @@ class DiagnosisStateMachine(smach.StateMachine):
                      transitions={'processed_sync_sensor_data': 'PERFORM_DATA_MANAGEMENT'},
                      remapping={'suggestion_list': 'sm_input'})
 
-            self.add('SUGGEST_MEASURING_POS_OR_COMPONENTS', SuggestMeasuringPosOrComponents(),
+            self.add('SUGGEST_SUSPECT_COMPONENTS', SuggestSuspectComponents(),
                      transitions={'provided_suggestions': 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS',
                                   'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT'},
                      remapping={'selected_instance': 'sm_input',
