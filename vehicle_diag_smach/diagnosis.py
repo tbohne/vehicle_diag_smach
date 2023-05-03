@@ -25,6 +25,7 @@ from low_level_states.provide_initial_hypothesis_and_log_context import ProvideI
 from low_level_states.suggest_suspect_components import SuggestSuspectComponents
 from low_level_states.perform_synchronized_sensor_recordings import PerformSynchronizedSensorRecordings
 from low_level_states.perform_data_management import PerformDataManagement
+from low_level_states.inspect_components import InspectComponents
 
 
 class ProvideDiagAndShowTrace(smach.State):
@@ -80,7 +81,7 @@ class ClassifyOscillograms(smach.State):
 
         smach.State.__init__(self,
                              outcomes=['detected_anomalies', 'no_anomaly',
-                                       'no_anomaly_and_no_more_measuring_pos'],
+                                       'no_anomaly_no_more_comp'],
                              input_keys=['suggestion_list'],
                              output_keys=['classified_components'])
 
@@ -89,7 +90,7 @@ class ClassifyOscillograms(smach.State):
         Execution of 'CLASSIFY_OSCILLOGRAMS' state.
 
         :param userdata: input of state
-        :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_and_no_more_measuring_pos")
+        :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_no_more_comp")
         """
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
@@ -204,50 +205,11 @@ class ClassifyOscillograms(smach.State):
         remaining_suspect_components = False
 
         if len(anomalous_components) == 0 and not remaining_suspect_components:
-            return "no_anomaly_and_no_more_measuring_pos"
+            return "no_anomaly_no_more_comp"
         elif len(anomalous_components) == 0 and remaining_suspect_components:
             return "no_anomaly"
         elif len(anomalous_components) > 0:
             return "detected_anomalies"
-
-
-class InspectComponents(smach.State):
-    """
-    State in high-level SMACH representing situations where manual inspection of suspect components for which
-    oscilloscope diagnosis is not appropriate is performed.
-    """
-
-    def __init__(self):
-
-        smach.State.__init__(self,
-                             outcomes=['no_anomaly', 'detected_anomalies', 'no_anomaly_and_no_more_measuring_pos'],
-                             input_keys=['suggestion_list'],
-                             output_keys=[''])
-
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
-        """
-        Execution of 'INSPECT_COMPONENTS' state.
-
-        :param userdata: input of state
-        :return: outcome of the state ("no_anomaly" | "detected_anomalies" | "no_anomaly_and_no_more_measuring_pos")
-        """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("INSPECT_COMPONENTS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
-
-        print("SUGGESTION LIST:", userdata.suggestion_list)
-        # TODO: to be implemented
-        no_anomaly = True
-
-        # TODO: are there remaining suspect components? (atm every component is suggested each case)
-        no_more_measuring_pos = True
-
-        if no_anomaly and no_more_measuring_pos:
-            return "no_anomaly_and_no_more_measuring_pos"
-        elif no_anomaly:
-            return "no_anomaly"
-        return "detected_anomalies"
 
 
 class DiagnosisStateMachine(smach.StateMachine):
@@ -298,7 +260,7 @@ class DiagnosisStateMachine(smach.StateMachine):
                      remapping={'diagnosis': 'sm_input'})
 
             self.add('CLASSIFY_OSCILLOGRAMS', ClassifyOscillograms(),
-                     transitions={'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE',
+                     transitions={'no_anomaly_no_more_comp': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE',
                                   'no_anomaly': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
                      remapping={'suggestion_list': 'sm_input',
@@ -307,7 +269,7 @@ class DiagnosisStateMachine(smach.StateMachine):
             self.add('INSPECT_COMPONENTS', InspectComponents(),
                      transitions={'no_anomaly': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS',
-                                  'no_anomaly_and_no_more_measuring_pos': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE'},
+                                  'no_anomaly_no_more_comp': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE'},
                      remapping={'suggestion_list': 'sm_input'})
 
             self.add('PERFORM_DATA_MANAGEMENT', PerformDataManagement(),
