@@ -3,6 +3,7 @@
 # @author Tim Bohne
 
 from abc import ABC, abstractmethod
+from typing import List
 
 from vehicle_diag_smach.data_types.onboard_diagnosis_data import OnboardDiagnosisData
 from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
@@ -23,5 +24,5 @@ class DataAccessor(ABC):
         pass
 
     @abstractmethod
-    def get_oscillogram_by_component(self, component: str) -> OscillogramData:
+    def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
         pass

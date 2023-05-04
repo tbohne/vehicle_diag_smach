@@ -55,6 +55,7 @@ class ClassifyOscillograms(smach.State):
         non_anomalous_components = []
 
         # iteratively process oscilloscope recordings
+        # TODO: adapt to new file format (json)
         for osci_path in Path(SESSION_DIR + "/" + OSCI_SESSION_FILES + "/").rglob('*.csv'):
             label = str(osci_path).split("/")[2].replace(".csv", "")
             comp_name = label.split("_")[-1]
@@ -72,9 +73,7 @@ class ClassifyOscillograms(smach.State):
                 userdata.suggestion_list[comp_name] = False
                 continue
 
-            # fix input size
             net_input_size = model.layers[0].output_shape[0][1]
-
             assert net_input_size == len(voltages)
             # if len(voltages) > net_input_size:
             #     remove = len(voltages) - net_input_size
@@ -108,7 +107,7 @@ class ClassifyOscillograms(smach.State):
 
             res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
 
-            # read suggestion - assumption: it is always the latest suggestion
+            # read DTC suggestion - assumption: it is always the latest suggestion
             with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
                 suggestions = json.load(f)
             assert comp_name in list(suggestions.values())[0]

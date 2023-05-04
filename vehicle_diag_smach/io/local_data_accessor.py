@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+from typing import List
+
 from vehicle_diag_smach.data_types.onboard_diagnosis_data import OnboardDiagnosisData
 from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 from vehicle_diag_smach.data_types.workshop_data import WorkshopData
@@ -37,5 +39,5 @@ class LocalDataAccessor(DataAccessor):
         print(obd_data)
         return obd_data
 
-    def get_oscillogram_by_component(self, component: str) -> OscillogramData:
+    def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
         pass
