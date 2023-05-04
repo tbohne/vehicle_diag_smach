@@ -15,7 +15,9 @@ from vehicle_diag_smach.high_level_states.read_obd_data_and_gen_ontology_instanc
 from vehicle_diag_smach.high_level_states.rec_vehicle_and_proc_metadata import RecVehicleAndProcMetadata
 from vehicle_diag_smach.high_level_states.retrieve_historical_data import RetrieveHistoricalData
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
+from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 from vehicle_diag_smach.io.local_data_accessor import LocalDataAccessor
+from vehicle_diag_smach.io.local_model_accessor import LocalModelAccessor
 
 
 class VehicleDiagnosisStateMachine(smach.StateMachine):
@@ -23,11 +25,12 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
     High-level hierarchically structured state machine guiding the entire vehicle diagnosis process.
     """
 
-    def __init__(self, data_accessor: DataAccessor):
+    def __init__(self, data_accessor: DataAccessor, model_accessor: ModelAccessor):
         """
         Initializes the high-level state machine.
 
         :param data_accessor: implementation of the data accessor interface
+        :param model_accessor: implementation of the model accessor interface
         """
         super(VehicleDiagnosisStateMachine, self).__init__(
             outcomes=['diag', 'insufficient_data', 'refuted_hypothesis'],
@@ -35,6 +38,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
             output_keys=[]
         )
         self.data_accessor = data_accessor
+        self.model_accessor = model_accessor
         self.userdata.sm_input = []
 
         with self:
@@ -66,7 +70,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      remapping={'vehicle_specific_instance_data_in': 'sm_input',
                                 'vehicle_specific_instance_data_out': 'sm_input'})
 
-            self.add('DIAGNOSIS', DiagnosisStateMachine(),
+            self.add('DIAGNOSIS', DiagnosisStateMachine(self.model_accessor),
                      transitions={'diag': 'diag',
                                   'refuted_hypothesis': 'refuted_hypothesis'})
 
@@ -93,7 +97,8 @@ if __name__ == '__main__':
 
     # init local implementations of I/O interfaces
     data_acc = LocalDataAccessor()
+    model_acc = LocalModelAccessor()
 
-    sm = VehicleDiagnosisStateMachine(data_acc)
+    sm = VehicleDiagnosisStateMachine(data_acc, model_acc)
     tf.get_logger().setLevel(logging.ERROR)
     sm.execute()
