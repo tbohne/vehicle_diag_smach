@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+from typing import List
+
+
 class OnboardDiagnosisData:
     """
     Represents onboard diagnosis data, which is communicated to the state machine.
     """
 
-    def __init__(self, dtc_list: list[str], model: str, hsn: str, tsn: str, vin: str):
+    def __init__(self, dtc_list: List[str], model: str, hsn: str, tsn: str, vin: str):
         """
         Inits the onboard diagnosis data.
 
@@ -22,3 +25,6 @@ class OnboardDiagnosisData:
         self.hsn = hsn
         self.tsn = tsn
         self.vin = vin
+
+    def __str__(self):
+        return f"DTC list: {self.dtc_list},\nmodel: {self.model},\nHSN: {self.hsn},\nTSN: {self.tsn},\nVIN: {self.vin}"

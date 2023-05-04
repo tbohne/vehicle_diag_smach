@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+from typing import List
+
 class OscillogramData:
     """
     Represents oscillogram data, which is communicated to the state machine.
     """
 
-    def __init__(self, time_series: list[float]):
+    def __init__(self, time_series: List[float]):
         """
         Inits the oscillogram data.
 
