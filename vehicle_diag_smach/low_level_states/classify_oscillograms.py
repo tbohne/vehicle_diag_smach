@@ -11,11 +11,10 @@ import smach
 from obd_ontology import expert_knowledge_enhancer
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
-from tensorflow import keras
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, OSCI_SESSION_FILES, Z_NORMALIZATION, TRAINED_MODEL_POOL, \
-    SUGGESTION_SESSION_FILE
+from vehicle_diag_smach.config import SESSION_DIR, OSCI_SESSION_FILES, Z_NORMALIZATION, SUGGESTION_SESSION_FILE
+from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 
 
 class ClassifyOscillograms(smach.State):
@@ -24,13 +23,20 @@ class ClassifyOscillograms(smach.State):
     the trained neural net model, i.e., detecting anomalies.
     """
 
-    def __init__(self):
+    def __init__(self, model_accessor: ModelAccessor):
+        """
+        Initializes the state.
+
+        :param model_accessor: implementation of the model accessor interface
+        """
 
         smach.State.__init__(self,
                              outcomes=['detected_anomalies', 'no_anomaly',
                                        'no_anomaly_no_more_comp'],
                              input_keys=['suggestion_list'],
                              output_keys=['classified_components'])
+
+        self.model_accessor = model_accessor
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -47,7 +53,6 @@ class ClassifyOscillograms(smach.State):
 
         anomalous_components = []
         non_anomalous_components = []
-        num_of_recordings = len(list(Path(SESSION_DIR + "/" + OSCI_SESSION_FILES + "/").rglob('*.csv')))
 
         # iteratively process oscilloscope recordings
         for osci_path in Path(SESSION_DIR + "/" + OSCI_SESSION_FILES + "/").rglob('*.csv'):
@@ -60,12 +65,8 @@ class ClassifyOscillograms(smach.State):
             if Z_NORMALIZATION:
                 voltages = preprocess.z_normalize_time_series(voltages)
 
-            try:
-                # selecting trained model based on component name
-                trained_model_file = TRAINED_MODEL_POOL + comp_name + ".h5"
-                print("loading trained model:", trained_model_file)
-                model = keras.models.load_model(trained_model_file)
-            except OSError as e:
+            model = self.model_accessor.get_model_by_component(comp_name)
+            if model is None:
                 print("no trained model available for the signal (component) to be classified:", comp_name)
                 print("adding it to the list of components to be verified manually..")
                 userdata.suggestion_list[comp_name] = False
