@@ -40,8 +40,8 @@ class RetrieveHistoricalData(smach.State):
         print("executing", colored("RETRIEVE_HISTORICAL_DATA", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################\n")
         qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
-        vin = userdata.vehicle_specific_instance_data_in['vin']
-        model = userdata.vehicle_specific_instance_data_in['model']
+        vin = userdata.vehicle_specific_instance_data_in.vin
+        model = userdata.vehicle_specific_instance_data_in.model
 
         # TODO: potentially retrieve more historical information (not only DTCs)
         historic_dtcs_by_vin = qt.query_dtcs_by_vin(vin)

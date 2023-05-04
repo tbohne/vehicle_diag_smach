@@ -47,7 +47,7 @@ class EstablishInitialHypothesis(smach.State):
         except FileNotFoundError:
             print("no customer complaints available..")
 
-        if len(userdata.vehicle_specific_instance_data['dtc_list']) == 0 and len(initial_hypothesis) == 0:
+        if len(userdata.vehicle_specific_instance_data.dtc_list) == 0 and len(initial_hypothesis) == 0:
             # no OBD data + no customer complaints -> insufficient data
             return "no_OBD_and_no_CC"
 
