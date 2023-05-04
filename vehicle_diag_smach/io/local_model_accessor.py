@@ -21,7 +21,7 @@ class LocalModelAccessor(ModelAccessor):
         Retrieves a trained classification model for the specified vehicle component.
 
         :param component: vehicle component to retrieve trained model for
-        :return:
+        :return: trained model or `None` if unavailable
         """
         try:
             trained_model_file = TRAINED_MODEL_POOL + component + ".h5"

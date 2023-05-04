@@ -17,6 +17,11 @@ class LocalDataAccessor(DataAccessor):
         pass
 
     def get_workshop_info(self) -> WorkshopData:
+        """
+        Retrieves the workshop metadata required in the diagnostic process.
+
+        :return: workshop metadata
+        """
         return WorkshopData(4)
 
     def get_obd_data(self) -> OnboardDiagnosisData:
