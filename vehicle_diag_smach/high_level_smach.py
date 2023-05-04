@@ -63,15 +63,15 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
 
 
 def log_info(msg):
-    pass
+    print("[ INFO ] : " + str(msg))
 
 
 def log_warn(msg):
-    pass
+    print("[ WARNING ] : " + str(msg))
 
 
 def log_debug(msg):
-    pass
+    print("[ DEBUG ] : " + str(msg))
 
 
 def log_err(msg):
