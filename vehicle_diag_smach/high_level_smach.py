@@ -24,6 +24,11 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
     """
 
     def __init__(self, data_accessor: DataAccessor):
+        """
+        Initializes the high-level state machine.
+
+        :param data_accessor: implementation of the data accessor interface
+        """
         super(VehicleDiagnosisStateMachine, self).__init__(
             outcomes=['diag', 'insufficient_data', 'refuted_hypothesis'],
             input_keys=[],

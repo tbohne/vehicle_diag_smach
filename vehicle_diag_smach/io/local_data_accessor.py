@@ -10,7 +10,7 @@ from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 
 class LocalDataAccessor(DataAccessor):
     """
-    Implementation of the `DataAccessor` interface using local files and dummy data for I/O.
+    Implementation of the data accessor interface using local files and dummy data for I/O.
     """
 
     def __init__(self):
@@ -20,6 +20,11 @@ class LocalDataAccessor(DataAccessor):
         pass
 
     def get_obd_data(self) -> OnboardDiagnosisData:
+        """
+        Retrieves the on-board diagnosis data required in the diagnostic process.
+
+        :return: on-board diagnosis data
+        """
         print("\nprocessing OBD data..")
         obd_data = OnboardDiagnosisData(
             ['P2563'], "Mazda 3", "849357984", "453948539", "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"

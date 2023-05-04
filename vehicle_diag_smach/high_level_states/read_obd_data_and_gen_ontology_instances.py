@@ -21,7 +21,11 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
     """
 
     def __init__(self, data_accessor: DataAccessor):
+        """
+        Initializes the state.
 
+        :param data_accessor: implementation of the data accessor interface
+        """
         smach.State.__init__(self,
                              outcomes=['processed_OBD_data', 'no_OBD_data'],
                              input_keys=[''],
