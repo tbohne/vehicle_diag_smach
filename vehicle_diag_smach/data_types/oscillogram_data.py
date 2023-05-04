@@ -4,6 +4,7 @@
 
 from typing import List
 
+
 class OscillogramData:
     """
     Represents oscillogram data, which is communicated to the state machine.
