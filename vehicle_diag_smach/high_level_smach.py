@@ -87,8 +87,7 @@ def run():
 
     sm = VehicleDiagnosisStateMachine()
     tf.get_logger().setLevel(logging.ERROR)
-    outcome = sm.execute()
-    print("OUTCOME:", outcome)
+    sm.execute()
 
 
 if __name__ == '__main__':
