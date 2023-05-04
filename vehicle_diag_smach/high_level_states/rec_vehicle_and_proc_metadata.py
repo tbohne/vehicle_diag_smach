@@ -5,12 +5,12 @@
 import json
 import os
 import shutil
-from datetime import date
 
 import smach
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR
+from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 
 
 class RecVehicleAndProcMetadata(smach.State):
@@ -19,8 +19,14 @@ class RecVehicleAndProcMetadata(smach.State):
     the metadata (data about the workshop, mechanic, etc.).
     """
 
-    def __init__(self):
+    def __init__(self, data_accessor: DataAccessor):
+        """
+        Initializes the state.
+
+        :param data_accessor: implementation of the data accessor interface
+        """
         smach.State.__init__(self, outcomes=['processed_metadata'], input_keys=[''], output_keys=[''])
+        self.data_accessor = data_accessor
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -33,20 +39,8 @@ class RecVehicleAndProcMetadata(smach.State):
         print("executing", colored("REC_VEHICLE_AND_PROC_METADATA", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
         print()
-        # TODO: read from updated GUI
-        # GUI.run_gui()
-        user_data = {
-            "workshop_name": "workshop_one",
-            "zipcode": "12345",
-            "workshop_id": "00000",
-            "mechanic_id": "99999",
-            # how many parallel measurements are possible at most (based on workshop equipment / oscilloscope channels)
-            "max_number_of_parallel_recordings": "4",
-            "date": date.today()
-        }
-
-        for k in user_data.keys():
-            print(k + ": " + str(user_data[k]))
+        workshop_info = self.data_accessor.get_workshop_info()
+        print("max num of parallel recordings:", workshop_info.num_of_parallel_rec)
 
         # if not present, create directory for session data
         if not os.path.exists(SESSION_DIR):
@@ -58,10 +52,10 @@ class RecVehicleAndProcMetadata(smach.State):
             shutil.rmtree(SESSION_DIR)
             os.makedirs(SESSION_DIR + "/")
 
-        # write user data to session directory
-        with open(SESSION_DIR + '/user_data.json', 'w') as f:
-            print(colored("------ writing user data to session directory..", "green", "on_grey", ["bold"]))
-            json.dump(user_data, f, default=str)
+        # write metadata to session directory
+        with open(SESSION_DIR + '/metadata.json', 'w') as f:
+            print(colored("------ writing metadata to session directory..", "green", "on_grey", ["bold"]))
+            json.dump(workshop_info, f, default=str)
 
         val = None
         while val != "":

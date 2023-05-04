@@ -17,7 +17,7 @@ class LocalDataAccessor(DataAccessor):
         pass
 
     def get_workshop_info(self) -> WorkshopData:
-        pass
+        return WorkshopData(4)
 
     def get_obd_data(self) -> OnboardDiagnosisData:
         """
