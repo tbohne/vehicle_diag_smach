@@ -243,7 +243,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             if not userdata.classified_components[anomalous_comp]:
                 continue
 
-            # read suggestion - assumption: it is always the latest suggestion
+            # read DTC suggestion - assumption: it is always the latest suggestion
             with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
                 suggestions = json.load(f)
             assert anomalous_comp in list(suggestions.values())[0]
