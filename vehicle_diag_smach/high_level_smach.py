@@ -70,7 +70,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      remapping={'vehicle_specific_instance_data_in': 'sm_input',
                                 'vehicle_specific_instance_data_out': 'sm_input'})
 
-            self.add('DIAGNOSIS', DiagnosisStateMachine(self.model_accessor),
+            self.add('DIAGNOSIS', DiagnosisStateMachine(self.model_accessor, self.data_accessor),
                      transitions={'diag': 'diag',
                                   'refuted_hypothesis': 'refuted_hypothesis'})
 

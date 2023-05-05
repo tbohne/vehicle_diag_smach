@@ -4,6 +4,7 @@
 
 import smach
 
+from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 from vehicle_diag_smach.low_level_states.classify_oscillograms import ClassifyOscillograms
 from vehicle_diag_smach.low_level_states.gen_artificial_instance_based_on_cc import GenArtificialInstanceBasedOnCC
@@ -26,11 +27,12 @@ class DiagnosisStateMachine(smach.StateMachine):
     Low-level diagnosis state machine responsible for the details of the diagnostic process.
     """
 
-    def __init__(self, model_accessor: ModelAccessor):
+    def __init__(self, model_accessor: ModelAccessor, data_accessor: DataAccessor):
         """
         Initializes the low-level state machine.
 
         :param model_accessor: implementation of the model accessor interface
+        :param data_accessor: implementation of the data accessor interface
         """
         super(DiagnosisStateMachine, self).__init__(
             outcomes=['refuted_hypothesis', 'diag'],
@@ -38,6 +40,7 @@ class DiagnosisStateMachine(smach.StateMachine):
             output_keys=[]
         )
         self.model_accessor = model_accessor
+        self.data_accessor = data_accessor
         self.userdata.sm_input = []
 
         # defines states and transitions of the low-level diagnosis SMACH
@@ -50,7 +53,7 @@ class DiagnosisStateMachine(smach.StateMachine):
                      remapping={'selected_instance': 'sm_input',
                                 'customer_complaints': 'sm_input'})
 
-            self.add('ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS', IsolateProblemCheckEffectiveRadius(),
+            self.add('ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS', IsolateProblemCheckEffectiveRadius(self.data_accessor),
                      transitions={'isolated_problem': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
                      remapping={'classified_components': 'sm_input',
                                 'fault_paths': 'sm_input'})
