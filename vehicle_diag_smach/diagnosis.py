@@ -53,7 +53,8 @@ class DiagnosisStateMachine(smach.StateMachine):
                      remapping={'selected_instance': 'sm_input',
                                 'customer_complaints': 'sm_input'})
 
-            self.add('ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS', IsolateProblemCheckEffectiveRadius(self.data_accessor),
+            self.add('ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS',
+                     IsolateProblemCheckEffectiveRadius(self.data_accessor, self.model_accessor),
                      transitions={'isolated_problem': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
                      remapping={'classified_components': 'sm_input',
                                 'fault_paths': 'sm_input'})

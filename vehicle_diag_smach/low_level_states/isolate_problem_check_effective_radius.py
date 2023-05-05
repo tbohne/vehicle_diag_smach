@@ -16,12 +16,12 @@ from obd_ontology import expert_knowledge_enhancer
 from obd_ontology import knowledge_graph_query_tool
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
-from tensorflow import keras
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, OSCI_ISOLATION_SESSION_FILES, Z_NORMALIZATION, TRAINED_MODEL_POOL, \
+from vehicle_diag_smach.config import SESSION_DIR, OSCI_ISOLATION_SESSION_FILES, Z_NORMALIZATION, \
     SUGGESTION_SESSION_FILE
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
+from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 
 
 class IsolateProblemCheckEffectiveRadius(smach.State):
@@ -30,11 +30,12 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
     task is to isolate the defective components based on their effective radius (structural knowledge).
     """
 
-    def __init__(self, data_accessor: DataAccessor):
+    def __init__(self, data_accessor: DataAccessor, model_accessor: ModelAccessor):
         """
         Initializes the state.
 
         :param data_accessor: implementation of the data accessor interface
+        :param model_accessor: implementation of the model accessor interface
         """
         smach.State.__init__(self,
                              outcomes=['isolated_problem'],
@@ -42,6 +43,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                              output_keys=['fault_paths'])
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
         self.data_accessor = data_accessor
+        self.model_accessor = model_accessor
 
     @staticmethod
     def manual_transition() -> None:
@@ -64,8 +66,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         val = None
         while val != "":
-            val = input("\npress 'ENTER' when the recording phase is finished and the" +
-                        " oscillogram is generated..")
+            val = input("\npress 'ENTER' when the recording phase is finished and the oscillogram is generated..")
 
         # TODO: in this state, there is only one component to be classified, but there could be several
         oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
@@ -75,15 +76,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if Z_NORMALIZATION:
             voltages = preprocess.z_normalize_time_series(voltages)
 
-        # selecting trained model based on component name
-        try:
-            trained_model_file = TRAINED_MODEL_POOL + affecting_comp + ".h5"
-            print("loading trained model:", trained_model_file)
-            model = keras.models.load_model(trained_model_file)
-        except OSError as e:
-            print("no trained model available for the signal (component) to be classified:", affecting_comp)
-            print("ERROR:", e)
-            return
+        model = self.model_accessor.get_model_by_component(affecting_comp)
 
         net_input_size = model.layers[0].output_shape[0][1]
         assert net_input_size == len(voltages)
