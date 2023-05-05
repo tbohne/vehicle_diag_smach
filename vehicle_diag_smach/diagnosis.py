@@ -12,7 +12,6 @@ from vehicle_diag_smach.low_level_states.inspect_components import InspectCompon
 from vehicle_diag_smach.low_level_states.isolate_problem_check_effective_radius import \
     IsolateProblemCheckEffectiveRadius
 from vehicle_diag_smach.low_level_states.no_problem_detected_check_sensor import NoProblemDetectedCheckSensor
-from vehicle_diag_smach.low_level_states.perform_data_management import PerformDataManagement
 from vehicle_diag_smach.low_level_states.perform_synchronized_sensor_recordings import \
     PerformSynchronizedSensorRecordings
 from vehicle_diag_smach.low_level_states.provide_diag_and_show_trace import ProvideDiagAndShowTrace
@@ -90,18 +89,13 @@ class DiagnosisStateMachine(smach.StateMachine):
                                   'no_anomaly_no_more_comp': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE'},
                      remapping={'suggestion_list': 'sm_input'})
 
-            self.add('PERFORM_DATA_MANAGEMENT', PerformDataManagement(),
-                     transitions={'performed_data_management': 'CLASSIFY_OSCILLOGRAMS',
-                                  'performed_reduced_data_management': 'INSPECT_COMPONENTS'},
-                     remapping={'suggestion_list': 'sm_input'})
-
             self.add('PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS', PerformSynchronizedSensorRecordings(),
-                     transitions={'processed_sync_sensor_data': 'PERFORM_DATA_MANAGEMENT'},
+                     transitions={'processed_sync_sensor_data': 'CLASSIFY_OSCILLOGRAMS'},
                      remapping={'suggestion_list': 'sm_input'})
 
             self.add('SUGGEST_SUSPECT_COMPONENTS', SuggestSuspectComponents(),
                      transitions={'provided_suggestions': 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS',
-                                  'no_oscilloscope_required': 'PERFORM_DATA_MANAGEMENT'},
+                                  'no_oscilloscope_required': 'INSPECT_COMPONENTS'},
                      remapping={'selected_instance': 'sm_input',
                                 'generated_instance': 'sm_input',
                                 'suggestion_list': 'sm_input'})
