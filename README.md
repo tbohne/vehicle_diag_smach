@@ -86,7 +86,12 @@ $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 ```
 
 ## State Machine Architecture
-![](img/smach_v11.jpg)
+
+**Hierarchical Diagnosis State Machine (High-Level)**
+![](img/smach_high_level_v1.png)
+
+**Embedded Diagnosis State Machine (Low-Level)**
+![](img/smach_low_level_v1.png)
 
 ## Fault Isolation Result Example
 ![](img/isolation.png)
