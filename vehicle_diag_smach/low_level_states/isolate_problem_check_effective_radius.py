@@ -4,7 +4,7 @@
 
 import json
 import os
-import shutil
+from typing import Union
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -19,9 +19,9 @@ from oscillogram_classification import preprocess
 from tensorflow import keras
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, OSCI_ISOLATION_SESSION_FILES, DUMMY_ISOLATION_OSCILLOGRAM_NEG1, \
-    DUMMY_ISOLATION_OSCILLOGRAM_NEG2, DUMMY_ISOLATION_OSCILLOGRAM_POS, Z_NORMALIZATION, TRAINED_MODEL_POOL, \
+from vehicle_diag_smach.config import SESSION_DIR, OSCI_ISOLATION_SESSION_FILES, Z_NORMALIZATION, TRAINED_MODEL_POOL, \
     SUGGESTION_SESSION_FILE
+from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 
 
 class IsolateProblemCheckEffectiveRadius(smach.State):
@@ -30,13 +30,18 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
     task is to isolate the defective components based on their effective radius (structural knowledge).
     """
 
-    def __init__(self):
+    def __init__(self, data_accessor: DataAccessor):
+        """
+        Initializes the state.
 
+        :param data_accessor: implementation of the data accessor interface
+        """
         smach.State.__init__(self,
                              outcomes=['isolated_problem'],
                              input_keys=['classified_components'],
                              output_keys=['fault_paths'])
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+        self.data_accessor = data_accessor
 
     @staticmethod
     def manual_transition() -> None:
@@ -44,7 +49,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         while val != "":
             val = input("\n..............................")
 
-    def classify_component(self, affecting_comp: str, dtc: str) -> bool:
+    def classify_component(self, affecting_comp: str, dtc: str) -> Union[bool, None]:
         """
         Classifies the oscillogram for the specified vehicle component.
 
@@ -62,15 +67,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             val = input("\npress 'ENTER' when the recording phase is finished and the" +
                         " oscillogram is generated..")
 
-        # TODO: hard-coded for demo purposes - showing reasonable case (one NEG)
-        if affecting_comp == "Ladedruck-Regelventil":
-            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_iso_session_dir + affecting_comp + ".csv")
-        elif affecting_comp == "Ladedrucksteller-Positionssensor":
-            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG2, osci_iso_session_dir + affecting_comp + ".csv")
-        else:
-            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_iso_session_dir + affecting_comp + ".csv")
-        path = SESSION_DIR + "/" + OSCI_ISOLATION_SESSION_FILES + "/" + affecting_comp + ".csv"
-        _, voltages = preprocess.read_oscilloscope_recording(path)
+        # TODO: in this state, there is only one component to be classified, but there could be several
+        oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
+        assert len(oscillograms) == 1
+        voltages = oscillograms[0].time_series
 
         if Z_NORMALIZATION:
             voltages = preprocess.z_normalize_time_series(voltages)
@@ -82,6 +82,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             model = keras.models.load_model(trained_model_file)
         except OSError as e:
             print("no trained model available for the signal (component) to be classified:", affecting_comp)
+            print("ERROR:", e)
             return
 
         net_input_size = model.layers[0].output_shape[0][1]
@@ -120,8 +121,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("")
         # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
         knowledge_enhancer.extend_kg_with_heatmap_facts(dtc, affecting_comp, heatmaps["tf-keras-gradcam"].tolist())
-
-        cam.plot_heatmaps_as_overlay(heatmaps, voltages, path.split("/")[2].replace(".csv", "") + res_str)
+        title = affecting_comp + "_" + res_str
+        cam.plot_heatmaps_as_overlay(heatmaps, voltages, title)
 
         return np.argmax(prediction) == 0
 
