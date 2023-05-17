@@ -4,7 +4,6 @@
 
 SESSION_DIR = "session_files"
 OSCI_SESSION_FILES = "oscillograms"
-OSCI_ISOLATION_SESSION_FILES = "isolation_oscillograms"
 XPS_SESSION_FILE = "xps_session.xml"
 SUGGESTION_SESSION_FILE = "session_suggestions.json"
 HISTORICAL_INFO_FILE = "historical_info.txt"
