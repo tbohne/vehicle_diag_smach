@@ -57,10 +57,18 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
             dtc_tmp = {'list': obd_data.dtc_list}
             json.dump(dtc_tmp, f, default=str)
 
+        # read workshop metadata
+        with open(SESSION_DIR + "/" + "metadata.json") as f:
+            workshop_info = json.load(f)
+            max_num_of_parallel_rec = int(workshop_info.split(",")[0].split(":")[1].strip())
+            diag_date = workshop_info.split(",")[1].split(":")[1].strip()
+
         # extend knowledge graph with read OBD data (if the vehicle instance already exists, it will be extended)
         instance_gen = ontology_instance_generator.OntologyInstanceGenerator(OBD_ONTOLOGY_PATH, local_kb=False)
         for dtc in obd_data.dtc_list:
-            instance_gen.extend_knowledge_graph(obd_data.model, obd_data.hsn, obd_data.tsn, obd_data.vin, dtc)
+            instance_gen.extend_knowledge_graph(
+                obd_data.model, obd_data.hsn, obd_data.tsn, obd_data.vin, dtc, max_num_of_parallel_rec, diag_date
+            )
 
         val = None
         while val != "":
