@@ -4,7 +4,6 @@
 
 import json
 import os
-from pathlib import Path
 
 import numpy as np
 import smach
@@ -13,7 +12,8 @@ from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, OSCI_SESSION_FILES, Z_NORMALIZATION, SUGGESTION_SESSION_FILE
+from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE
+from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 
 
@@ -23,20 +23,20 @@ class ClassifyOscillograms(smach.State):
     the trained neural net model, i.e., detecting anomalies.
     """
 
-    def __init__(self, model_accessor: ModelAccessor):
+    def __init__(self, model_accessor: ModelAccessor, data_accessor: DataAccessor):
         """
         Initializes the state.
 
         :param model_accessor: implementation of the model accessor interface
+        :param data_accessor: implementation of the data accessor interface
         """
-
         smach.State.__init__(self,
                              outcomes=['detected_anomalies', 'no_anomaly',
                                        'no_anomaly_no_more_comp'],
                              input_keys=['suggestion_list'],
                              output_keys=['classified_components'])
-
         self.model_accessor = model_accessor
+        self.data_accessor = data_accessor
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -53,24 +53,23 @@ class ClassifyOscillograms(smach.State):
 
         anomalous_components = []
         non_anomalous_components = []
+        the_ones_to_classify = [key for key in userdata.suggestion_list.keys() if userdata.suggestion_list[key]]
+        oscillograms = self.data_accessor.get_oscillograms_by_components(the_ones_to_classify)
 
         # iteratively process oscilloscope recordings
-        # TODO: adapt to new file format (json)
-        for osci_path in Path(SESSION_DIR + "/" + OSCI_SESSION_FILES + "/").rglob('*.csv'):
-            label = str(osci_path).split("/")[2].replace(".csv", "")
-            comp_name = label.split("_")[-1]
-
-            print(colored("\n\nclassifying:" + comp_name, "green", "on_grey", ["bold"]))
-            _, voltages = preprocess.read_oscilloscope_recording(osci_path)
+        for osci_data in oscillograms:
+            print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
+            voltages = osci_data.time_series
 
             if Z_NORMALIZATION:
                 voltages = preprocess.z_normalize_time_series(voltages)
 
-            model = self.model_accessor.get_model_by_component(comp_name)
+            model = self.model_accessor.get_model_by_component(osci_data.comp_name)
+
             if model is None:
-                print("no trained model available for the signal (component) to be classified:", comp_name)
+                print("no trained model available for the signal (component) to be classified:", osci_data.comp_name)
                 print("adding it to the list of components to be verified manually..")
-                userdata.suggestion_list[comp_name] = False
+                userdata.suggestion_list[osci_data.comp_name] = False
                 continue
 
             net_input_size = model.layers[0].output_shape[0][1]
@@ -93,12 +92,12 @@ class ClassifyOscillograms(smach.State):
                 print("#####################################")
                 print(colored("--> ANOMALY DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
                 print("#####################################")
-                anomalous_components.append(comp_name)
+                anomalous_components.append(osci_data.comp_name)
             else:
                 print("#####################################")
                 print(colored("--> NO ANOMALIES DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
                 print("#####################################")
-                non_anomalous_components.append(comp_name)
+                non_anomalous_components.append(osci_data.comp_name)
 
             heatmaps = {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
                         "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
@@ -110,7 +109,7 @@ class ClassifyOscillograms(smach.State):
             # read DTC suggestion - assumption: it is always the latest suggestion
             with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
                 suggestions = json.load(f)
-            assert comp_name in list(suggestions.values())[0]
+            assert osci_data.comp_name in list(suggestions.values())[0]
             assert len(suggestions.keys()) == 1
             dtc = list(suggestions.keys())[0]
             print("DTC to set heatmap for:", dtc)
@@ -118,9 +117,10 @@ class ClassifyOscillograms(smach.State):
             # extend KG with generated heatmap
             knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("")
             # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-            knowledge_enhancer.extend_kg_with_heatmap_facts(dtc, comp_name, heatmaps["tf-keras-gradcam"].tolist())
-
-            cam.plot_heatmaps_as_overlay(heatmaps, voltages, label + res_str)
+            knowledge_enhancer.extend_kg_with_heatmap_facts(
+                heatmaps["tf-keras-gradcam"].tolist(), "tf-keras-gradcam"
+            )
+            cam.plot_heatmaps_as_overlay(heatmaps, voltages, osci_data.comp_name + res_str)
 
         # classifying the subset of components that are to be classified manually
         for comp in userdata.suggestion_list.keys():
