@@ -41,6 +41,7 @@ class RecVehicleAndProcMetadata(smach.State):
         print()
         workshop_info = self.data_accessor.get_workshop_info()
         print("max num of parallel recordings:", workshop_info.num_of_parallel_rec)
+        print("date:", workshop_info.diag_date)
 
         # if not present, create directory for session data
         if not os.path.exists(SESSION_DIR):
