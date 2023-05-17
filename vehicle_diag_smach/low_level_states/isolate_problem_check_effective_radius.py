@@ -18,8 +18,7 @@ from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, OSCI_ISOLATION_SESSION_FILES, Z_NORMALIZATION, \
-    SUGGESTION_SESSION_FILE
+from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 
@@ -60,7 +59,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :return: whether an anomaly has been detected
         """
         # create session data directory
-        osci_iso_session_dir = SESSION_DIR + "/" + OSCI_ISOLATION_SESSION_FILES + "/"
+        osci_iso_session_dir = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/"
         if not os.path.exists(osci_iso_session_dir):
             os.makedirs(osci_iso_session_dir)
 
@@ -113,7 +112,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         # extend KG with generated heatmap
         knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("")
         # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-        knowledge_enhancer.extend_kg_with_heatmap_facts(dtc, affecting_comp, heatmaps["tf-keras-gradcam"].tolist())
+        knowledge_enhancer.extend_kg_with_heatmap_facts(heatmaps["tf-keras-gradcam"].tolist(), "tf-keras-gradcam")
         title = affecting_comp + "_" + res_str
         cam.plot_heatmaps_as_overlay(heatmaps, voltages, title)
 
