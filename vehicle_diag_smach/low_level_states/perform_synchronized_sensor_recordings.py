@@ -3,13 +3,9 @@
 # @author Tim Bohne
 
 import os
-import shutil
-from pathlib import Path
 
 import smach
 from termcolor import colored
-
-from vehicle_diag_smach.config import DUMMY_OSCILLOGRAMS, SESSION_DIR, OSCI_SESSION_FILES
 
 
 class PerformSynchronizedSensorRecordings(smach.State):
@@ -54,19 +50,5 @@ class PerformSynchronizedSensorRecordings(smach.State):
         val = None
         while val != "":
             val = input("\npress 'ENTER' when the recording phase is finished and the oscillograms are generated..")
-
-        # creating dummy oscillograms in '/session_files' for each suspect component
-        comp_idx = 0
-        for path in Path(DUMMY_OSCILLOGRAMS).rglob('*.csv'):
-            src = str(path)
-            osci_session_dir = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/"
-
-            if not os.path.exists(osci_session_dir):
-                os.makedirs(osci_session_dir)
-
-            shutil.copy(src, osci_session_dir + str(src.split("/")[-1]))
-            comp_idx += 1
-            if comp_idx == len(components_to_be_recorded):
-                break
 
         return "processed_sync_sensor_data"
