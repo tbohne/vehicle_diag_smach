@@ -5,6 +5,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+from vehicle_diag_smach.data_types.customer_complaint_data import CustomerComplaintData
 from vehicle_diag_smach.data_types.onboard_diagnosis_data import OnboardDiagnosisData
 from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 from vehicle_diag_smach.data_types.workshop_data import WorkshopData
@@ -25,4 +26,8 @@ class DataAccessor(ABC):
 
     @abstractmethod
     def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
+        pass
+
+    @abstractmethod
+    def get_customer_complaints(self) -> CustomerComplaintData:
         pass

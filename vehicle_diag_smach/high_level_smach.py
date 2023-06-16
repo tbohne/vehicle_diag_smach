@@ -47,7 +47,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      remapping={'input': 'sm_input',
                                 'user_data': 'sm_input'})
 
-            self.add('PROC_CUSTOMER_COMPLAINTS', ProcCustomerComplaints(),
+            self.add('PROC_CUSTOMER_COMPLAINTS', ProcCustomerComplaints(self.data_accessor),
                      transitions={'received_complaints': 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES',
                                   'no_complaints': 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES'},
                      remapping={'user_data': 'sm_input',
