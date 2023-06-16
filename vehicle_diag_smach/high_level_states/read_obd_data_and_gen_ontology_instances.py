@@ -16,7 +16,7 @@ from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 class ReadOBDDataAndGenOntologyInstances(smach.State):
     """
     State in the high-level SMACH that represents situations in which the OBD information are read from the ECU.
-    Based on the read information, an ontology instance is generated, i.e., the vehicle-specific instance data
+    Based on the read information, ontology instances are generated, i.e., the vehicle-specific instance data
     is entered into the knowledge graph.
     """
 
@@ -69,10 +69,5 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
             instance_gen.extend_knowledge_graph(
                 obd_data.model, obd_data.hsn, obd_data.tsn, obd_data.vin, dtc, max_num_of_parallel_rec, diag_date
             )
-
-        val = None
-        while val != "":
-            val = input("\n..............................")
-
         userdata.vehicle_specific_instance_data = obd_data
         return "processed_OBD_data"

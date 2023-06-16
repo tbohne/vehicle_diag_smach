@@ -35,6 +35,9 @@ class LocalDataAccessor(DataAccessor):
 
         :return: workshop metadata
         """
+        val = None
+        while val != "":
+            val = input("\n..............................")
         return WorkshopData(4, date.today())
 
     def get_obd_data(self) -> OnboardDiagnosisData:
@@ -44,6 +47,9 @@ class LocalDataAccessor(DataAccessor):
         :return: on-board diagnosis data
         """
         print("\nprocessing OBD data..")
+        val = None
+        while val != "":
+            val = input("\n..............................")
         obd_data = OnboardDiagnosisData(
             ['P2563'], "Mazda 3", "849357984", "453948539", "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
         )
@@ -80,6 +86,9 @@ class LocalDataAccessor(DataAccessor):
         :param components: components to retrieve oscillograms for
         :return: oscillogram data for each component
         """
+        val = None
+        while val != "":
+            val = input("\n..............................")
         self.create_local_dummy_oscillograms()
         oscillograms = []
         for comp in components:
@@ -97,6 +106,10 @@ class LocalDataAccessor(DataAccessor):
         val = ""
         while val != "0" and val != "1":
             val = input("\nstarting diagnosis with [0] / without [1] customer complaints")
+
+        val = None
+        while val != "":
+            val = input("\n..............................")
 
         if val == "0":
             # launch expert system that processes the customer complaints
