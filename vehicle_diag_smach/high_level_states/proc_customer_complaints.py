@@ -5,10 +5,9 @@
 import os
 
 import smach
-from py4j.java_gateway import JavaGateway
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE
+from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 
 
 class ProcCustomerComplaints(smach.State):
@@ -17,18 +16,14 @@ class ProcCustomerComplaints(smach.State):
     to the processing system (fault tree, decision tree, XPS, ...).
     """
 
-    def __init__(self):
-        smach.State.__init__(self, outcomes=['received_complaints', 'no_complaints'], input_keys=[''], output_keys=[''])
+    def __init__(self, data_accessor: DataAccessor):
+        """
+        Initializes the state.
 
-    @staticmethod
-    def launch_customer_xps() -> str:
+        :param data_accessor: implementation of the data accessor interface
         """
-        Launches the expert system that processes the customer complaints.
-        """
-        print("establish connection to customer XPS server..")
-        gateway = JavaGateway()
-        customer_xps = gateway.entry_point
-        return customer_xps.demo("../vehicle_diag_smach/" + SESSION_DIR + "/" + XPS_SESSION_FILE)
+        smach.State.__init__(self, outcomes=['received_complaints', 'no_complaints'], input_keys=[''], output_keys=[''])
+        self.data_accessor = data_accessor
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -41,12 +36,11 @@ class ProcCustomerComplaints(smach.State):
         print("\n\n############################################")
         print("executing", colored("PROC_CUSTOMER_COMPLAINTS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
-        val = ""
-        while val != "0" and val != "1":
-            val = input("\nstarting diagnosis with [0] / without [1] customer complaints")
 
-        if val == "0":
-            print("result of customer xps: ", self.launch_customer_xps())
+        customer_complaints = self.data_accessor.get_customer_complaints()
+        if customer_complaints.root != "":
+            print("customer complaints session:")
+            customer_complaints.print_all_info()
             print("customer XPS session protocol saved..")
             return "received_complaints"
         else:
