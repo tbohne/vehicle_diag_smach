@@ -55,9 +55,4 @@ class RetrieveHistoricalData(smach.State):
             f.write("DTCs previously recorded in cars of model " + model + ": " + str(historic_dtcs_by_model) + "\n")
 
         userdata.vehicle_specific_instance_data_out = userdata.vehicle_specific_instance_data_in
-
-        val = None
-        while val != "":
-            val = input("\n..............................")
-
         return "processed_all_data"

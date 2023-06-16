@@ -120,3 +120,16 @@ class LocalDataAccessor(DataAccessor):
             return CustomerComplaintData(SESSION_DIR + "/" + XPS_SESSION_FILE)
         else:
             return CustomerComplaintData()
+
+    def get_manual_judgement_for_component(self, component: str) -> bool:
+        """
+        Retrieves a manual judgement by the mechanic for the specified vehicle component.
+
+        :param component: vehicle component to get manual judgement for
+        :return: true -> anomaly, false -> regular
+        """
+        print("manual inspection of component:", component)
+        val = ""
+        while val not in ['0', '1']:
+            val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
+        return val == "0"
