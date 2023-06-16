@@ -14,4 +14,10 @@ class ModelAccessor(ABC):
 
     @abstractmethod
     def get_model_by_component(self, component: str) -> keras.models.Model:
+        """
+        Retrieves a trained model to classify signals of the specified vehicle component.
+
+        :param component: vehicle component to retrieve model for
+        :return: trained model
+        """
         pass

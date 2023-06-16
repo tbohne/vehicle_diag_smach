@@ -14,4 +14,9 @@ class DataProvider(ABC):
 
     @abstractmethod
     def provide_intermediate_results(self) -> IntermediateResults:
+        """
+        Provides intermediate results to the hub UI.
+
+        :return: intermediate results
+        """
         pass
