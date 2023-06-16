@@ -37,8 +37,7 @@ class RecVehicleAndProcMetadata(smach.State):
         """
         print("\n\n############################################")
         print("executing", colored("REC_VEHICLE_AND_PROC_METADATA", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
-        print()
+        print("############################################\n")
         workshop_info = self.data_accessor.get_workshop_info()
         print("max num of parallel recordings:", workshop_info.num_of_parallel_rec)
         print("date:", workshop_info.diag_date)
@@ -57,9 +56,4 @@ class RecVehicleAndProcMetadata(smach.State):
         with open(SESSION_DIR + '/metadata.json', 'w') as f:
             print(colored("------ writing metadata to session directory..", "green", "on_grey", ["bold"]))
             json.dump(workshop_info, f, default=str)
-
-        val = None
-        while val != "":
-            val = input("\n..............................")
-
         return "processed_metadata"
