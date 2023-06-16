@@ -9,9 +9,12 @@ from pathlib import Path
 from typing import List
 
 from oscillogram_classification import preprocess
+from py4j.java_gateway import JavaGateway
 
-from vehicle_diag_smach.config import DUMMY_OSCILLOGRAMS, SESSION_DIR, OSCI_SESSION_FILES, \
+from vehicle_diag_smach.config import DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, \
     DUMMY_ISOLATION_OSCILLOGRAM_POS, DUMMY_ISOLATION_OSCILLOGRAM_NEG1, DUMMY_ISOLATION_OSCILLOGRAM_NEG2
+from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE
+from vehicle_diag_smach.data_types.customer_complaint_data import CustomerComplaintData
 from vehicle_diag_smach.data_types.onboard_diagnosis_data import OnboardDiagnosisData
 from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 from vehicle_diag_smach.data_types.workshop_data import WorkshopData
@@ -84,3 +87,23 @@ class LocalDataAccessor(DataAccessor):
             _, voltages = preprocess.read_oscilloscope_recording(path)
             oscillograms.append(OscillogramData(voltages, comp))
         return oscillograms
+
+    def get_customer_complaints(self) -> CustomerComplaintData:
+        """
+        Local implementation of customer complaint retrieval.
+
+        :return: customer complaints
+        """
+        val = ""
+        while val != "0" and val != "1":
+            val = input("\nstarting diagnosis with [0] / without [1] customer complaints")
+
+        if val == "0":
+            # launch expert system that processes the customer complaints
+            print("establish connection to customer XPS server..")
+            customer_xps = JavaGateway().entry_point
+            print("result of customer xps: ",
+                  customer_xps.demo("../vehicle_diag_smach/" + SESSION_DIR + "/" + XPS_SESSION_FILE))
+            return CustomerComplaintData(SESSION_DIR + "/" + XPS_SESSION_FILE)
+        else:
+            return CustomerComplaintData()
