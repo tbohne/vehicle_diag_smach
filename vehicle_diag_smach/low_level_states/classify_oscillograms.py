@@ -31,8 +31,7 @@ class ClassifyOscillograms(smach.State):
         :param data_accessor: implementation of the data accessor interface
         """
         smach.State.__init__(self,
-                             outcomes=['detected_anomalies', 'no_anomaly',
-                                       'no_anomaly_no_more_comp'],
+                             outcomes=['detected_anomalies', 'no_anomaly', 'no_anomaly_no_more_comp'],
                              input_keys=['suggestion_list'],
                              output_keys=['classified_components'])
         self.model_accessor = model_accessor
@@ -61,9 +60,13 @@ class ClassifyOscillograms(smach.State):
             print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
             voltages = osci_data.time_series
 
+            # TODO: this depends on the trained model that is going to be applied
+            #       -> we need to save this kind of meta information for each trained model we have on the platform
+            #       -> all the preprocessing the model expects
             if Z_NORMALIZATION:
                 voltages = preprocess.z_normalize_time_series(voltages)
 
+            # TODO: we should probably not only obtain the model here, but also the meta info (see above)
             model = self.model_accessor.get_model_by_component(osci_data.comp_name)
 
             if model is None:
@@ -74,10 +77,6 @@ class ClassifyOscillograms(smach.State):
 
             net_input_size = model.layers[0].output_shape[0][1]
             assert net_input_size == len(voltages)
-            # if len(voltages) > net_input_size:
-            #     remove = len(voltages) - net_input_size
-            #     voltages = voltages[: len(voltages) - remove]
-
             net_input = np.asarray(voltages).astype('float32')
             net_input = net_input.reshape((net_input.shape[0], 1))
 
@@ -126,10 +125,7 @@ class ClassifyOscillograms(smach.State):
         for comp in userdata.suggestion_list.keys():
             if not userdata.suggestion_list[comp]:
                 print(colored("\n\nmanual inspection of component " + comp, "green", "on_grey", ["bold"]))
-                val = ""
-                while val not in ['0', '1']:
-                    val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
-                anomaly = val == "0"
+                anomaly = self.data_accessor.get_manual_judgement_for_component(comp)
                 if anomaly:
                     anomalous_components.append(comp)
                 else:
