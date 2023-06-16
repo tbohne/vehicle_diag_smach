@@ -28,7 +28,7 @@ class ProcCustomerComplaints(smach.State):
         print("establish connection to customer XPS server..")
         gateway = JavaGateway()
         customer_xps = gateway.entry_point
-        return customer_xps.demo("../" + SESSION_DIR + "/" + XPS_SESSION_FILE)
+        return customer_xps.demo("../vehicle_diag_smach/" + SESSION_DIR + "/" + XPS_SESSION_FILE)
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
