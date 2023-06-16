@@ -67,9 +67,4 @@ class EstablishInitialHypothesis(smach.State):
 
         # TODO: use historical data to refine initial hypothesis (e.g. to deny certain hypotheses)
         print("establish hypothesis..")
-
-        val = None
-        while val != "":
-            val = input("\n..............................")
-
         return "established_init_hypothesis"
