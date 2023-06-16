@@ -4,6 +4,7 @@
 
 import os
 import shutil
+from datetime import date
 from pathlib import Path
 from typing import List
 
@@ -31,7 +32,7 @@ class LocalDataAccessor(DataAccessor):
 
         :return: workshop metadata
         """
-        return WorkshopData(4)
+        return WorkshopData(4, date.today())
 
     def get_obd_data(self) -> OnboardDiagnosisData:
         """
