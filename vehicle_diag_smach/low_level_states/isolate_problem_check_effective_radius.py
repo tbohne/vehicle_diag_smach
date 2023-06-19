@@ -44,12 +44,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         self.data_accessor = data_accessor
         self.model_accessor = model_accessor
 
-    @staticmethod
-    def manual_transition() -> None:
-        val = None
-        while val != "":
-            val = input("\n..............................")
-
     def classify_component(self, affecting_comp: str, dtc: str) -> Union[bool, None]:
         """
         Classifies the oscillogram for the specified vehicle component.
@@ -63,15 +57,12 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if not os.path.exists(osci_iso_session_dir):
             os.makedirs(osci_iso_session_dir)
 
-        val = None
-        while val != "":
-            val = input("\npress 'ENTER' when the recording phase is finished and the oscillogram is generated..")
-
-        # TODO: in this state, there is only one component to be classified, but there could be several
+        # in this state, there is only one component to be classified, but there could be several
         oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
         assert len(oscillograms) == 1
         voltages = oscillograms[0].time_series
 
+        # TODO: should be based on model config (meta data) -- see `CLASSIFY_OSCILLOGRAMS`
         if Z_NORMALIZATION:
             voltages = preprocess.z_normalize_time_series(voltages)
 
@@ -79,9 +70,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         net_input_size = model.layers[0].output_shape[0][1]
         assert net_input_size == len(voltages)
-        # if len(voltages) > net_input_size:
-        #     remove = len(voltages) - net_input_size
-        #     voltages = voltages[: len(voltages) - remove]
 
         net_input = np.asarray(voltages).astype('float32')
         net_input = net_input.reshape((net_input.shape[0], 1))
@@ -198,19 +186,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 plt.legend(legend_lines, labels, fontsize=18)
             plt.show()
 
-    @staticmethod
-    def manual_inspection_of_component() -> bool:
-        """
-        Guides a manual inspection of the component by the mechanic.
-
-        :return: true -> anomaly / false -> no anomaly
-        """
-        print("manual inspection of component (no oscilloscope)..")
-        val = ""
-        while val not in ['0', '1']:
-            val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
-        return val == "0"
-
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
@@ -234,7 +209,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                            for comp in userdata.classified_components.keys() if userdata.classified_components[comp]}
         explicitly_considered_links = {}
 
-        self.manual_transition()
         # visualizing the initial graph (without highlighted edges / pre isolation)
         self.visualize_causal_graphs(anomalous_paths, complete_graphs, explicitly_considered_links)
 
@@ -283,11 +257,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     print("use oscilloscope..")
                     anomaly = self.classify_component(comp_to_be_checked, dtc)
                     if anomaly is None:
-                        anomaly = self.manual_inspection_of_component()
+                        anomaly = self.data_accessor.get_manual_judgement_for_component(comp_to_be_checked)
                     else:
                         already_checked_components[comp_to_be_checked] = anomaly
                 else:
-                    anomaly = self.manual_inspection_of_component()
+                    anomaly = self.data_accessor.get_manual_judgement_for_component(comp_to_be_checked)
                     already_checked_components[comp_to_be_checked] = anomaly
 
                 if anomaly:
