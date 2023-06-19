@@ -107,8 +107,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
         knowledge_enhancer.extend_kg_with_heatmap_facts(heatmaps["tf-keras-gradcam"].tolist(), "tf-keras-gradcam")
         title = affecting_comp + "_" + res_str
-        cam.plot_heatmaps_as_overlay(heatmaps, voltages, title)
 
+        heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, voltages, title)
+        self.data_provider.provide_heatmaps(heatmap_img, title)
         return np.argmax(prediction) == 0
 
     def construct_complete_graph(self, graph: dict, components_to_process: list) -> dict:
