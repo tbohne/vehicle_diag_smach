@@ -2,15 +2,17 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+import io
 import json
 import os
-from typing import Union
+from typing import Union, List
 
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
 import smach
+from PIL import Image
 from matplotlib.lines import Line2D
 from obd_ontology import expert_knowledge_enhancer
 from obd_ontology import knowledge_graph_query_tool
@@ -20,6 +22,7 @@ from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
+from vehicle_diag_smach.interfaces.data_provider import DataProvider
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 
 
@@ -29,12 +32,13 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
     task is to isolate the defective components based on their effective radius (structural knowledge).
     """
 
-    def __init__(self, data_accessor: DataAccessor, model_accessor: ModelAccessor):
+    def __init__(self, data_accessor: DataAccessor, model_accessor: ModelAccessor, data_provider: DataProvider):
         """
         Initializes the state.
 
         :param data_accessor: implementation of the data accessor interface
         :param model_accessor: implementation of the model accessor interface
+        :param data_provider: implementation of the data provider interface
         """
         smach.State.__init__(self,
                              outcomes=['isolated_problem'],
@@ -43,6 +47,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
         self.data_accessor = data_accessor
         self.model_accessor = model_accessor
+        self.data_provider = data_provider
 
     def classify_component(self, affecting_comp: str, dtc: str) -> Union[bool, None]:
         """
@@ -134,7 +139,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         """
         return Line2D([0, 1], [0, 1], color=colors, **kwargs)
 
-    def visualize_causal_graphs(self, anomalous_paths, complete_graphs, explicitly_considered_links):
+    def gen_causal_graph_visualizations(self, anomalous_paths, complete_graphs, explicitly_considered_links) \
+            -> List[Image.Image]:
         """
         Visualizes the causal graphs along with the actual paths to the root cause.
 
@@ -142,12 +148,15 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param complete_graphs: the causal graphs
         :param explicitly_considered_links: links that have been verified explicitly
         """
+        visualizations = []
         for key in anomalous_paths.keys():
             print("isolation results, i.e., causal path:")
             print(key, ":", anomalous_paths[key])
 
         for key in complete_graphs.keys():
             print("visualizing graph for component:", key, "\n")
+
+            plt.figure(figsize=(25, 25))
             plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=24, fontweight='bold')
 
             from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
@@ -184,7 +193,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             # initial preview does not require a legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
                 plt.legend(legend_lines, labels, fontsize=18)
-            plt.show()
+
+            # create bytes object and save matplotlib fig into it
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            plt.close()
+            # create PIL image object
+            image = Image.open(buf)
+            visualizations.append(image)
+        return visualizations
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -210,7 +228,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         explicitly_considered_links = {}
 
         # visualizing the initial graph (without highlighted edges / pre isolation)
-        self.visualize_causal_graphs(anomalous_paths, complete_graphs, explicitly_considered_links)
+        visualizations = self.gen_causal_graph_visualizations(
+            anomalous_paths, complete_graphs, explicitly_considered_links
+        )
+        self.data_provider.provide_causal_graph_visualizations(visualizations)
 
         for anomalous_comp in userdata.classified_components.keys():
             if not userdata.classified_components[anomalous_comp]:
@@ -273,6 +294,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             anomalous_paths[anomalous_comp] = causal_path
 
-        self.visualize_causal_graphs(anomalous_paths, complete_graphs, explicitly_considered_links)
+        visualizations = self.gen_causal_graph_visualizations(
+            anomalous_paths, complete_graphs, explicitly_considered_links
+        )
+        self.data_provider.provide_causal_graph_visualizations(visualizations)
+
         userdata.fault_paths = anomalous_paths
         return "isolated_problem"
