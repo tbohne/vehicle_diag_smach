@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+from typing import List
+
+
 class IntermediateResults:
     """
     Represents intermediate results of the diagnosis, which are communicated to the user.
     """
 
-    def __init__(self, status: str, required_actions: list[dict], state_log: list):
+    def __init__(self, status: str, required_actions: List[dict], state_log: List):
         """
         Inits the intermediate results.
 
