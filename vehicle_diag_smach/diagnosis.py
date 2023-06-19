@@ -79,7 +79,8 @@ class DiagnosisStateMachine(smach.StateMachine):
                      transitions={'uploaded_diag': 'diag'},
                      remapping={'diagnosis': 'sm_input'})
 
-            self.add('CLASSIFY_OSCILLOGRAMS', ClassifyOscillograms(self.model_accessor, self.data_accessor),
+            self.add('CLASSIFY_OSCILLOGRAMS', ClassifyOscillograms(self.model_accessor, self.data_accessor,
+                                                                   self.data_provider),
                      transitions={'no_anomaly_no_more_comp': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE',
                                   'no_anomaly': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},

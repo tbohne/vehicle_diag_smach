@@ -14,6 +14,7 @@ from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
+from vehicle_diag_smach.interfaces.data_provider import DataProvider
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 
 
@@ -23,12 +24,13 @@ class ClassifyOscillograms(smach.State):
     the trained neural net model, i.e., detecting anomalies.
     """
 
-    def __init__(self, model_accessor: ModelAccessor, data_accessor: DataAccessor):
+    def __init__(self, model_accessor: ModelAccessor, data_accessor: DataAccessor, data_provider: DataProvider):
         """
         Initializes the state.
 
         :param model_accessor: implementation of the model accessor interface
         :param data_accessor: implementation of the data accessor interface
+        :param data_provider: implementation of the data provider interface
         """
         smach.State.__init__(self,
                              outcomes=['detected_anomalies', 'no_anomaly', 'no_anomaly_no_more_comp'],
@@ -36,6 +38,7 @@ class ClassifyOscillograms(smach.State):
                              output_keys=['classified_components'])
         self.model_accessor = model_accessor
         self.data_accessor = data_accessor
+        self.data_provider = data_provider
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -119,7 +122,8 @@ class ClassifyOscillograms(smach.State):
             knowledge_enhancer.extend_kg_with_heatmap_facts(
                 heatmaps["tf-keras-gradcam"].tolist(), "tf-keras-gradcam"
             )
-            cam.plot_heatmaps_as_overlay(heatmaps, voltages, osci_data.comp_name + res_str)
+            heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, voltages, osci_data.comp_name + res_str)
+            self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
 
         # classifying the subset of components that are to be classified manually
         for comp in userdata.suggestion_list.keys():
