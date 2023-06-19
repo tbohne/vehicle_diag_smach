@@ -88,7 +88,7 @@ class LocalDataAccessor(DataAccessor):
         """
         val = None
         while val != "":
-            val = input("\n..............................")
+            val = input("\npress 'ENTER' when the recording phase is finished and the oscillogram is generated..")
         self.create_local_dummy_oscillograms()
         oscillograms = []
         for comp in components:

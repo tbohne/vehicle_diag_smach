@@ -10,8 +10,8 @@ from termcolor import colored
 
 class InspectComponents(smach.State):
     """
-    State in the low-level SMACH representing situations where manual inspection of suspect components for which
-    oscilloscope diagnosis is not appropriate is performed.
+    State in the low-level SMACH representing situations where manual inspection of suspect components, for which
+    oscilloscope diagnosis is not appropriate, is performed.
     """
 
     def __init__(self):
@@ -36,7 +36,6 @@ class InspectComponents(smach.State):
         print("SUGGESTION LIST:", userdata.suggestion_list)
         # TODO: to be implemented
         no_anomaly = True
-
         # TODO: are there remaining suspect components? (atm every component is suggested each case)
         no_more_measuring_pos = True
 
