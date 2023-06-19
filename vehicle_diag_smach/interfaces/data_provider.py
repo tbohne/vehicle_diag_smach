@@ -24,10 +24,21 @@ class DataProvider(ABC):
         """
         pass
 
+    @abstractmethod
     def provide_causal_graph_visualizations(self, visualizations: List[Image]) -> None:
         """
         Provides causal graph visualizations to the hub UI.
 
         :param visualizations: causal graph visualizations to be displayed on hub UI
+        """
+        pass
+
+    @abstractmethod
+    def provide_heatmaps(self, heatmaps: Image, title: str) -> None:
+        """
+        Provides heatmap visualizations to the hub UI.
+
+        :param heatmaps: heatmap visualizations to be displayed on hub UI
+        :param title: title of the heatmap plot (component + result of classification + score)
         """
         pass
