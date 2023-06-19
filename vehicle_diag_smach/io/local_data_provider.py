@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+import os
+import platform
 from typing import List
 
 from PIL import Image
@@ -34,3 +36,20 @@ class LocalDataProvider(DataProvider):
         """
         for vis in visualizations:
             vis.show()
+
+    def provide_heatmaps(self, heatmaps: Image, title: str) -> None:
+        """
+        Provides heatmap visualizations to the hub UI.
+
+        :param heatmaps: heatmap visualizations to be displayed on hub UI
+        :param title: title of the heatmap plot (component + result of classification + score)
+        """
+        title = title.replace(" ", "_") + ".png"
+        heatmaps.save(title)
+        # determine platform and open file with default image viewer
+        if platform.system() == "Windows":
+            os.system("start " + title)
+        elif platform.system() == "Darwin":  # macOS
+            os.system("open " + title)
+        else:  # Linux
+            os.system("xdg-open " + title)
