@@ -1,4 +1,6 @@
 standalone-smach
+Pillow
+setuptools
 beautifulsoup4
 tensorflow
 py4j
