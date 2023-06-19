@@ -131,7 +131,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return self.construct_complete_graph(graph, components_to_process)
 
     @staticmethod
-    def create_legend_lines(colors, **kwargs):
+    def create_legend_lines(colors: list, **kwargs) -> Line2D:
         """
         Creates the edge representations for the plot legend.
 
@@ -140,8 +140,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         """
         return Line2D([0, 1], [0, 1], color=colors, **kwargs)
 
-    def gen_causal_graph_visualizations(self, anomalous_paths, complete_graphs, explicitly_considered_links) \
-            -> List[Image.Image]:
+    def gen_causal_graph_visualizations(self, anomalous_paths: dict, complete_graphs: dict,
+                                        explicitly_considered_links: dict) -> List[Image.Image]:
         """
         Visualizes the causal graphs along with the actual paths to the root cause.
 
