@@ -9,12 +9,9 @@ from vehicle_diag_smach.interfaces.data_provider import DataProvider
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 from vehicle_diag_smach.low_level_states.classify_oscillograms import ClassifyOscillograms
 from vehicle_diag_smach.low_level_states.gen_artificial_instance_based_on_cc import GenArtificialInstanceBasedOnCC
-from vehicle_diag_smach.low_level_states.inspect_components import InspectComponents
 from vehicle_diag_smach.low_level_states.isolate_problem_check_effective_radius import \
     IsolateProblemCheckEffectiveRadius
 from vehicle_diag_smach.low_level_states.no_problem_detected_check_sensor import NoProblemDetectedCheckSensor
-from vehicle_diag_smach.low_level_states.perform_synchronized_sensor_recordings import \
-    PerformSynchronizedSensorRecordings
 from vehicle_diag_smach.low_level_states.provide_diag_and_show_trace import ProvideDiagAndShowTrace
 from vehicle_diag_smach.low_level_states.provide_initial_hypothesis_and_log_context import \
     ProvideInitialHypothesisAndLogContext
@@ -87,19 +84,8 @@ class DiagnosisStateMachine(smach.StateMachine):
                      remapping={'suggestion_list': 'sm_input',
                                 'classified_components': 'sm_input'})
 
-            self.add('INSPECT_COMPONENTS', InspectComponents(),
-                     transitions={'no_anomaly': 'SUGGEST_SUSPECT_COMPONENTS',
-                                  'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS',
-                                  'no_anomaly_no_more_comp': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE'},
-                     remapping={'suggestion_list': 'sm_input'})
-
-            self.add('PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS', PerformSynchronizedSensorRecordings(),
-                     transitions={'processed_sync_sensor_data': 'CLASSIFY_OSCILLOGRAMS'},
-                     remapping={'suggestion_list': 'sm_input'})
-
             self.add('SUGGEST_SUSPECT_COMPONENTS', SuggestSuspectComponents(),
-                     transitions={'provided_suggestions': 'PERFORM_SYNCHRONIZED_SENSOR_RECORDINGS',
-                                  'no_oscilloscope_required': 'INSPECT_COMPONENTS'},
+                     transitions={'provided_suggestions': 'CLASSIFY_OSCILLOGRAMS'},
                      remapping={'selected_instance': 'sm_input',
                                 'generated_instance': 'sm_input',
                                 'suggestion_list': 'sm_input'})
