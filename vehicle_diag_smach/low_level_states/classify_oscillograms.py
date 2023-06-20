@@ -18,10 +18,13 @@ from vehicle_diag_smach.interfaces.data_provider import DataProvider
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 
 
-class ClassifyOscillograms(smach.State):
+class ClassifyComponents(smach.State):
     """
-    State in the low-level SMACH that represents situations in which the recorded oscillograms are classified using
-    the trained neural net model, i.e., detecting anomalies.
+    State in the low-level SMACH that represents situations in which the suggested physical components in the vehicle
+    are classified:
+        - synchronized sensor recordings are performed at the suggested suspect components
+        - recorded oscillograms are classified using the trained neural net model, i.e., detecting anomalies
+        - manual inspection of suspect components, for which oscilloscope diagnosis is not appropriate, is performed
     """
 
     def __init__(self, model_accessor: ModelAccessor, data_accessor: DataAccessor, data_provider: DataProvider):
@@ -42,21 +45,32 @@ class ClassifyOscillograms(smach.State):
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
-        Execution of 'CLASSIFY_OSCILLOGRAMS' state.
+        Execution of 'CLASSIFY_COMPONENTS' state.
 
         :param userdata: input of state
         :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_no_more_comp")
         """
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
-        print("executing", colored("CLASSIFY_OSCILLOGRAMS", "yellow", "on_grey", ["bold"]),
+        print("executing", colored("CLASSIFY_COMPONENTS", "yellow", "on_grey", ["bold"]),
               "state (applying trained model)..")
         print("############################################")
 
+        # perform synchronized sensor recordings
+        components_to_be_recorded = [k for k, v in userdata.suggestion_list.items() if v]
+        components_to_be_manually_verified = [k for k, v in userdata.suggestion_list.items() if not v]
+        print("------------------------------------------")
+        print("components to be recorded:", components_to_be_recorded)
+        print("components to be verified manually:", components_to_be_manually_verified)
+        print("------------------------------------------")
+
+        print(colored("\nperform synchronized sensor recordings at:", "green", "on_grey", ["bold"]))
+        for comp in components_to_be_recorded:
+            print(colored("- " + comp, "green", "on_grey", ["bold"]))
+
+        oscillograms = self.data_accessor.get_oscillograms_by_components(components_to_be_recorded)
         anomalous_components = []
         non_anomalous_components = []
-        the_ones_to_classify = [key for key in userdata.suggestion_list.keys() if userdata.suggestion_list[key]]
-        oscillograms = self.data_accessor.get_oscillograms_by_components(the_ones_to_classify)
 
         # iteratively process oscilloscope recordings
         for osci_data in oscillograms:
@@ -126,14 +140,13 @@ class ClassifyOscillograms(smach.State):
             self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
 
         # classifying the subset of components that are to be classified manually
-        for comp in userdata.suggestion_list.keys():
-            if not userdata.suggestion_list[comp]:
-                print(colored("\n\nmanual inspection of component " + comp, "green", "on_grey", ["bold"]))
-                anomaly = self.data_accessor.get_manual_judgement_for_component(comp)
-                if anomaly:
-                    anomalous_components.append(comp)
-                else:
-                    non_anomalous_components.append(comp)
+        for comp in components_to_be_manually_verified:
+            print(colored("\n\nmanual inspection of component " + comp, "green", "on_grey", ["bold"]))
+            anomaly = self.data_accessor.get_manual_judgement_for_component(comp)
+            if anomaly:
+                anomalous_components.append(comp)
+            else:
+                non_anomalous_components.append(comp)
 
         classified_components = {}
         for comp in non_anomalous_components:
