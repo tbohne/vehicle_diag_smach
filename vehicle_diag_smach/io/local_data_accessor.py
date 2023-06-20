@@ -133,3 +133,15 @@ class LocalDataAccessor(DataAccessor):
         while val not in ['0', '1']:
             val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
         return val == "0"
+
+    def get_manual_judgement_for_sensor(self) -> bool:
+        """
+        Retrieves a manual judgement by the mechanic for the currently considered sensor.
+
+        :return: true -> anomaly, false -> regular
+        """
+        print("no anomaly identified -- check potential sensor malfunction..")
+        val = ""
+        while val not in ['0', '1']:
+            val = input("\npress '0' for sensor malfunction and '1' for working sensor..")
+        return val == "0"
