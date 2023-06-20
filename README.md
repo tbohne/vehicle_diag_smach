@@ -91,7 +91,7 @@ $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 ![](img/smach_high_level_v1.png)
 
 **Embedded Diagnosis State Machine (Low-Level)**
-![](img/smach_low_level_v1.png)
+![](img/smach_low_level_v2.png)
 
 ## Fault Isolation Result Example
 ![](img/isolation.png)
