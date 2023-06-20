@@ -21,7 +21,7 @@ class SuggestSuspectComponents(smach.State):
     def __init__(self):
 
         smach.State.__init__(self,
-                             outcomes=['provided_suggestions', 'no_oscilloscope_required'],
+                             outcomes=['provided_suggestions'],
                              input_keys=['selected_instance', 'generated_instance'],
                              output_keys=['suggestion_list'])
 
@@ -36,7 +36,7 @@ class SuggestSuspectComponents(smach.State):
         Execution of 'SUGGEST_SUSPECT_COMPONENTS' state.
 
         :param userdata: input of state
-        :return: outcome of the state ("provided_suggestions" | "no_oscilloscope_required")
+        :return: outcome of the state ("provided_suggestions")
         """
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
@@ -93,4 +93,3 @@ class SuggestSuspectComponents(smach.State):
 
         print("none of the identified suspect components can be diagnosed with an oscilloscope..")
         self.manual_transition()
-        return "no_oscilloscope_required"
