@@ -67,7 +67,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         assert len(oscillograms) == 1
         voltages = oscillograms[0].time_series
 
-        # TODO: should be based on model config (meta data) -- see `CLASSIFY_OSCILLOGRAMS`
+        # TODO: should be based on model config (meta data) -- see `CLASSIFY_COMPONENTS`
         if Z_NORMALIZATION:
             voltages = preprocess.z_normalize_time_series(voltages)
 

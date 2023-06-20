@@ -7,7 +7,7 @@ import smach
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
-from vehicle_diag_smach.low_level_states.classify_oscillograms import ClassifyOscillograms
+from vehicle_diag_smach.low_level_states.classify_oscillograms import ClassifyComponents
 from vehicle_diag_smach.low_level_states.gen_artificial_instance_based_on_cc import GenArtificialInstanceBasedOnCC
 from vehicle_diag_smach.low_level_states.isolate_problem_check_effective_radius import \
     IsolateProblemCheckEffectiveRadius
@@ -76,8 +76,8 @@ class DiagnosisStateMachine(smach.StateMachine):
                      transitions={'uploaded_diag': 'diag'},
                      remapping={'diagnosis': 'sm_input'})
 
-            self.add('CLASSIFY_OSCILLOGRAMS', ClassifyOscillograms(self.model_accessor, self.data_accessor,
-                                                                   self.data_provider),
+            self.add('CLASSIFY_COMPONENTS', ClassifyComponents(self.model_accessor, self.data_accessor,
+                                                                 self.data_provider),
                      transitions={'no_anomaly_no_more_comp': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE',
                                   'no_anomaly': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
@@ -85,7 +85,7 @@ class DiagnosisStateMachine(smach.StateMachine):
                                 'classified_components': 'sm_input'})
 
             self.add('SUGGEST_SUSPECT_COMPONENTS', SuggestSuspectComponents(),
-                     transitions={'provided_suggestions': 'CLASSIFY_OSCILLOGRAMS'},
+                     transitions={'provided_suggestions': 'CLASSIFY_COMPONENTS'},
                      remapping={'selected_instance': 'sm_input',
                                 'generated_instance': 'sm_input',
                                 'suggestion_list': 'sm_input'})
