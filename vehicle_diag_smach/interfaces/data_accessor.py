@@ -62,3 +62,12 @@ class DataAccessor(ABC):
         :return: true -> anomaly, false -> regular
         """
         pass
+
+    @abstractmethod
+    def get_manual_judgement_for_sensor(self) -> bool:
+        """
+        Retrieves a manual judgement by the mechanic for the currently considered sensor.
+
+        :return: true -> anomaly, false -> regular
+        """
+        pass
