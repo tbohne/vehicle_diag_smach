@@ -7,7 +7,7 @@ import smach
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
-from vehicle_diag_smach.low_level_states.classify_oscillograms import ClassifyComponents
+from vehicle_diag_smach.low_level_states.classify_components import ClassifyComponents
 from vehicle_diag_smach.low_level_states.gen_artificial_instance_based_on_cc import GenArtificialInstanceBasedOnCC
 from vehicle_diag_smach.low_level_states.isolate_problem_check_effective_radius import \
     IsolateProblemCheckEffectiveRadius
