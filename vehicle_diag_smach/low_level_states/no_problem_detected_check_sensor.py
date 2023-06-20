@@ -7,6 +7,8 @@ import os
 import smach
 from termcolor import colored
 
+from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
+
 
 class NoProblemDetectedCheckSensor(smach.State):
     """
@@ -15,12 +17,17 @@ class NoProblemDetectedCheckSensor(smach.State):
     state.
     """
 
-    def __init__(self):
+    def __init__(self, data_accessor: DataAccessor):
+        """
+        Initializes the state.
 
+        :param data_accessor: implementation of the data accessor interface
+        """
         smach.State.__init__(self,
                              outcomes=['sensor_works', 'sensor_defective'],
                              input_keys=[''],
                              output_keys=[''])
+        self.data_accessor = data_accessor
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -34,12 +41,7 @@ class NoProblemDetectedCheckSensor(smach.State):
         print("executing", colored("NO_PROBLEM_DETECTED_CHECK_SENSOR", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
-        print("no anomaly identified -- check potential sensor malfunction..")
-
-        val = ""
-        while val not in ['0', '1']:
-            val = input("\npress '0' for sensor malfunction and '1' for working sensor..")
-
-        if val == "0":
+        anomaly = self.data_accessor.get_manual_judgement_for_sensor()
+        if anomaly:
             return "sensor_defective"
         return "sensor_works"
