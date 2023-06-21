@@ -63,7 +63,7 @@ class DiagnosisStateMachine(smach.StateMachine):
                                   'sensor_defective': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
                      remapping={})
 
-            self.add('GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC', GenArtificialInstanceBasedOnCC(),
+            self.add('GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC', GenArtificialInstanceBasedOnCC(self.data_provider),
                      transitions={'generated_artificial_instance': 'SUGGEST_SUSPECT_COMPONENTS'},
                      remapping={'customer_complaints': 'sm_input',
                                 'generated_instance': 'sm_input'})

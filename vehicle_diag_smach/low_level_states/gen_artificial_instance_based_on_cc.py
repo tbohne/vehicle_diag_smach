@@ -7,6 +7,9 @@ import os
 import smach
 from termcolor import colored
 
+from vehicle_diag_smach.data_types.state_transition import StateTransition
+from vehicle_diag_smach.interfaces.data_provider import DataProvider
+
 
 class GenArtificialInstanceBasedOnCC(smach.State):
     """
@@ -14,11 +17,17 @@ class GenArtificialInstanceBasedOnCC(smach.State):
     based on the customer complaints. Used for cases where no OBD information is available.
     """
 
-    def __init__(self):
+    def __init__(self, data_provider: DataProvider):
+        """
+        Initializes the state.
+
+        :param data_provider: implementation of the data provider interface
+        """
         smach.State.__init__(self,
                              outcomes=['generated_artificial_instance'],
                              input_keys=['customer_complaints'],
                              output_keys=['generated_instance'])
+        self.data_provider = data_provider
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -34,4 +43,7 @@ class GenArtificialInstanceBasedOnCC(smach.State):
         print("CC:", userdata.customer_complaints)
         # TODO: generate instance based on provided CC
         userdata.generated_instance = "P2563"
+        self.data_provider.provide_state_transition(StateTransition(
+            "GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC", "SUGGEST_SUSPECT_COMPONENTS", "generated_artificial_instance"
+        ))
         return "generated_artificial_instance"
