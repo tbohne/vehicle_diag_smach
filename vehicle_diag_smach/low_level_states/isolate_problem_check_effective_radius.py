@@ -21,6 +21,7 @@ from oscillogram_classification import preprocess
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES
+from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
@@ -301,4 +302,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         self.data_provider.provide_causal_graph_visualizations(visualizations)
 
         userdata.fault_paths = anomalous_paths
+        self.data_provider.provide_state_transition(StateTransition(
+            "ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "PROVIDE_DIAG_AND_SHOW_TRACE", "isolated_problem"
+        ))
         return "isolated_problem"
