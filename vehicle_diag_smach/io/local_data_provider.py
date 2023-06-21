@@ -7,6 +7,7 @@ import platform
 from typing import List
 
 from PIL import Image
+from termcolor import colored
 
 from vehicle_diag_smach.data_types.intermediate_results import IntermediateResults
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -53,3 +54,12 @@ class LocalDataProvider(DataProvider):
             os.system("open " + title)
         else:  # Linux
             os.system("xdg-open " + title)
+
+    def provide_diagnosis(self, fault_paths: List[str]) -> None:
+        """
+        Provides the final diagnosis in the form of a set of fault paths to the hub UI.
+
+        :param fault_paths: final diagnosis to be displayed on hub UI
+        """
+        for fault_path in fault_paths:
+            print(colored(fault_path, "red", "on_white", ["bold"]))
