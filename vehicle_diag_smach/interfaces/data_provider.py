@@ -42,3 +42,12 @@ class DataProvider(ABC):
         :param title: title of the heatmap plot (component + result of classification + score)
         """
         pass
+
+    @abstractmethod
+    def provide_diagnosis(self, fault_paths: List[str]) -> None:
+        """
+        Provides the final diagnosis in the form of a set of fault paths to the hub UI.
+
+        :param fault_paths: final diagnosis to be displayed on hub UI
+        """
+        pass
