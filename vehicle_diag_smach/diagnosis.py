@@ -86,7 +86,7 @@ class DiagnosisStateMachine(smach.StateMachine):
                      remapping={'suggestion_list': 'sm_input',
                                 'classified_components': 'sm_input'})
 
-            self.add('SUGGEST_SUSPECT_COMPONENTS', SuggestSuspectComponents(),
+            self.add('SUGGEST_SUSPECT_COMPONENTS', SuggestSuspectComponents(self.data_provider),
                      transitions={'provided_suggestions': 'CLASSIFY_COMPONENTS'},
                      remapping={'selected_instance': 'sm_input',
                                 'generated_instance': 'sm_input',

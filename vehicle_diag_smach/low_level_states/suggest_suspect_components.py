@@ -10,6 +10,8 @@ from obd_ontology import knowledge_graph_query_tool
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, SUS_COMP_TMP_FILE, SUGGESTION_SESSION_FILE
+from vehicle_diag_smach.data_types.state_transition import StateTransition
+from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
 
 class SuggestSuspectComponents(smach.State):
@@ -18,12 +20,17 @@ class SuggestSuspectComponents(smach.State):
     vehicle are suggested to be investigated based on the available information (OBD, CC, etc.).
     """
 
-    def __init__(self):
+    def __init__(self, data_provider: DataProvider):
+        """
+        Initializes the state.
 
+        :param data_provider: implementation of the data provider interface
+        """
         smach.State.__init__(self,
                              outcomes=['provided_suggestions'],
                              input_keys=['selected_instance', 'generated_instance'],
                              output_keys=['suggestion_list'])
+        self.data_provider = data_provider
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -82,5 +89,8 @@ class SuggestSuspectComponents(smach.State):
 
         if True in oscilloscope_usage:
             print("\n--> there is at least one suspect component that can be diagnosed using an oscilloscope..")
+            self.data_provider.provide_state_transition(StateTransition(
+                "SUGGEST_SUSPECT_COMPONENTS", "CLASSIFY_COMPONENTS", "provided_suggestions"
+            ))
             return "provided_suggestions"
         print("none of the identified suspect components can be diagnosed with an oscilloscope..")
