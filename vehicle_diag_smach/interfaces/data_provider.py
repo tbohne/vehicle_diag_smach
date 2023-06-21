@@ -8,6 +8,7 @@ from typing import List
 from PIL.Image import Image
 
 from vehicle_diag_smach.data_types.intermediate_results import IntermediateResults
+from vehicle_diag_smach.data_types.state_transition import StateTransition
 
 
 class DataProvider(ABC):
@@ -49,5 +50,14 @@ class DataProvider(ABC):
         Provides the final diagnosis in the form of a set of fault paths to the hub UI.
 
         :param fault_paths: final diagnosis to be displayed on hub UI
+        """
+        pass
+
+    @abstractmethod
+    def provide_state_transition(self, state_transition: StateTransition) -> None:
+        """
+        Provides a transition performed by the state machine as part of a diagnostic process.
+
+        :param state_transition: state transition (prev state -- (transition link) --> current state)
         """
         pass
