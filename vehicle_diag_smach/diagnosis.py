@@ -72,7 +72,7 @@ class DiagnosisStateMachine(smach.StateMachine):
                      transitions={'no_diag': 'refuted_hypothesis'},
                      remapping={})
 
-            self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(),
+            self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(self.data_provider),
                      transitions={'uploaded_diag': 'diag'},
                      remapping={'diagnosis': 'sm_input'})
 
