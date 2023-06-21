@@ -7,6 +7,9 @@ import os
 import smach
 from termcolor import colored
 
+from vehicle_diag_smach.data_types.state_transition import StateTransition
+from vehicle_diag_smach.interfaces.data_provider import DataProvider
+
 
 class ProvideInitialHypothesisAndLogContext(smach.State):
     """
@@ -14,8 +17,14 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
     the context of the diagnostic process is provided due to unmanageable uncertainty.
     """
 
-    def __init__(self):
+    def __init__(self, data_provider: DataProvider):
+        """
+        Initializes the state.
+
+        :param data_provider: implementation of the data provider interface
+        """
         smach.State.__init__(self, outcomes=['no_diag'], input_keys=[''], output_keys=[''])
+        self.data_provider = data_provider
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -30,4 +39,7 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
               "state..")
         print("############################################")
         # TODO: create log file for the failed diagnostic process to improve future diagnosis (missing knowledge etc.)
+        self.data_provider.provide_state_transition(StateTransition(
+            "PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT", "refuted_hypothesis", "no_diag"
+        ))
         return "no_diag"

@@ -69,7 +69,8 @@ class DiagnosisStateMachine(smach.StateMachine):
                      remapping={'customer_complaints': 'sm_input',
                                 'generated_instance': 'sm_input'})
 
-            self.add('PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT', ProvideInitialHypothesisAndLogContext(),
+            self.add('PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT',
+                     ProvideInitialHypothesisAndLogContext(self.data_provider),
                      transitions={'no_diag': 'refuted_hypothesis'},
                      remapping={})
 
