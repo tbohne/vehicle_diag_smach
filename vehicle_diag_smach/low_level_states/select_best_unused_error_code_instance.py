@@ -43,12 +43,6 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             # clear list, already used now
             json.dump({'list': []}, f, default=str)
 
-    @staticmethod
-    def manual_transition() -> None:
-        val = None
-        while val != "":
-            val = input("\n..............................")
-
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE' state.
@@ -80,7 +74,6 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             self.remove_cc_instance_from_tmp_file()
             userdata.customer_complaints = customer_complaints_list[0]
             print("no DTCs provided, but customer complaints available..")
-            self.manual_transition()
             return "no_instance"
 
         # case 2: both available
@@ -94,7 +87,6 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
                     dtc_list.remove(dtc)
                     self.remove_dtc_instance_from_tmp_file(dtc_list)
                     print("select matching instance (OBD, CC)..")
-                    self.manual_transition()
                     return "selected_matching_instance(OBD_CC)"
             # sub-case 2: no matching instance -> select best instance
             # TODO: select best remaining DTC instance based on some criteria
@@ -102,13 +94,11 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             dtc_list.remove(dtc_list[0])
             self.remove_dtc_instance_from_tmp_file(dtc_list)
             print("DTCs and customer complaints available, but no matching instance..")
-            self.manual_transition()
             return "no_matching_selected_best_instance"
 
         # case 3: no remaining instance and customer complaints already used
         elif len(dtc_list) == 0 and len(customer_complaints_list) == 0:
             print("no more DTC instances and customer complaints already considered..")
-            self.manual_transition()
             return "no_instance_and_CC_already_used"
 
         # case 4: no customer complaints, but remaining DTCs
@@ -120,5 +110,4 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             self.remove_dtc_instance_from_tmp_file(dtc_list)
             print("\nno customer complaints available, selecting DTC instance..")
             print(colored("selected DTC instance: " + selected_dtc, "green", "on_grey", ["bold"]))
-            self.manual_transition()
             return "no_matching_selected_best_instance"

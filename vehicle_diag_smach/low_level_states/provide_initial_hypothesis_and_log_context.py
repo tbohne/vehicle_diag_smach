@@ -15,10 +15,7 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
     """
 
     def __init__(self):
-        smach.State.__init__(self,
-                             outcomes=['no_diag'],
-                             input_keys=[''],
-                             output_keys=[''])
+        smach.State.__init__(self, outcomes=['no_diag'], input_keys=[''], output_keys=[''])
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
