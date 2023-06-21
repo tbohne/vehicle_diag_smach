@@ -63,7 +63,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      remapping={'interview_data': 'sm_input',
                                 'vehicle_specific_instance_data': 'sm_input'})
 
-            self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(),
+            self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(self.data_provider),
                      transitions={'established_init_hypothesis': 'DIAGNOSIS',
                                   'no_OBD_and_no_CC': 'insufficient_data'},
                      remapping={'vehicle_specific_instance_data': 'sm_input',

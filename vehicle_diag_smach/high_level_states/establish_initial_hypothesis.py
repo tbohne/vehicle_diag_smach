@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE, HISTORICAL_INFO_FILE, CC_TMP_FILE
+from vehicle_diag_smach.data_types.state_transition import StateTransition
+from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
 
 class EstablishInitialHypothesis(smach.State):
@@ -18,11 +20,17 @@ class EstablishInitialHypothesis(smach.State):
     on the provided information.
     """
 
-    def __init__(self):
+    def __init__(self, data_provider: DataProvider):
+        """
+        Initializes the state.
+
+        :param data_provider: implementation of the data provider interface
+        """
         smach.State.__init__(self,
                              outcomes=['established_init_hypothesis', 'no_OBD_and_no_CC'],
                              input_keys=['vehicle_specific_instance_data'],
                              output_keys=['hypothesis'])
+        self.data_provider = data_provider
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -49,6 +57,9 @@ class EstablishInitialHypothesis(smach.State):
 
         if len(userdata.vehicle_specific_instance_data.dtc_list) == 0 and len(initial_hypothesis) == 0:
             # no OBD data + no customer complaints -> insufficient data
+            self.data_provider.provide_state_transition(StateTransition(
+                "ESTABLISH_INITIAL_HYPOTHESIS", "insufficient_data", "no_OBD_and_no_CC"
+            ))
             return "no_OBD_and_no_CC"
 
         print("reading historical information..")
@@ -67,4 +78,7 @@ class EstablishInitialHypothesis(smach.State):
 
         # TODO: use historical data to refine initial hypothesis (e.g. to deny certain hypotheses)
         print("establish hypothesis..")
+        self.data_provider.provide_state_transition(StateTransition(
+            "ESTABLISH_INITIAL_HYPOTHESIS", "DIAGNOSIS", "established_init_hypothesis"
+        ))
         return "established_init_hypothesis"
