@@ -25,12 +25,6 @@ class SuggestSuspectComponents(smach.State):
                              input_keys=['selected_instance', 'generated_instance'],
                              output_keys=['suggestion_list'])
 
-    @staticmethod
-    def manual_transition() -> None:
-        val = None
-        while val != "":
-            val = input("\n..............................")
-
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'SUGGEST_SUSPECT_COMPONENTS' state.
@@ -88,8 +82,5 @@ class SuggestSuspectComponents(smach.State):
 
         if True in oscilloscope_usage:
             print("\n--> there is at least one suspect component that can be diagnosed using an oscilloscope..")
-            self.manual_transition()
             return "provided_suggestions"
-
         print("none of the identified suspect components can be diagnosed with an oscilloscope..")
-        self.manual_transition()
