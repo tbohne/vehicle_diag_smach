@@ -10,7 +10,9 @@ import smach
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR
+from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
+from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
 
 class RecVehicleAndProcMetadata(smach.State):
@@ -19,14 +21,16 @@ class RecVehicleAndProcMetadata(smach.State):
     the metadata (data about the workshop, mechanic, etc.).
     """
 
-    def __init__(self, data_accessor: DataAccessor):
+    def __init__(self, data_accessor: DataAccessor, data_provider: DataProvider):
         """
         Initializes the state.
 
         :param data_accessor: implementation of the data accessor interface
+        :param data_provider: implementation of the data provider interface
         """
         smach.State.__init__(self, outcomes=['processed_metadata'], input_keys=[''], output_keys=[''])
         self.data_accessor = data_accessor
+        self.data_provider = data_provider
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -56,4 +60,7 @@ class RecVehicleAndProcMetadata(smach.State):
         with open(SESSION_DIR + '/metadata.json', 'w') as f:
             print(colored("------ writing metadata to session directory..", "green", "on_grey", ["bold"]))
             json.dump(workshop_info, f, default=str)
+        self.data_provider.provide_state_transition(StateTransition(
+            "REC_VEHICLE_AND_PROC_METADATA", "PROC_CUSTOMER_COMPLAINTS", "processed_metadata"
+        ))
         return "processed_metadata"

@@ -46,7 +46,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
         self.userdata.sm_input = []
 
         with self:
-            self.add('REC_VEHICLE_AND_PROC_METADATA', RecVehicleAndProcMetadata(self.data_accessor),
+            self.add('REC_VEHICLE_AND_PROC_METADATA', RecVehicleAndProcMetadata(self.data_accessor, self.data_provider),
                      transitions={'processed_metadata': 'PROC_CUSTOMER_COMPLAINTS'},
                      remapping={'input': 'sm_input',
                                 'user_data': 'sm_input'})
