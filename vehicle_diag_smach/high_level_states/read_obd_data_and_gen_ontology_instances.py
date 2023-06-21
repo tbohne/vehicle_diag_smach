@@ -10,7 +10,9 @@ from obd_ontology import ontology_instance_generator
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, OBD_INFO_FILE, DTC_TMP_FILE, OBD_ONTOLOGY_PATH
+from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
+from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
 
 class ReadOBDDataAndGenOntologyInstances(smach.State):
@@ -20,18 +22,19 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
     is entered into the knowledge graph.
     """
 
-    def __init__(self, data_accessor: DataAccessor):
+    def __init__(self, data_accessor: DataAccessor, data_provider: DataProvider):
         """
         Initializes the state.
 
         :param data_accessor: implementation of the data accessor interface
+        :param data_provider: implementation of the data provider interface
         """
         smach.State.__init__(self,
                              outcomes=['processed_OBD_data', 'no_OBD_data'],
                              input_keys=[''],
                              output_keys=['vehicle_specific_instance_data'])
-
         self.data_accessor = data_accessor
+        self.data_provider = data_provider
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -47,6 +50,9 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         print("############################################")
         obd_data = self.data_accessor.get_obd_data()
         if len(obd_data.dtc_list) == 0:
+            self.data_provider.provide_state_transition(StateTransition(
+                "READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "ESTABLISH_INITIAL_HYPOTHESIS", "no_OBD_data"
+            ))
             return "no_OBD_data"
 
         # write OBD data to session file
@@ -70,4 +76,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
                 obd_data.model, obd_data.hsn, obd_data.tsn, obd_data.vin, dtc, max_num_of_parallel_rec, diag_date
             )
         userdata.vehicle_specific_instance_data = obd_data
+        self.data_provider.provide_state_transition(StateTransition(
+            "READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "RETRIEVE_HISTORICAL_DATA", "processed_OBD_data"
+        ))
         return "processed_OBD_data"
