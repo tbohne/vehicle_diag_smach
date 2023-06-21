@@ -40,7 +40,7 @@ class NoProblemDetectedCheckSensor(smach.State):
         print("\n\n############################################")
         print("executing", colored("NO_PROBLEM_DETECTED_CHECK_SENSOR", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
-
+        # TODO: we should think about making the sensor explicit -- where to get this info?
         anomaly = self.data_accessor.get_manual_judgement_for_sensor()
         if anomaly:
             return "sensor_defective"
