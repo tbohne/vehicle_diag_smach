@@ -7,6 +7,7 @@ import os
 import smach
 from termcolor import colored
 
+from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
 
@@ -57,4 +58,7 @@ class ProvideDiagAndShowTrace(smach.State):
             path = [path[i] if i == len(path) - 1 else path[i] + " -> " for i in range(len(path))]
             fault_paths.append("".join(path))
         self.data_provider.provide_diagnosis(fault_paths)
+        self.data_provider.provide_state_transition(StateTransition(
+            "PROVIDE_DIAG_AND_SHOW_TRACE", "diag", "uploaded_diag"
+        ))
         return "uploaded_diag"
