@@ -70,7 +70,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                      remapping={'vehicle_specific_instance_data': 'sm_input',
                                 'hypothesis': 'sm_input'})
 
-            self.add('RETRIEVE_HISTORICAL_DATA', RetrieveHistoricalData(),
+            self.add('RETRIEVE_HISTORICAL_DATA', RetrieveHistoricalData(self.data_provider),
                      transitions={'processed_all_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
                      remapping={'vehicle_specific_instance_data_in': 'sm_input',
                                 'vehicle_specific_instance_data_out': 'sm_input'})

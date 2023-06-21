@@ -9,6 +9,8 @@ from obd_ontology import knowledge_graph_query_tool
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, HISTORICAL_INFO_FILE
+from vehicle_diag_smach.data_types.state_transition import StateTransition
+from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
 
 class RetrieveHistoricalData(smach.State):
@@ -18,11 +20,17 @@ class RetrieveHistoricalData(smach.State):
     Optionally, historical data for the car model can be retrieved.
     """
 
-    def __init__(self):
+    def __init__(self, data_provider: DataProvider):
+        """
+        Initializes the state.
+
+        :param data_provider: implementation of the data provider interface
+        """
         smach.State.__init__(self,
                              outcomes=['processed_all_data'],
                              input_keys=['vehicle_specific_instance_data_in'],
                              output_keys=['vehicle_specific_instance_data_out'])
+        self.data_provider = data_provider
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -55,4 +63,7 @@ class RetrieveHistoricalData(smach.State):
             f.write("DTCs previously recorded in cars of model " + model + ": " + str(historic_dtcs_by_model) + "\n")
 
         userdata.vehicle_specific_instance_data_out = userdata.vehicle_specific_instance_data_in
+        self.data_provider.provide_state_transition(StateTransition(
+            "RETRIEVE_HISTORICAL_DATA", "ESTABLISH_INITIAL_HYPOTHESIS", "processed_all_data"
+        ))
         return "processed_all_data"
