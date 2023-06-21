@@ -44,7 +44,7 @@ class DiagnosisStateMachine(smach.StateMachine):
 
         # defines states and transitions of the low-level diagnosis SMACH
         with self:
-            self.add('SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE', SelectBestUnusedErrorCodeInstance(),
+            self.add('SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE', SelectBestUnusedErrorCodeInstance(self.data_provider),
                      transitions={'selected_matching_instance(OBD_CC)': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'no_matching_selected_best_instance': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'no_instance': 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC',

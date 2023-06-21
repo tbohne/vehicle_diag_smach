@@ -9,6 +9,8 @@ import smach
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, DTC_TMP_FILE, CC_TMP_FILE
+from vehicle_diag_smach.data_types.state_transition import StateTransition
+from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
 
 class SelectBestUnusedErrorCodeInstance(smach.State):
@@ -17,12 +19,18 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
     selected for further processing.
     """
 
-    def __init__(self):
+    def __init__(self, data_provider: DataProvider):
+        """
+        Initializes the state.
+
+        :param data_provider: implementation of the data provider interface
+        """
         smach.State.__init__(self,
                              outcomes=['selected_matching_instance(OBD_CC)', 'no_matching_selected_best_instance',
                                        'no_instance', 'no_instance_and_CC_already_used'],
                              input_keys=[''],
                              output_keys=['selected_instance', 'customer_complaints'])
+        self.data_provider = data_provider
 
     @staticmethod
     def remove_dtc_instance_from_tmp_file(remaining_instances: list) -> None:
@@ -74,6 +82,9 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             self.remove_cc_instance_from_tmp_file()
             userdata.customer_complaints = customer_complaints_list[0]
             print("no DTCs provided, but customer complaints available..")
+            self.data_provider.provide_state_transition(StateTransition(
+                "SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE", "GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC", "no_instance"
+            ))
             return "no_instance"
 
         # case 2: both available
@@ -87,6 +98,10 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
                     dtc_list.remove(dtc)
                     self.remove_dtc_instance_from_tmp_file(dtc_list)
                     print("select matching instance (OBD, CC)..")
+                    self.data_provider.provide_state_transition(StateTransition(
+                        "SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE", "SUGGEST_SUSPECT_COMPONENTS",
+                        "selected_matching_instance(OBD_CC)"
+                    ))
                     return "selected_matching_instance(OBD_CC)"
             # sub-case 2: no matching instance -> select best instance
             # TODO: select best remaining DTC instance based on some criteria
@@ -94,11 +109,19 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             dtc_list.remove(dtc_list[0])
             self.remove_dtc_instance_from_tmp_file(dtc_list)
             print("DTCs and customer complaints available, but no matching instance..")
+            self.data_provider.provide_state_transition(StateTransition(
+                "SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE", "SUGGEST_SUSPECT_COMPONENTS",
+                "no_matching_selected_best_instance"
+            ))
             return "no_matching_selected_best_instance"
 
         # case 3: no remaining instance and customer complaints already used
         elif len(dtc_list) == 0 and len(customer_complaints_list) == 0:
             print("no more DTC instances and customer complaints already considered..")
+            self.data_provider.provide_state_transition(StateTransition(
+                "SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE", "NO_PROBLEM_DETECTED_CHECK_SENSOR",
+                "no_instance_and_CC_already_used"
+            ))
             return "no_instance_and_CC_already_used"
 
         # case 4: no customer complaints, but remaining DTCs
@@ -110,4 +133,8 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
             self.remove_dtc_instance_from_tmp_file(dtc_list)
             print("\nno customer complaints available, selecting DTC instance..")
             print(colored("selected DTC instance: " + selected_dtc, "green", "on_grey", ["bold"]))
+            self.data_provider.provide_state_transition(StateTransition(
+                "SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE", "SUGGEST_SUSPECT_COMPONENTS",
+                "no_matching_selected_best_instance"
+            ))
             return "no_matching_selected_best_instance"
