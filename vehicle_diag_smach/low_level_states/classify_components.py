@@ -13,6 +13,7 @@ from oscillogram_classification import preprocess
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE
+from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
@@ -165,8 +166,17 @@ class ClassifyComponents(smach.State):
         remaining_suspect_components = False
 
         if len(anomalous_components) == 0 and not remaining_suspect_components:
+            self.data_provider.provide_state_transition(StateTransition(
+                "CLASSIFY_COMPONENTS", "SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE", "no_anomaly_no_more_comp"
+            ))
             return "no_anomaly_no_more_comp"
         elif len(anomalous_components) == 0 and remaining_suspect_components:
+            self.data_provider.provide_state_transition(StateTransition(
+                "CLASSIFY_COMPONENTS", "SUGGEST_SUSPECT_COMPONENTS", "no_anomaly"
+            ))
             return "no_anomaly"
         elif len(anomalous_components) > 0:
+            self.data_provider.provide_state_transition(StateTransition(
+                "CLASSIFY_COMPONENTS", "ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "detected_anomalies"
+            ))
             return "detected_anomalies"
