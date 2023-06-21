@@ -10,6 +10,7 @@ from PIL import Image
 from termcolor import colored
 
 from vehicle_diag_smach.data_types.intermediate_results import IntermediateResults
+from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
 
@@ -63,3 +64,13 @@ class LocalDataProvider(DataProvider):
         """
         for fault_path in fault_paths:
             print(colored(fault_path, "red", "on_white", ["bold"]))
+
+    def provide_state_transition(self, state_transition: StateTransition) -> None:
+        """
+        Provides a transition performed by the state machine as part of a diagnostic process.
+
+        :param state_transition: state transition (prev state -- (transition link) --> current state)
+        """
+        print("-----------------------------------------------------------")
+        print("Performed state transition:", state_transition)
+        print("-----------------------------------------------------------")
