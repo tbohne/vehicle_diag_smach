@@ -19,28 +19,28 @@ class DataAccessor(ABC):
     @abstractmethod
     def get_workshop_info(self) -> WorkshopData:
         """
-        Retrieves meta information for the workshop.
+        Retrieves the workshop metadata required in the diagnostic process.
 
-        :return: workshop data
+        :return: workshop metadata
         """
         pass
 
     @abstractmethod
     def get_obd_data(self) -> OnboardDiagnosisData:
         """
-        Retrieves OBD (on-board diagnosis) data.
+        Retrieves the on-board diagnosis data required in the diagnostic process.
 
-        :return: OBD data
+        :return: on-board diagnosis data
         """
         pass
 
     @abstractmethod
     def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
         """
-        Retrieves oscillograms for the specified vehicle components.
+        Retrieves the oscillogram data for the specified components.
 
-        :param components: vehicle components to provide oscillograms for
-        :return: oscillograms
+        :param components: components to retrieve oscillograms for
+        :return: oscillogram data for each component
         """
         pass
 
@@ -48,6 +48,8 @@ class DataAccessor(ABC):
     def get_customer_complaints(self) -> CustomerComplaintData:
         """
         Retrieves customer complaints for the vehicle to be diagnosed.
+
+        If there are no customer complaints, an empty object should be returned, i.e. CustomerComplaintData().
 
         :return: customer complaints
         """

@@ -37,7 +37,7 @@ class LocalDataAccessor(DataAccessor):
         """
         val = None
         while val != "":
-            val = input("\n..............................")
+            val = input("\nlocal interface impl.: simulation of mechanic providing these information..")
         return WorkshopData(4, date.today())
 
     def get_obd_data(self) -> OnboardDiagnosisData:
@@ -46,10 +46,9 @@ class LocalDataAccessor(DataAccessor):
 
         :return: on-board diagnosis data
         """
-        print("\nprocessing OBD data..")
         val = None
         while val != "":
-            val = input("\n..............................")
+            val = input("\nlocal interface impl.: sim processing OBD data..")
         obd_data = OnboardDiagnosisData(
             ['P2563'], "Mazda 3", "849357984", "453948539", "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
         )
@@ -88,7 +87,8 @@ class LocalDataAccessor(DataAccessor):
         """
         val = None
         while val != "":
-            val = input("\npress 'ENTER' when the recording phase is finished and the oscillogram is generated..")
+            val = input("\nlocal interface impl.: sim mechanic - press 'ENTER' when the recording phase is finished"
+                        + " and the oscillograms are generated for " + str(components))
         self.create_local_dummy_oscillograms()
         oscillograms = []
         for comp in components:
@@ -105,11 +105,7 @@ class LocalDataAccessor(DataAccessor):
         """
         val = ""
         while val != "0" and val != "1":
-            val = input("\nstarting diagnosis with [0] / without [1] customer complaints")
-
-        val = None
-        while val != "":
-            val = input("\n..............................")
+            val = input("\nlocal interface impl.: starting diagnosis with [0] / without [1] customer complaints")
 
         if val == "0":
             # launch expert system that processes the customer complaints
@@ -128,10 +124,10 @@ class LocalDataAccessor(DataAccessor):
         :param component: vehicle component to get manual judgement for
         :return: true -> anomaly, false -> regular
         """
-        print("manual inspection of component:", component)
+        print("local interface impl.: manual inspection of component:", component)
         val = ""
         while val not in ['0', '1']:
-            val = input("\npress '0' for defective component, i.e., anomaly, and '1' for no defect..")
+            val = input("\nsim mechanic - press '0' for defective component, i.e., anomaly, and '1' for no defect..")
         return val == "0"
 
     def get_manual_judgement_for_sensor(self) -> bool:
