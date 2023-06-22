@@ -13,7 +13,7 @@ from vehicle_diag_smach.data_types.state_transition import StateTransition
 
 class DataProvider(ABC):
     """
-    Interface that defines the state machine's provision of intermediate results to be displayed in the hub UI.
+    Interface that defines the state machine's provision of intermediate results and diagnosis-relevant case data.
     """
 
     @abstractmethod

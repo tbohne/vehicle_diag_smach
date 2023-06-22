@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+from typing import Union
+
 from tensorflow import keras
 
 from vehicle_diag_smach.config import TRAINED_MODEL_POOL
@@ -16,9 +18,9 @@ class LocalModelAccessor(ModelAccessor):
     def __init__(self):
         pass
 
-    def get_model_by_component(self, component: str) -> keras.models.Model:
+    def get_model_by_component(self, component: str) -> Union[keras.models.Model, None]:
         """
-        Retrieves a trained classification model for the specified vehicle component.
+        Retrieves a trained model to classify signals of the specified vehicle component.
 
         :param component: vehicle component to retrieve trained model for
         :return: trained model or `None` if unavailable
