@@ -7,7 +7,6 @@ from typing import List
 
 from PIL.Image import Image
 
-from vehicle_diag_smach.data_types.intermediate_results import IntermediateResults
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 
 
@@ -15,15 +14,6 @@ class DataProvider(ABC):
     """
     Interface that defines the state machine's provision of intermediate results and diagnosis-relevant case data.
     """
-
-    @abstractmethod
-    def provide_intermediate_results(self, intermediate_results: IntermediateResults) -> None:
-        """
-        Provides intermediate results to the hub UI.
-
-        :param intermediate_results: intermediate results to be displayed on hub UI
-        """
-        pass
 
     @abstractmethod
     def provide_causal_graph_visualizations(self, visualizations: List[Image]) -> None:

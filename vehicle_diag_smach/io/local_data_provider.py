@@ -9,7 +9,6 @@ from typing import List
 from PIL import Image
 from termcolor import colored
 
-from vehicle_diag_smach.data_types.intermediate_results import IntermediateResults
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -20,14 +19,6 @@ class LocalDataProvider(DataProvider):
     """
 
     def __init__(self):
-        pass
-
-    def provide_intermediate_results(self, intermediate_results: IntermediateResults) -> None:
-        """
-        Provides intermediate results to the hub UI.
-
-        :param intermediate_results: intermediate results to be displayed on hub UI
-        """
         pass
 
     def provide_causal_graph_visualizations(self, visualizations: List[Image.Image]) -> None:
