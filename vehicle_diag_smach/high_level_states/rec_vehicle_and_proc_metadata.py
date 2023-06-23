@@ -56,6 +56,8 @@ class RecVehicleAndProcMetadata(smach.State):
             shutil.rmtree(SESSION_DIR)
             os.makedirs(SESSION_DIR + "/")
 
+        # TODO: save workshop info in KG
+
         # write metadata to session directory
         with open(SESSION_DIR + '/metadata.json', 'w') as f:
             print(colored("------ writing metadata to session directory..", "green", "on_grey", ["bold"]))

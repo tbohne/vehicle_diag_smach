@@ -49,6 +49,7 @@ class ProcCustomerComplaints(smach.State):
             self.data_provider.provide_state_transition(StateTransition(
                 "PROC_CUSTOMER_COMPLAINTS", "READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "received_complaints"
             ))
+            # TODO: when we know more about the precise structure etc. of CC, we should enter them into the KG here
             return "received_complaints"
         else:
             print("starting diagnosis without customer complaints..")
