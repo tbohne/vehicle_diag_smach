@@ -20,5 +20,16 @@ class WorkshopData:
         self.num_of_parallel_rec = num_of_parallel_rec
         self.diag_date = diag_date
 
+    def get_json_representation(self) -> dict:
+        """
+        Returns a JSON representation of the workshop data.
+
+        :return: JSON representation of workshop data
+        """
+        return {
+            "max_num_of_parallel_rec": self.num_of_parallel_rec,
+            "diag_date": self.diag_date
+        }
+
     def __str__(self):
         return "num of parallel rec: " + str(self.num_of_parallel_rec) + ", diag date: " + str(self.diag_date)
