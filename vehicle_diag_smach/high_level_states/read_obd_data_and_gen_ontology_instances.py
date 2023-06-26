@@ -72,7 +72,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         # extend knowledge graph with read OBD data (if the vehicle instance already exists, it will be extended)
         instance_gen = ontology_instance_generator.OntologyInstanceGenerator(OBD_ONTOLOGY_PATH, local_kb=False)
         for dtc in obd_data.dtc_list:
-            instance_gen.extend_knowledge_graph(
+            instance_gen.extend_knowledge_graph_with_vehicle_data(
                 obd_data.model, obd_data.hsn, obd_data.tsn, obd_data.vin, dtc, max_num_of_parallel_rec, diag_date
             )
         userdata.vehicle_specific_instance_data = obd_data
