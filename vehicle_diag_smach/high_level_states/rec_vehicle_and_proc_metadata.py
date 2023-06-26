@@ -61,7 +61,7 @@ class RecVehicleAndProcMetadata(smach.State):
         # write metadata to session directory
         with open(SESSION_DIR + '/metadata.json', 'w') as f:
             print(colored("------ writing metadata to session directory..", "green", "on_grey", ["bold"]))
-            json.dump(workshop_info, f, default=str)
+            json.dump(workshop_info.get_json_representation(), f, default=str)
         self.data_provider.provide_state_transition(StateTransition(
             "REC_VEHICLE_AND_PROC_METADATA", "PROC_CUSTOMER_COMPLAINTS", "processed_metadata"
         ))
