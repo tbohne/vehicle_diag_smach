@@ -26,5 +26,19 @@ class OnboardDiagnosisData:
         self.tsn = tsn
         self.vin = vin
 
+    def get_json_representation(self) -> dict:
+        """
+        Returns a JSON representation of the OBD data.
+
+        :return: JSON representation of OBD data
+        """
+        return {
+            "dtc_list": self.dtc_list,
+            "model": self.model,
+            "hsn": self.hsn,
+            "tsn": self.tsn,
+            "vin": self.vin
+        }
+
     def __str__(self):
         return f"DTC list: {self.dtc_list},\nmodel: {self.model},\nHSN: {self.hsn},\nTSN: {self.tsn},\nVIN: {self.vin}"
