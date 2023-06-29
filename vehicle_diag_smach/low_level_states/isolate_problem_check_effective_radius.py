@@ -20,7 +20,8 @@ from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES
+from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
+    CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -206,6 +207,25 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             visualizations.append(image)
         return visualizations
 
+    @staticmethod
+    def log_classification_action(comp: str, anomaly: bool, use_oscilloscope: bool):
+        """
+        Logs the classification actions to the session directory.
+
+        :param comp: classified component
+        :param anomaly: whether an anomaly was identified
+        :param use_oscilloscope: whether an oscilloscope recording was used for the classification
+        """
+        with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, "r") as f:
+            log_file = json.load(f)
+            log_file.extend([{
+                comp: anomaly,
+                "State": "ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS",
+                "Classification Type": "manual inspection" if not use_oscilloscope else "osci classification"
+            }])
+        with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, "w") as f:
+            json.dump(log_file, f, indent=4)
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
@@ -293,6 +313,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     print("component potentially affected by:", affecting_comps)
                     unisolated_anomalous_components += affecting_comps
                     explicitly_considered_links[comp_to_be_checked] += affecting_comps.copy()
+
+                self.log_classification_action(comp_to_be_checked, bool(anomaly), use_oscilloscope)
 
             anomalous_paths[anomalous_comp] = causal_path
 
