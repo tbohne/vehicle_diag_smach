@@ -12,7 +12,7 @@ from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE
+from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -43,6 +43,27 @@ class ClassifyComponents(smach.State):
         self.model_accessor = model_accessor
         self.data_accessor = data_accessor
         self.data_provider = data_provider
+
+    @staticmethod
+    def log_classification_action(classified_components: dict, manually_inspected_components: list) -> None:
+        """
+        Logs the classification actions to the session directory.
+
+        :param classified_components: dictionary of classified components + classification results
+        :param manually_inspected_components: components that were classified manually by the mechanic
+        """
+        with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, "r") as f:
+            log_file = json.load(f)
+            for k, v in classified_components.items():
+                new_data = {
+                    k: v,
+                    "State": "CLASSIFY_COMPONENTS",
+                    "Classification Type": "manual inspection"
+                    if k in manually_inspected_components else "osci classification"
+                }
+                log_file.extend([new_data])
+        with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, "w") as f:
+            json.dump(log_file, f, indent=4)
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -156,6 +177,7 @@ class ClassifyComponents(smach.State):
             classified_components[comp] = True
 
         userdata.classified_components = classified_components
+        self.log_classification_action(classified_components, components_to_be_manually_verified)
 
         # there are three options:
         #   1. there's only one recording at a time and thus only one classification
