@@ -61,4 +61,7 @@ class ProvideDiagAndShowTrace(smach.State):
         self.data_provider.provide_state_transition(StateTransition(
             "PROVIDE_DIAG_AND_SHOW_TRACE", "diag", "uploaded_diag"
         ))
+
+        # TODO: generate `DiagLog` instance
+
         return "uploaded_diag"

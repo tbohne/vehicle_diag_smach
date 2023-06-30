@@ -60,6 +60,9 @@ class EstablishInitialHypothesis(smach.State):
             self.data_provider.provide_state_transition(StateTransition(
                 "ESTABLISH_INITIAL_HYPOTHESIS", "insufficient_data", "no_OBD_and_no_CC"
             ))
+
+            # TODO: generate `DiagLog` instance
+
             return "no_OBD_and_no_CC"
 
         print("reading historical information..")
