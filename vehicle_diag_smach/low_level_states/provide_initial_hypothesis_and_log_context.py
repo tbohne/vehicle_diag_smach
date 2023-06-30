@@ -10,7 +10,7 @@ from obd_ontology import knowledge_graph_query_tool
 from obd_ontology import ontology_instance_generator
 from termcolor import colored
 
-from vehicle_diag_smach.config import OBD_ONTOLOGY_PATH, SESSION_DIR, OBD_INFO_FILE
+from vehicle_diag_smach.config import OBD_ONTOLOGY_PATH, SESSION_DIR, OBD_INFO_FILE, KG_URL
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -48,9 +48,11 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
         ))
 
         # TODO: generate `DiagLog` instance
-        instance_gen = ontology_instance_generator.OntologyInstanceGenerator(OBD_ONTOLOGY_PATH, local_kb=False)
+        instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
+            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
+        )
 
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=KG_URL)
 
         with open(SESSION_DIR + '/metadata.json', 'r') as f:
             data = json.load(f)

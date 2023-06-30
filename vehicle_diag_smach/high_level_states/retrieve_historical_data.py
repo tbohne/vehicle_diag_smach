@@ -8,7 +8,7 @@ import smach
 from obd_ontology import knowledge_graph_query_tool
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, HISTORICAL_INFO_FILE
+from vehicle_diag_smach.config import SESSION_DIR, HISTORICAL_INFO_FILE, KG_URL
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -47,7 +47,7 @@ class RetrieveHistoricalData(smach.State):
         print("\n\n############################################")
         print("executing", colored("RETRIEVE_HISTORICAL_DATA", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################\n")
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=KG_URL)
         vin = userdata.vehicle_specific_instance_data_in.vin
         model = userdata.vehicle_specific_instance_data_in.model
 

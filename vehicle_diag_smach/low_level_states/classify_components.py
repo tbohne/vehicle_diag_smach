@@ -13,7 +13,8 @@ from oscillogram_classification import preprocess
 from termcolor import colored
 
 from vehicle_diag_smach import util
-from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE
+from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE, \
+    KG_URL
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -159,7 +160,7 @@ class ClassifyComponents(smach.State):
             print("DTC to set heatmap for:", dtc)
             print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
             # extend KG with generated heatmap
-            knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("")
+            knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("", kg_url=KG_URL)
             # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
             knowledge_enhancer.extend_kg_with_heatmap_facts(
                 heatmaps["tf-keras-gradcam"].tolist(), "tf-keras-gradcam"

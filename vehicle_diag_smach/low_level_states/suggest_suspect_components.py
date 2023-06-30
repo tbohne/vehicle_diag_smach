@@ -9,7 +9,7 @@ import smach
 from obd_ontology import knowledge_graph_query_tool
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, SUS_COMP_TMP_FILE, SUGGESTION_SESSION_FILE
+from vehicle_diag_smach.config import SESSION_DIR, SUS_COMP_TMP_FILE, SUGGESTION_SESSION_FILE, KG_URL
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -45,7 +45,7 @@ class SuggestSuspectComponents(smach.State):
         print("############################################\n")
 
         # print("generated instance:", userdata.generated_instance)
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=KG_URL)
 
         # should not be queried over and over again - just once for a session
         # -> then suggest as many as possible per execution of the state (write to session files)

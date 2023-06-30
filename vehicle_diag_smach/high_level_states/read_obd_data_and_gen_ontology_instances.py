@@ -9,7 +9,7 @@ import smach
 from obd_ontology import ontology_instance_generator
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, OBD_INFO_FILE, DTC_TMP_FILE, OBD_ONTOLOGY_PATH
+from vehicle_diag_smach.config import SESSION_DIR, OBD_INFO_FILE, DTC_TMP_FILE, OBD_ONTOLOGY_PATH, KG_URL
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -72,7 +72,9 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
             diag_date = workshop_info["diag_date"]
 
         # extend knowledge graph with read OBD data (if the vehicle instance already exists, it will be extended)
-        instance_gen = ontology_instance_generator.OntologyInstanceGenerator(OBD_ONTOLOGY_PATH, local_kb=False)
+        instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
+            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
+        )
         for dtc in obd_data.dtc_list:
             instance_gen.extend_knowledge_graph_with_vehicle_data(
                 obd_data.model, obd_data.hsn, obd_data.tsn, obd_data.vin, dtc, max_num_of_parallel_rec, diag_date

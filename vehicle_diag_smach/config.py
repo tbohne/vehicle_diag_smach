@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+KG_URL = "https://aw.ni.dfki.de"
 SESSION_DIR = "session_files"
 OSCI_SESSION_FILES = "oscillograms"
 XPS_SESSION_FILE = "xps_session.xml"

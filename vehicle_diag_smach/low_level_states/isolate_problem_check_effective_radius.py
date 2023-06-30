@@ -22,7 +22,7 @@ from termcolor import colored
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
-    CLASSIFICATION_LOG_FILE
+    CLASSIFICATION_LOG_FILE, KG_URL
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -47,7 +47,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                              outcomes=['isolated_problem'],
                              input_keys=['classified_components'],
                              output_keys=['fault_paths'])
-        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=KG_URL)
         self.data_accessor = data_accessor
         self.model_accessor = model_accessor
         self.data_provider = data_provider
@@ -113,7 +113,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         print("DTC to set heatmap for:", dtc)
         print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
         # extend KG with generated heatmap
-        knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("")
+        knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("", kg_url=KG_URL)
         # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
         knowledge_enhancer.extend_kg_with_heatmap_facts(heatmaps["tf-keras-gradcam"].tolist(), "tf-keras-gradcam")
         title = affecting_comp + "_" + res_str
