@@ -9,7 +9,7 @@ import shutil
 import smach
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR
+from vehicle_diag_smach.config import SESSION_DIR, CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -55,6 +55,10 @@ class RecVehicleAndProcMetadata(smach.State):
             print(colored("\n------ clearing session data directory..", "green", "on_grey", ["bold"]))
             shutil.rmtree(SESSION_DIR)
             os.makedirs(SESSION_DIR + "/")
+
+        # init classification log
+        with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, 'w') as f:
+            json.dump([], f, indent=4)
 
         # TODO: save workshop info in KG
 
