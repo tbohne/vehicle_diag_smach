@@ -12,6 +12,7 @@ from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from termcolor import colored
 
+from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
@@ -107,6 +108,11 @@ class ClassifyComponents(smach.State):
 
             # TODO: we should probably not only obtain the model here, but also the meta info (see above)
             model = self.model_accessor.get_model_by_component(osci_data.comp_name)
+            try:
+                util.validate_keras_model(model)
+            except ValueError as e:
+                print(f"invalid model dimensions: {str(e)}")
+                model = None
 
             if model is None:
                 print("no trained model available for the signal (component) to be classified:", osci_data.comp_name)

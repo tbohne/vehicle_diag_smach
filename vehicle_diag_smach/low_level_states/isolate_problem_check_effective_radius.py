@@ -20,6 +20,7 @@ from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from termcolor import colored
 
+from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
     CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
@@ -74,6 +75,13 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             voltages = preprocess.z_normalize_time_series(voltages)
 
         model = self.model_accessor.get_model_by_component(affecting_comp)
+        try:
+            util.validate_keras_model(model)
+        except ValueError as e:
+            print(f"invalid model dimensions: {str(e)}")
+            model = None
+
+        # TODO: handle model is None cases
 
         net_input_size = model.layers[0].output_shape[0][1]
         assert net_input_size == len(voltages)

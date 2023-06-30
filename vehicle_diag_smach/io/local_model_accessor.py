@@ -22,6 +22,12 @@ class LocalModelAccessor(ModelAccessor):
         """
         Retrieves a trained model to classify signals of the specified vehicle component.
 
+        The provided model is expected to be a Keras model satisfying the following assumptions:
+            - input_shape: (None, len_of_ts, 1)
+            - output_shape: (None, 1)
+        Thus, in both cases we have a variable batch size due to `None`. For the input we expect a list of scalars and
+        for the output exactly one scalar.
+
         :param component: vehicle component to retrieve trained model for
         :return: trained model or `None` if unavailable
         """
