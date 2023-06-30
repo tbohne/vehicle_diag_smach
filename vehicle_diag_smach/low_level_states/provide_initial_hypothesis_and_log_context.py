@@ -2,11 +2,15 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+import json
 import os
 
 import smach
+from obd_ontology import knowledge_graph_query_tool
+from obd_ontology import ontology_instance_generator
 from termcolor import colored
 
+from vehicle_diag_smach.config import OBD_ONTOLOGY_PATH, SESSION_DIR, OBD_INFO_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -42,4 +46,23 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
         self.data_provider.provide_state_transition(StateTransition(
             "PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT", "refuted_hypothesis", "no_diag"
         ))
+
+        # TODO: generate `DiagLog` instance
+        instance_gen = ontology_instance_generator.OntologyInstanceGenerator(OBD_ONTOLOGY_PATH, local_kb=False)
+
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False)
+
+        with open(SESSION_DIR + '/metadata.json', 'r') as f:
+            data = json.load(f)
+
+        with open(SESSION_DIR + "/" + OBD_INFO_FILE, "r") as f:
+            obd_data = json.load(f)
+
+        dtc_instances = [qt.query_dtc_instance_by_code(dtc) for dtc in obd_data["dtc_list"]]
+
+        # TODO: extend ontology instance generation
+        # instance_gen.extend_knowledge_graph_with_diag_log(
+        #     data["diag_date"], data["max_num_of_parallel_rec"], dtc_instances, [],
+        # )
+
         return "no_diag"
