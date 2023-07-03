@@ -3,7 +3,7 @@
 # @author Tim Bohne
 
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Union, Tuple
 
 from tensorflow import keras
 
@@ -15,7 +15,7 @@ class ModelAccessor(ABC):
 
     @abstractmethod
     def get_keras_univariate_ts_classification_model_by_component(
-            self, component: str) -> Union[keras.models.Model, None]:
+            self, component: str) -> Union[Tuple[keras.models.Model, dict], None]:
         """
         Retrieves a trained model to classify signals of the specified vehicle component.
 
@@ -26,6 +26,6 @@ class ModelAccessor(ABC):
         for the output exactly one scalar.
 
         :param component: vehicle component to retrieve trained model for
-        :return: trained model or `None` if unavailable
+        :return: trained model and model meta info dictionary or `None` if unavailable
         """
         pass

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
-from typing import Union
+from typing import Union, Tuple
 
 from tensorflow import keras
 
@@ -19,7 +19,7 @@ class LocalModelAccessor(ModelAccessor):
         pass
 
     def get_keras_univariate_ts_classification_model_by_component(
-            self, component: str) -> Union[keras.models.Model, None]:
+            self, component: str) -> Union[Tuple[keras.models.Model, dict], None]:
         """
         Retrieves a trained model to classify signals of the specified vehicle component.
 
@@ -30,12 +30,13 @@ class LocalModelAccessor(ModelAccessor):
         for the output exactly one scalar.
 
         :param component: vehicle component to retrieve trained model for
-        :return: trained model or `None` if unavailable
+        :return: trained model and model meta info dictionary or `None` if unavailable
         """
         try:
             trained_model_file = TRAINED_MODEL_POOL + component + ".h5"
             print("loading trained model:", trained_model_file)
-            return keras.models.load_model(trained_model_file)
+            model_meta_info = {"normalization_method": "z-normalization"}
+            return keras.models.load_model(trained_model_file), model_meta_info
         except OSError as e:
             print("no trained model available for the signal (component) to be classified:", component)
             print("ERROR:", e)
