@@ -74,7 +74,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if Z_NORMALIZATION:
             voltages = preprocess.z_normalize_time_series(voltages)
 
-        model = self.model_accessor.get_model_by_component(affecting_comp)
+        model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(affecting_comp)
         try:
             util.validate_keras_model(model)
         except ValueError as e:

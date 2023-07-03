@@ -14,7 +14,8 @@ class ModelAccessor(ABC):
     """
 
     @abstractmethod
-    def get_model_by_component(self, component: str) -> Union[keras.models.Model, None]:
+    def get_keras_univariate_ts_classification_model_by_component(
+            self, component: str) -> Union[keras.models.Model, None]:
         """
         Retrieves a trained model to classify signals of the specified vehicle component.
 

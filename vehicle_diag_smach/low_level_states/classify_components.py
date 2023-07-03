@@ -108,7 +108,7 @@ class ClassifyComponents(smach.State):
                 voltages = preprocess.z_normalize_time_series(voltages)
 
             # TODO: we should probably not only obtain the model here, but also the meta info (see above)
-            model = self.model_accessor.get_model_by_component(osci_data.comp_name)
+            model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(osci_data.comp_name)
             try:
                 util.validate_keras_model(model)
             except ValueError as e:
