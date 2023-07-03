@@ -75,13 +75,18 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             voltages = preprocess.z_normalize_time_series(voltages)
 
         model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(affecting_comp)
+
+        # TODO: handle model is None cases
+        if model is None:
+            pass
+        (model, model_meta_info) = model
+        print("model meta info:", model_meta_info)
         try:
             util.validate_keras_model(model)
         except ValueError as e:
-            print(f"invalid model dimensions: {str(e)}")
-            model = None
-
-        # TODO: handle model is None cases
+            print("invalid model for the signal (component) to be classified:", affecting_comp)
+            print("error:", e)
+            print("adding it to the list of components to be verified manually..")
 
         net_input_size = model.layers[0].output_shape[0][1]
         assert net_input_size == len(voltages)

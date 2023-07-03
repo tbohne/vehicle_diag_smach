@@ -109,14 +109,18 @@ class ClassifyComponents(smach.State):
 
             # TODO: we should probably not only obtain the model here, but also the meta info (see above)
             model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(osci_data.comp_name)
+            if model is None:
+                print("no trained model available for the signal (component) to be classified:", osci_data.comp_name)
+                print("adding it to the list of components to be verified manually..")
+                userdata.suggestion_list[osci_data.comp_name] = False
+                continue
+            (model, model_meta_info) = model
+            print("model meta info:", model_meta_info)
             try:
                 util.validate_keras_model(model)
             except ValueError as e:
-                print(f"invalid model dimensions: {str(e)}")
-                model = None
-
-            if model is None:
-                print("no trained model available for the signal (component) to be classified:", osci_data.comp_name)
+                print("invalid model for the signal (component) to be classified:", osci_data.comp_name)
+                print("error:", e)
                 print("adding it to the list of components to be verified manually..")
                 userdata.suggestion_list[osci_data.comp_name] = False
                 continue
