@@ -85,23 +85,25 @@ class ClassifyComponents(smach.State):
         print("############################################")
 
         # perform synchronized sensor recordings
-        components_to_be_recorded = [k for k, v in userdata.suggestion_list.items() if v]
-        components_to_be_manually_verified = [k for k, v in userdata.suggestion_list.items() if not v]
+        components_to_be_recorded = {k: v[0] for k, v in userdata.suggestion_list.items() if v[1]}
+        components_to_be_manually_verified = {k: v[0] for k, v in userdata.suggestion_list.items() if not v[1]}
         print("------------------------------------------")
         print("components to be recorded:", components_to_be_recorded)
         print("components to be verified manually:", components_to_be_manually_verified)
         print("------------------------------------------")
 
         print(colored("\nperform synchronized sensor recordings at:", "green", "on_grey", ["bold"]))
-        for comp in components_to_be_recorded:
+        for comp in components_to_be_recorded.keys():
             print(colored("- " + comp, "green", "on_grey", ["bold"]))
 
-        oscillograms = self.data_accessor.get_oscillograms_by_components(components_to_be_recorded)
+        oscillograms = self.data_accessor.get_oscillograms_by_components(list(components_to_be_recorded.keys()))
         anomalous_components = []
         non_anomalous_components = []
+        classification_instances = []
 
         # iteratively process oscilloscope recordings
         for osci_data in oscillograms:
+            osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(osci_data.time_series)
             print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
             voltages = osci_data.time_series
 
@@ -170,16 +172,27 @@ class ClassifyComponents(smach.State):
 
             # extend KG with generated heatmap
             # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-            self.instance_gen.extend_knowledge_graph_with_heatmap(
+            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
                 "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
             )
             heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, voltages, osci_data.comp_name + res_str)
             self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
 
+            classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
+                anomaly, components_to_be_recorded[osci_data.comp_name], osci_data.comp_name, pred_value,
+                model_meta_info["model_id"], osci_id, heatmap_id
+            )
+            classification_instances.append(classification_id)
+
         # classifying the subset of components that are to be classified manually
-        for comp in components_to_be_manually_verified:
+        for comp in components_to_be_manually_verified.keys():
             print(colored("\n\nmanual inspection of component " + comp, "green", "on_grey", ["bold"]))
             anomaly = self.data_accessor.get_manual_judgement_for_component(comp)
+            classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
+                anomaly, components_to_be_manually_verified[comp], comp
+            )
+            classification_instances.append(classification_id)
+
             if anomaly:
                 anomalous_components.append(comp)
             else:
@@ -191,8 +204,8 @@ class ClassifyComponents(smach.State):
         for comp in anomalous_components:
             classified_components[comp] = True
 
-        userdata.classified_components = classified_components
-        self.log_classification_action(classified_components, components_to_be_manually_verified)
+        userdata.classified_components = classification_instances
+        self.log_classification_action(classified_components, list(components_to_be_manually_verified.keys()))
 
         # there are three options:
         #   1. there's only one recording at a time and thus only one classification
