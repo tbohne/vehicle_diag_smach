@@ -80,7 +80,13 @@ class SuggestSuspectComponents(smach.State):
             print("comp:", comp, "// use oscilloscope:", use)
             oscilloscope_usage.append(use)
 
-        suggestion_list = {comp: osci for comp, osci in zip(suspect_components, oscilloscope_usage)}
+        suggestion_list = {
+            comp: (
+                qt.query_diag_association_instance_by_dtc_and_sus_comp(
+                    userdata.selected_instance, comp
+                )[0].split("#")[1], osci
+            ) for comp, osci in zip(suspect_components, oscilloscope_usage)
+        }
         userdata.suggestion_list = suggestion_list
 
         # everything that is used here should be removed from the tmp file
