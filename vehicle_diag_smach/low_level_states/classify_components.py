@@ -7,14 +7,14 @@ import os
 
 import numpy as np
 import smach
-from obd_ontology import expert_knowledge_enhancer
+from obd_ontology import ontology_instance_generator
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from termcolor import colored
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE, \
-    KG_URL
+    KG_URL, OBD_ONTOLOGY_PATH
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -45,6 +45,10 @@ class ClassifyComponents(smach.State):
         self.model_accessor = model_accessor
         self.data_accessor = data_accessor
         self.data_provider = data_provider
+
+        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
+            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
+        )
 
     @staticmethod
     def log_classification_action(classified_components: dict, manually_inspected_components: list) -> None:
@@ -163,11 +167,11 @@ class ClassifyComponents(smach.State):
             dtc = list(suggestions.keys())[0]
             print("DTC to set heatmap for:", dtc)
             print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+
             # extend KG with generated heatmap
-            knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("", kg_url=KG_URL)
             # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-            knowledge_enhancer.extend_kg_with_heatmap_facts(
-                heatmaps["tf-keras-gradcam"].tolist(), "tf-keras-gradcam"
+            self.instance_gen.extend_knowledge_graph_with_heatmap(
+                "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
             )
             heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, voltages, osci_data.comp_name + res_str)
             self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)

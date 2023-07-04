@@ -14,15 +14,15 @@ import pandas as pd
 import smach
 from PIL import Image
 from matplotlib.lines import Line2D
-from obd_ontology import expert_knowledge_enhancer
 from obd_ontology import knowledge_graph_query_tool
+from obd_ontology import ontology_instance_generator
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from termcolor import colored
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
-    CLASSIFICATION_LOG_FILE, KG_URL
+    CLASSIFICATION_LOG_FILE, KG_URL, OBD_ONTOLOGY_PATH
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -48,6 +48,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                              input_keys=['classified_components'],
                              output_keys=['fault_paths'])
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=KG_URL)
+        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
+            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
+        )
         self.data_accessor = data_accessor
         self.model_accessor = model_accessor
         self.data_provider = data_provider
@@ -118,13 +121,19 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         print("DTC to set heatmap for:", dtc)
         print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
         # extend KG with generated heatmap
-        knowledge_enhancer = expert_knowledge_enhancer.ExpertKnowledgeEnhancer("", kg_url=KG_URL)
         # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-        knowledge_enhancer.extend_kg_with_heatmap_facts(heatmaps["tf-keras-gradcam"].tolist(), "tf-keras-gradcam")
+        self.instance_gen.extend_knowledge_graph_with_heatmap(
+            "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+        )
         title = affecting_comp + "_" + res_str
-
         heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, voltages, title)
         self.data_provider.provide_heatmaps(heatmap_img, title)
+
+        # # TODO: extend KG with osci classification
+        # self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
+        #     np.argmax(prediction) == 0,
+        # )
+
         return np.argmax(prediction) == 0
 
     def construct_complete_graph(self, graph: dict, components_to_process: list) -> dict:
