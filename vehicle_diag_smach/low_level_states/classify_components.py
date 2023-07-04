@@ -101,9 +101,13 @@ class ClassifyComponents(smach.State):
         non_anomalous_components = []
         classification_instances = []
 
-        # iteratively process oscilloscope recordings
+        osci_set_id = ""
+        if len(components_to_be_recorded.keys()) > 1:
+            osci_set_id = self.instance_gen.extend_knowledge_graph_with_parallel_rec_osci_set()
+
+        # iteratively process parallel recorded oscilloscope recordings
         for osci_data in oscillograms:
-            osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(osci_data.time_series)
+            osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(osci_data.time_series, osci_set_id)
             print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
             voltages = osci_data.time_series
 
