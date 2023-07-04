@@ -5,7 +5,7 @@
 import io
 import json
 import os
-from typing import Union, List
+from typing import Union, List, Tuple
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -55,13 +55,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         self.model_accessor = model_accessor
         self.data_provider = data_provider
 
-    def classify_component(self, affecting_comp: str, dtc: str) -> Union[bool, None]:
+    def classify_component(
+            self, affecting_comp: str, dtc: str, classification_reason: str
+    ) -> Union[Tuple[bool, str], None]:
         """
         Classifies the oscillogram for the specified vehicle component.
 
         :param affecting_comp: component to classify oscillogram for
         :param dtc: DTC the original component suggestion was based on
-        :return: whether an anomaly has been detected
+        :param classification_reason: reason for the classification (ID of another classification)
+        :return: tuple of whether an anomaly has been detected and the corresponding classification ID
         """
         # create session data directory
         osci_iso_session_dir = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/"
@@ -72,6 +75,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
         assert len(oscillograms) == 1
         voltages = oscillograms[0].time_series
+        osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(voltages)
 
         # TODO: should be based on model config (meta data) -- see `CLASSIFY_COMPONENTS`
         if Z_NORMALIZATION:
@@ -122,19 +126,19 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
         # extend KG with generated heatmap
         # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-        self.instance_gen.extend_knowledge_graph_with_heatmap(
+        heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
             "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
         )
         title = affecting_comp + "_" + res_str
         heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, voltages, title)
         self.data_provider.provide_heatmaps(heatmap_img, title)
 
-        # # TODO: extend KG with osci classification
-        # self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
-        #     np.argmax(prediction) == 0,
-        # )
-
-        return np.argmax(prediction) == 0
+        # extend KG with osci classification
+        classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
+            anomaly, classification_reason, affecting_comp, prediction[0][0], model_meta_info['model_id'],
+            osci_id, heatmap_id
+        )
+        return np.argmax(prediction) == 0, classification_id
 
     def construct_complete_graph(self, graph: dict, components_to_process: list) -> dict:
         """
@@ -261,14 +265,24 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         print("executing", colored("ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################\n")
 
-        # already checked components together with the corresponding results (true -> anomaly)
-        already_checked_components = userdata.classified_components.copy()
+        # already checked components together with the corresponding results: {comp: (prediction, classification_id)}
+        # a prediction of "true" -> anomaly
+        already_checked_components = {}
+        for classification_id in userdata.classified_components:
+            sus_comp_resp = self.qt.query_suspect_component_by_classification(classification_id)
+            assert len(sus_comp_resp) == 1
+            comp_id = sus_comp_resp[0].split("#")[1]
+            comp_name = self.qt.query_suspect_component_name_by_id(comp_id)[0]
+            # the prediction is retrieved as a string, not boolean, thus the check
+            pred = self.qt.query_prediction_by_classification(classification_id)[0] == "True"
+            already_checked_components[comp_name] = (pred, classification_id)
+
         anomalous_paths = {}
         print(colored("constructing causal graph, i.e., subgraph of structural component knowledge..\n",
                       "green", "on_grey", ["bold"]))
 
         complete_graphs = {comp: self.construct_complete_graph({}, [comp])
-                           for comp in userdata.classified_components.keys() if userdata.classified_components[comp]}
+                           for comp in already_checked_components.keys() if already_checked_components[comp][0]}
         explicitly_considered_links = {}
 
         # visualizing the initial graph (without highlighted edges / pre isolation)
@@ -277,8 +291,13 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         )
         self.data_provider.provide_causal_graph_visualizations(visualizations)
 
-        for anomalous_comp in userdata.classified_components.keys():
-            if not userdata.classified_components[anomalous_comp]:
+        # important to compare to userdata here to not have a dictionary of changed size during iteration
+        for class_id in userdata.classified_components:
+            sus_comp_resp = self.qt.query_suspect_component_by_classification(class_id)
+            assert len(sus_comp_resp) == 1
+            comp_id = sus_comp_resp[0].split("#")[1]
+            anomalous_comp = self.qt.query_suspect_component_name_by_id(comp_id)[0]
+            if not already_checked_components[anomalous_comp][0]:
                 continue
 
             # read DTC suggestion - assumption: it is always the latest suggestion
@@ -308,8 +327,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     explicitly_considered_links[comp_to_be_checked] = []
 
                 if comp_to_be_checked in already_checked_components.keys():
-                    print("already checked this component - anomaly:", already_checked_components[comp_to_be_checked])
-                    if already_checked_components[comp_to_be_checked]:
+                    print("already checked this component - anomaly:",
+                          already_checked_components[comp_to_be_checked][0])
+
+                    if already_checked_components[comp_to_be_checked][0]:
                         causal_path.append(comp_to_be_checked)
                         affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
                         unisolated_anomalous_components += affecting_comps
@@ -320,14 +341,24 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
                 if use_oscilloscope:
                     print("use oscilloscope..")
-                    anomaly = self.classify_component(comp_to_be_checked, dtc)
-                    if anomaly is None:
+                    classification_res = self.classify_component(
+                        comp_to_be_checked, dtc, already_checked_components[anomalous_comp][1]
+                    )
+                    if classification_res is None:
                         anomaly = self.data_accessor.get_manual_judgement_for_component(comp_to_be_checked)
+                        classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
+                            anomaly, already_checked_components[anomalous_comp][1], comp_to_be_checked
+                        )
                     else:
-                        already_checked_components[comp_to_be_checked] = anomaly
+                        (anomaly, classification_id) = classification_res
+
+                    already_checked_components[comp_to_be_checked] = (anomaly, classification_id)
                 else:
                     anomaly = self.data_accessor.get_manual_judgement_for_component(comp_to_be_checked)
-                    already_checked_components[comp_to_be_checked] = anomaly
+                    classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
+                        anomaly, already_checked_components[anomalous_comp][1], comp_to_be_checked
+                    )
+                    already_checked_components[comp_to_be_checked] = (anomaly, classification_id)
 
                 if anomaly:
                     causal_path.append(comp_to_be_checked)
