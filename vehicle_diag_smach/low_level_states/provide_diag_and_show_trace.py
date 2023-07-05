@@ -2,11 +2,15 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+import json
 import os
 
 import smach
+from obd_ontology import ontology_instance_generator, knowledge_graph_query_tool
 from termcolor import colored
 
+from vehicle_diag_smach.config import OBD_ONTOLOGY_PATH, KG_URL, SESSION_DIR, OBD_INFO_FILE, CLASSIFICATION_LOG_FILE, \
+    SUGGESTION_SESSION_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -29,6 +33,10 @@ class ProvideDiagAndShowTrace(smach.State):
                              input_keys=['diagnosis'],
                              output_keys=[''])
         self.data_provider = data_provider
+        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
+            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
+        )
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=KG_URL)
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -50,18 +58,46 @@ class ProvideDiagAndShowTrace(smach.State):
         #       - associated symptoms, DTCs, components (distinguishing root causes and side effects) etc.
         # TODO: show diagnosis + trace
 
-        fault_paths = []
+        fault_paths = {}
         for key in userdata.diagnosis.keys():
             print("\nidentified anomalous component:", key)
-            print("fault path:")
             path = userdata.diagnosis[key][::-1]
             path = [path[i] if i == len(path) - 1 else path[i] + " -> " for i in range(len(path))]
-            fault_paths.append("".join(path))
-        self.data_provider.provide_diagnosis(fault_paths)
+            fault_path = "".join(path)
+
+            # find out fault condition ID for this fault path
+            # read DTC suggestion - assumption: it is always the latest suggestion
+            with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
+                suggestions = json.load(f)
+            assert len(suggestions.keys()) == 1
+            dtc = list(suggestions.keys())[0]
+            fault_condition_id = self.qt.query_fault_condition_instance_by_code(dtc)[0].split("#")[1]
+            fault_path_id = self.instance_gen.extend_knowledge_graph_with_fault_path(fault_path, fault_condition_id)
+            fault_paths[fault_path_id] = fault_path
+
+        self.data_provider.provide_diagnosis(list(fault_paths.values()))
         self.data_provider.provide_state_transition(StateTransition(
             "PROVIDE_DIAG_AND_SHOW_TRACE", "diag", "uploaded_diag"
         ))
 
-        # TODO: generate `DiagLog` instance
+        # read meta data
+        with open(SESSION_DIR + '/metadata.json', 'r') as f:
+            data = json.load(f)
+        # read OBD data
+        with open(SESSION_DIR + "/" + OBD_INFO_FILE, "r") as f:
+            obd_data = json.load(f)
 
+        # read classification IDs
+        with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, "r") as f:
+            log_file = json.load(f)
+        classification_ids = [classification_entry["Classification ID"] for classification_entry in log_file]
+
+        # read vehicle ID
+        vehicle_id = self.qt.query_vehicle_instance_by_vin(obd_data["vin"])[0].split("#")[1]
+
+        # extend KG with `DiagLog` instance
+        self.instance_gen.extend_knowledge_graph_with_diag_log(
+            data["diag_date"], data["max_num_of_parallel_rec"], obd_data["dtc_list"], list(fault_paths.keys()),
+            classification_ids, vehicle_id
+        )
         return "uploaded_diag"
