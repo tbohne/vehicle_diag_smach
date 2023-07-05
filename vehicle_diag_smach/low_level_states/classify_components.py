@@ -51,12 +51,15 @@ class ClassifyComponents(smach.State):
         )
 
     @staticmethod
-    def log_classification_action(classified_components: dict, manually_inspected_components: list) -> None:
+    def log_classification_actions(
+            classified_components: dict, manually_inspected_components: list, classification_instances: dict
+    ) -> None:
         """
         Logs the classification actions to the session directory.
 
         :param classified_components: dictionary of classified components + classification results
         :param manually_inspected_components: components that were classified manually by the mechanic
+        :param classification_instances: IDs of the classification instances by component name
         """
         with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, "r") as f:
             log_file = json.load(f)
@@ -65,7 +68,8 @@ class ClassifyComponents(smach.State):
                     k: v,
                     "State": "CLASSIFY_COMPONENTS",
                     "Classification Type": "manual inspection"
-                    if k in manually_inspected_components else "osci classification"
+                        if k in manually_inspected_components else "osci classification",
+                    "Classification ID": classification_instances[k]
                 }
                 log_file.extend([new_data])
         with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, "w") as f:
@@ -99,7 +103,7 @@ class ClassifyComponents(smach.State):
         oscillograms = self.data_accessor.get_oscillograms_by_components(list(components_to_be_recorded.keys()))
         anomalous_components = []
         non_anomalous_components = []
-        classification_instances = []
+        classification_instances = {}
 
         osci_set_id = ""
         if len(components_to_be_recorded.keys()) > 1:
@@ -186,7 +190,7 @@ class ClassifyComponents(smach.State):
                 anomaly, components_to_be_recorded[osci_data.comp_name], osci_data.comp_name, pred_value,
                 model_meta_info["model_id"], osci_id, heatmap_id
             )
-            classification_instances.append(classification_id)
+            classification_instances[osci_data.comp_name] = classification_id
 
         # classifying the subset of components that are to be classified manually
         for comp in components_to_be_manually_verified.keys():
@@ -195,7 +199,7 @@ class ClassifyComponents(smach.State):
             classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
                 anomaly, components_to_be_manually_verified[comp], comp
             )
-            classification_instances.append(classification_id)
+            classification_instances[comp] = classification_id
 
             if anomaly:
                 anomalous_components.append(comp)
@@ -208,8 +212,10 @@ class ClassifyComponents(smach.State):
         for comp in anomalous_components:
             classified_components[comp] = True
 
-        userdata.classified_components = classification_instances
-        self.log_classification_action(classified_components, list(components_to_be_manually_verified.keys()))
+        userdata.classified_components = list(classification_instances.values())
+        self.log_classification_actions(
+            classified_components, list(components_to_be_manually_verified.keys()), classification_instances
+        )
 
         # there are three options:
         #   1. there's only one recording at a time and thus only one classification
