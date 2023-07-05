@@ -77,7 +77,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         )
         for dtc in obd_data.dtc_list:
             instance_gen.extend_knowledge_graph_with_vehicle_data(
-                obd_data.model, obd_data.hsn, obd_data.tsn, obd_data.vin, dtc, max_num_of_parallel_rec, diag_date
+                obd_data.model, obd_data.hsn, obd_data.tsn, obd_data.vin, dtc
             )
         userdata.vehicle_specific_instance_data = obd_data
         self.data_provider.provide_state_transition(StateTransition(
