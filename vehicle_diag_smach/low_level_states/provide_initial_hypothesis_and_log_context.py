@@ -10,7 +10,7 @@ from obd_ontology import knowledge_graph_query_tool
 from obd_ontology import ontology_instance_generator
 from termcolor import colored
 
-from vehicle_diag_smach.config import OBD_ONTOLOGY_PATH, SESSION_DIR, OBD_INFO_FILE, KG_URL
+from vehicle_diag_smach.config import OBD_ONTOLOGY_PATH, SESSION_DIR, OBD_INFO_FILE, KG_URL, CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -29,6 +29,10 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
         """
         smach.State.__init__(self, outcomes=['no_diag'], input_keys=[''], output_keys=[''])
         self.data_provider = data_provider
+        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
+            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
+        )
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=KG_URL)
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -47,24 +51,23 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
             "PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT", "refuted_hypothesis", "no_diag"
         ))
 
-        # TODO: generate `DiagLog` instance
-        instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
-        )
-
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=KG_URL)
-
+        # read meta data
         with open(SESSION_DIR + '/metadata.json', 'r') as f:
             data = json.load(f)
-
+        # read OBD data
         with open(SESSION_DIR + "/" + OBD_INFO_FILE, "r") as f:
             obd_data = json.load(f)
 
-        dtc_instances = [qt.query_dtc_instance_by_code(dtc) for dtc in obd_data["dtc_list"]]
+        # read classification IDs
+        with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, "r") as f:
+            log_file = json.load(f)
+        classification_ids = [classification_entry["Classification ID"] for classification_entry in log_file]
 
-        # TODO: extend ontology instance generation
-        # instance_gen.extend_knowledge_graph_with_diag_log(
-        #     data["diag_date"], data["max_num_of_parallel_rec"], dtc_instances, [],
-        # )
+        #  read vehicle ID
+        vehicle_id = self.qt.query_vehicle_instance_by_vin(obd_data["vin"])[0].split("#")[1]
 
+        # extend KG with `DiagLog` instance
+        self.instance_gen.extend_knowledge_graph_with_diag_log(
+            data["diag_date"], data["max_num_of_parallel_rec"], obd_data["dtc_list"], [], classification_ids, vehicle_id
+        )
         return "no_diag"
