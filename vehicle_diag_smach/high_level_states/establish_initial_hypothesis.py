@@ -11,7 +11,7 @@ from obd_ontology import ontology_instance_generator, knowledge_graph_query_tool
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE, HISTORICAL_INFO_FILE, CC_TMP_FILE, \
-    OBD_ONTOLOGY_PATH, KG_URL, OBD_INFO_FILE, CLASSIFICATION_LOG_FILE
+    OBD_ONTOLOGY_PATH, KG_URL, OBD_INFO_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -66,9 +66,6 @@ class EstablishInitialHypothesis(smach.State):
             self.data_provider.provide_state_transition(StateTransition(
                 "ESTABLISH_INITIAL_HYPOTHESIS", "insufficient_data", "no_DTC_and_no_CC"
             ))
-
-            # TODO: generate `DiagLog` instance
-
             # read meta data
             with open(SESSION_DIR + '/metadata.json', 'r') as f:
                 data = json.load(f)
