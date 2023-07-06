@@ -60,7 +60,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
             self.add('READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES',
                      ReadOBDDataAndGenOntologyInstances(self.data_accessor, self.data_provider),
                      transitions={'processed_OBD_data': 'RETRIEVE_HISTORICAL_DATA',
-                                  'no_OBD_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
+                                  'no_DTC_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
                      remapping={'interview_data': 'sm_input',
                                 'vehicle_specific_instance_data': 'sm_input'})
 

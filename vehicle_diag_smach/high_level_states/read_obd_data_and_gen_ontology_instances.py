@@ -30,7 +30,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         :param data_provider: implementation of the data provider interface
         """
         smach.State.__init__(self,
-                             outcomes=['processed_OBD_data', 'no_OBD_data'],
+                             outcomes=['processed_OBD_data', 'no_DTC_data'],
                              input_keys=[''],
                              output_keys=['vehicle_specific_instance_data'])
         self.data_accessor = data_accessor
@@ -41,7 +41,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         Execution of 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES' state.
 
         :param userdata: input of state
-        :return: outcome of the state ("processed_OBD_data" | "no_OBD_data")
+        :return: outcome of the state ("processed_OBD_data" | "no_DTC_data")
         """
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
@@ -52,10 +52,10 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
 
         if len(obd_data.dtc_list) == 0:
             self.data_provider.provide_state_transition(StateTransition(
-                "READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "ESTABLISH_INITIAL_HYPOTHESIS", "no_OBD_data"
+                "READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "ESTABLISH_INITIAL_HYPOTHESIS", "no_DTC_data"
             ))
             userdata.vehicle_specific_instance_data = obd_data
-            return "no_OBD_data"
+            return "no_DTC_data"
 
         # write OBD data to session file
         with open(SESSION_DIR + "/" + OBD_INFO_FILE, "w") as f:
