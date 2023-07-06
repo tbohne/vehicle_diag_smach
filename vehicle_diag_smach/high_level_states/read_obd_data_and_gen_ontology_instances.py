@@ -35,6 +35,9 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
                              output_keys=['vehicle_specific_instance_data'])
         self.data_accessor = data_accessor
         self.data_provider = data_provider
+        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
+            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
+        )
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -50,6 +53,15 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         print("############################################")
         obd_data = self.data_accessor.get_obd_data()
 
+        # write OBD data to session file
+        with open(SESSION_DIR + "/" + OBD_INFO_FILE, "w") as f:
+            json.dump(obd_data.get_json_representation(), f, default=str)
+
+        # extend knowledge graph with read OBD data
+        self.instance_gen.extend_knowledge_graph_with_vehicle_data(
+            obd_data.model, obd_data.hsn, obd_data.tsn, obd_data.vin
+        )
+
         if len(obd_data.dtc_list) == 0:
             self.data_provider.provide_state_transition(StateTransition(
                 "READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "ESTABLISH_INITIAL_HYPOTHESIS", "no_DTC_data"
@@ -57,28 +69,11 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
             userdata.vehicle_specific_instance_data = obd_data
             return "no_DTC_data"
 
-        # write OBD data to session file
-        with open(SESSION_DIR + "/" + OBD_INFO_FILE, "w") as f:
-            json.dump(obd_data.get_json_representation(), f, default=str)
-        # also create tmp file for unused DTC instances
+        # create tmp file for unused DTC instances
         with open(SESSION_DIR + "/" + DTC_TMP_FILE, "w") as f:
             dtc_tmp = {'list': obd_data.dtc_list}
             json.dump(dtc_tmp, f, default=str)
 
-        # read workshop metadata
-        with open(SESSION_DIR + "/" + "metadata.json") as f:
-            workshop_info = json.load(f)
-            max_num_of_parallel_rec = int(workshop_info["max_num_of_parallel_rec"])
-            diag_date = workshop_info["diag_date"]
-
-        # extend knowledge graph with read OBD data (if the vehicle instance already exists, it will be extended)
-        instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
-        )
-        for dtc in obd_data.dtc_list:
-            instance_gen.extend_knowledge_graph_with_vehicle_data(
-                obd_data.model, obd_data.hsn, obd_data.tsn, obd_data.vin, dtc
-            )
         userdata.vehicle_specific_instance_data = obd_data
         self.data_provider.provide_state_transition(StateTransition(
             "READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES", "RETRIEVE_HISTORICAL_DATA", "processed_OBD_data"
