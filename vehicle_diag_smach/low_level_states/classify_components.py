@@ -14,7 +14,7 @@ from termcolor import colored
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE, \
-    KG_URL, OBD_ONTOLOGY_PATH
+    OBD_ONTOLOGY_PATH
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -30,13 +30,15 @@ class ClassifyComponents(smach.State):
         - manual inspection of suspect components, for which oscilloscope diagnosis is not appropriate, is performed
     """
 
-    def __init__(self, model_accessor: ModelAccessor, data_accessor: DataAccessor, data_provider: DataProvider):
+    def __init__(self, model_accessor: ModelAccessor, data_accessor: DataAccessor, data_provider: DataProvider,
+                 kg_url: str):
         """
         Initializes the state.
 
         :param model_accessor: implementation of the model accessor interface
         :param data_accessor: implementation of the data accessor interface
         :param data_provider: implementation of the data provider interface
+        :param kg_url: URL of the knowledge graph guiding the diagnosis
         """
         smach.State.__init__(self,
                              outcomes=['detected_anomalies', 'no_anomaly', 'no_anomaly_no_more_comp'],
@@ -47,7 +49,7 @@ class ClassifyComponents(smach.State):
         self.data_provider = data_provider
 
         self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
+            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=kg_url
         )
 
     @staticmethod
@@ -68,7 +70,7 @@ class ClassifyComponents(smach.State):
                     k: v,
                     "State": "CLASSIFY_COMPONENTS",
                     "Classification Type": "manual inspection"
-                        if k in manually_inspected_components else "osci classification",
+                    if k in manually_inspected_components else "osci classification",
                     "Classification ID": classification_instances[k]
                 }
                 log_file.extend([new_data])

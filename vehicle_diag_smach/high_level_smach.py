@@ -7,6 +7,7 @@ import logging
 import smach
 import tensorflow as tf
 
+from vehicle_diag_smach.config import KG_URL
 from vehicle_diag_smach.diagnosis import DiagnosisStateMachine
 from vehicle_diag_smach.high_level_states.establish_initial_hypothesis import EstablishInitialHypothesis
 from vehicle_diag_smach.high_level_states.proc_customer_complaints import ProcCustomerComplaints
@@ -27,13 +28,15 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
     High-level hierarchically structured state machine guiding the entire vehicle diagnosis process.
     """
 
-    def __init__(self, data_accessor: DataAccessor, model_accessor: ModelAccessor, data_provider: DataProvider):
+    def __init__(self, data_accessor: DataAccessor, model_accessor: ModelAccessor, data_provider: DataProvider,
+                 kg_url: str = KG_URL):
         """
         Initializes the high-level state machine.
 
         :param data_accessor: implementation of the data accessor interface
         :param model_accessor: implementation of the model accessor interface
         :param data_provider: implementation of the data provider interface
+        :param kg_url: URL of the knowledge graph guiding the diagnosis
         """
         super(VehicleDiagnosisStateMachine, self).__init__(
             outcomes=['diag', 'insufficient_data', 'refuted_hypothesis'],
@@ -44,6 +47,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
         self.model_accessor = model_accessor
         self.data_provider = data_provider
         self.userdata.sm_input = []
+        self.kg_url = kg_url
 
         with self:
             self.add('REC_VEHICLE_AND_PROC_METADATA', RecVehicleAndProcMetadata(self.data_accessor, self.data_provider),
@@ -58,24 +62,25 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
                                 'interview_protocol_file': 'sm_input'})
 
             self.add('READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES',
-                     ReadOBDDataAndGenOntologyInstances(self.data_accessor, self.data_provider),
+                     ReadOBDDataAndGenOntologyInstances(self.data_accessor, self.data_provider, self.kg_url),
                      transitions={'processed_OBD_data': 'RETRIEVE_HISTORICAL_DATA',
                                   'no_DTC_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
                      remapping={'interview_data': 'sm_input',
                                 'vehicle_specific_instance_data': 'sm_input'})
 
-            self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(self.data_provider),
+            self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(self.data_provider, self.kg_url),
                      transitions={'established_init_hypothesis': 'DIAGNOSIS',
                                   'no_DTC_and_no_CC': 'insufficient_data'},
                      remapping={'vehicle_specific_instance_data': 'sm_input',
                                 'hypothesis': 'sm_input'})
 
-            self.add('RETRIEVE_HISTORICAL_DATA', RetrieveHistoricalData(self.data_provider),
+            self.add('RETRIEVE_HISTORICAL_DATA', RetrieveHistoricalData(self.data_provider, self.kg_url),
                      transitions={'processed_all_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
                      remapping={'vehicle_specific_instance_data_in': 'sm_input',
                                 'vehicle_specific_instance_data_out': 'sm_input'})
 
-            self.add('DIAGNOSIS', DiagnosisStateMachine(self.model_accessor, self.data_accessor, self.data_provider),
+            self.add('DIAGNOSIS',
+                     DiagnosisStateMachine(self.model_accessor, self.data_accessor, self.data_provider, self.kg_url),
                      transitions={'diag': 'diag',
                                   'refuted_hypothesis': 'refuted_hypothesis'})
 

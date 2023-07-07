@@ -9,7 +9,7 @@ import smach
 from obd_ontology import knowledge_graph_query_tool
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, SUS_COMP_TMP_FILE, SUGGESTION_SESSION_FILE, KG_URL
+from vehicle_diag_smach.config import SESSION_DIR, SUS_COMP_TMP_FILE, SUGGESTION_SESSION_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -20,17 +20,19 @@ class SuggestSuspectComponents(smach.State):
     vehicle are suggested to be investigated based on the available information (OBD, CC, etc.).
     """
 
-    def __init__(self, data_provider: DataProvider):
+    def __init__(self, data_provider: DataProvider, kg_url: str):
         """
         Initializes the state.
 
         :param data_provider: implementation of the data provider interface
+        :param kg_url: URL of the knowledge graph guiding the diagnosis
         """
         smach.State.__init__(self,
                              outcomes=['provided_suggestions'],
                              input_keys=['selected_instance', 'generated_instance'],
                              output_keys=['suggestion_list'])
         self.data_provider = data_provider
+        self.kg_url = kg_url
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -45,7 +47,7 @@ class SuggestSuspectComponents(smach.State):
         print("############################################\n")
 
         # print("generated instance:", userdata.generated_instance)
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=KG_URL)
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=self.kg_url)
 
         # should not be queried over and over again - just once for a session
         # -> then suggest as many as possible per execution of the state (write to session files)

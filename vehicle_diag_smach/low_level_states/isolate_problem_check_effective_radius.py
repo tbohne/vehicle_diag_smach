@@ -22,7 +22,7 @@ from termcolor import colored
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
-    CLASSIFICATION_LOG_FILE, KG_URL, OBD_ONTOLOGY_PATH
+    CLASSIFICATION_LOG_FILE, OBD_ONTOLOGY_PATH
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -35,21 +35,23 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
     task is to isolate the defective components based on their effective radius (structural knowledge).
     """
 
-    def __init__(self, data_accessor: DataAccessor, model_accessor: ModelAccessor, data_provider: DataProvider):
+    def __init__(self, data_accessor: DataAccessor, model_accessor: ModelAccessor, data_provider: DataProvider,
+                 kg_url: str):
         """
         Initializes the state.
 
         :param data_accessor: implementation of the data accessor interface
         :param model_accessor: implementation of the model accessor interface
         :param data_provider: implementation of the data provider interface
+        :param kg_url: URL of the knowledge graph guiding the diagnosis
         """
         smach.State.__init__(self,
                              outcomes=['isolated_problem'],
                              input_keys=['classified_components'],
                              output_keys=['fault_paths'])
-        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=KG_URL)
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=kg_url)
         self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
+            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=kg_url
         )
         self.data_accessor = data_accessor
         self.model_accessor = model_accessor

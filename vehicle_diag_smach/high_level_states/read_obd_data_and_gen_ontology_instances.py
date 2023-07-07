@@ -9,7 +9,7 @@ import smach
 from obd_ontology import ontology_instance_generator
 from termcolor import colored
 
-from vehicle_diag_smach.config import SESSION_DIR, OBD_INFO_FILE, DTC_TMP_FILE, OBD_ONTOLOGY_PATH, KG_URL
+from vehicle_diag_smach.config import SESSION_DIR, OBD_INFO_FILE, DTC_TMP_FILE, OBD_ONTOLOGY_PATH
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -22,12 +22,13 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
     is entered into the knowledge graph.
     """
 
-    def __init__(self, data_accessor: DataAccessor, data_provider: DataProvider):
+    def __init__(self, data_accessor: DataAccessor, data_provider: DataProvider, kg_url: str):
         """
         Initializes the state.
 
         :param data_accessor: implementation of the data accessor interface
         :param data_provider: implementation of the data provider interface
+        :param kg_url: URL of the knowledge graph guiding the diagnosis
         """
         smach.State.__init__(self,
                              outcomes=['processed_OBD_data', 'no_DTC_data'],
@@ -36,7 +37,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
         self.data_accessor = data_accessor
         self.data_provider = data_provider
         self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=KG_URL
+            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=kg_url
         )
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
