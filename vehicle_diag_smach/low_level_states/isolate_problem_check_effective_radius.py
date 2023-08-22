@@ -187,7 +187,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         for key in complete_graphs.keys():
             print("visualizing graph for component:", key, "\n")
 
-            plt.figure(figsize=(25, 25))
+            plt.figure(figsize=(25, 18))
             plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=24, fontweight='bold')
 
             from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
@@ -199,8 +199,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 if key in anomalous_paths.keys():
                     for j in range(len(anomalous_paths[key]) - 1):
                         # causal link check
-                        if anomalous_paths[key][j] == from_relations[i] \
-                                and anomalous_paths[key][j + 1] == to_relations[i]:
+                        if (anomalous_paths[key][j] == from_relations[i]
+                                and anomalous_paths[key][j + 1] == to_relations[i]):
                             causal_links.append(i)
                             break
 
@@ -211,19 +211,19 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         explicitly_considered_links[from_relations[i]]:
                     colors[i] = 'black'
 
-            widths = [5 if i not in causal_links else 10 for i in range(len(to_relations))]
+            widths = [8 if i not in causal_links else 8 for i in range(len(to_relations))]
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
 
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
-            pos = nx.spring_layout(g, seed=5)
-            nx.draw(g, pos=pos, with_labels=True, node_size=40000, alpha=0.75, arrows=True, edge_color=colors,
-                    width=widths)
+            pos = nx.spring_layout(g, scale=0.3, seed=5)
+            nx.draw(g, pos=pos, with_labels=True, node_size=30000, font_size=10, alpha=0.75, arrows=True,
+                    edge_color=colors, width=widths)
 
             legend_lines = [self.create_legend_lines(clr, lw=5) for clr in ['r', 'g', 'black']]
             labels = ["fault path", "non-anomalous links", "disregarded"]
             # initial preview does not require a legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
-                plt.legend(legend_lines, labels, fontsize=18)
+                plt.legend(legend_lines, labels, fontsize=20, loc='lower right')
 
             # create bytes object and save matplotlib fig into it
             buf = io.BytesIO()
