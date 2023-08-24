@@ -1,6 +1,6 @@
-# Vehicle Diagnosis State Machine
+# Neuro-Symbolic Vehicle Diagnosis State Machine
 
-State-machine-based prototype of a vehicle diagnosis *[and recommendation]* system.
+> Iterative, hybrid neuro-symbolic approach for anomaly detection and complex fault diagnosis, enabling knowledge-based (symbolic) methods to complement (neural) machine learning methods and vice versa. Explainability is indispensable for diagnosis and arises naturally in the system through the specific interplay of neural and symbolic methods. The reasoning of the system is encoded in a state machine architecture.
 
 ## Dependencies
 
@@ -31,7 +31,7 @@ $ curl -L https://dlcdn.apache.org/jena/binaries/apache-jena-fuseki-4.6.1.tar.gz
 $ tar -xvzf apache-jena-fuseki-4.6.1.tar.gz
 $ chmod +x apache-jena-fuseki-4.6.1/fuseki-server
 ```
-For configuration, i.e., hosting the knowledge graph, cf. [OBDOntology](https://github.com/tbohne/OBDOntology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
+For configuration, i.e., hosting the knowledge graph, cf. [obd_ontology](https://github.com/tbohne/obd_ontology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
 
 ## Installation (Docker)
 ```
@@ -71,7 +71,7 @@ Create and start docker container with visualizations on host system (*Apache Je
 ```
 $ docker run -v /tmp/.X11-unix/:/tmp/.X11-unix -e DISPLAY=unix$DISPLAY -ti diag_system
 ```
-For configuration, i.e., hosting the knowledge graph, cf. [OBDOntology](https://github.com/tbohne/OBDOntology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
+For configuration, i.e., hosting the knowledge graph, cf. [obd_ontology](https://github.com/tbohne/obd_ontology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
 
 ### <u>Run existing container</u>
 
@@ -88,10 +88,11 @@ $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 ## State Machine Architecture
 
 **Hierarchical Diagnosis State Machine (High-Level)**
-![](img/smach_high_level_v2.png)
+![](img/smach_high_level_v2.svg)
 
 **Embedded Diagnosis State Machine (Low-Level)**
-![](img/smach_low_level_v2.png)
+![](img/smach_low_level_v2.svg)
 
 ## Fault Isolation Result Example
-![](img/isolation.png)
+
+![](img/fault_isolation.svg)
