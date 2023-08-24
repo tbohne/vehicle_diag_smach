@@ -10,17 +10,9 @@ Essentially, the *Diag. Circuit* is implemented through this repository, the *Ne
 
 ## Dependencies
 
-- [**standalone-smach**](https://pypi.org/project/standalone-smach/): ROS SMACH fork for development of HSM outside of ROS
-- [**BeautifulSoup**](https://pypi.org/project/beautifulsoup4/): library that makes it easy to scrape information from web pages
-- [**tensorflow**](https://pypi.org/project/tensorflow/): open source machine learning framework
-- [**OBDOntology**](https://github.com/tbohne/OBDOntology): ontology for capturing knowledge about on-board diagnostics (OBD), particularly diagnostic trouble codes (DTCs) + ontology query tool
-- [**oscillogram_classification**](https://github.com/tbohne/oscillogram_classification): neural network based anomaly detection for vehicle components using oscilloscope recordings
-- [**CustomerXPS**](https://github.com/tbohne/CustomerXPS): expert system that deals with customer complaints
-- [**py4j**](https://www.py4j.org/): bridge between Python and Java
+- for Python requirements, cf. `requirements.txt`
 - [**Apache Jena Fuseki**](https://jena.apache.org/documentation/fuseki2/): SPARQL server hosting / maintaining the knowledge graph
-- [**networkx**](https://pypi.org/project/networkx/): Python package for creating and manipulating graphs and networks
-- [**termcolor**](https://pypi.org/project/termcolor/): ANSI color formatting for output in terminal
-- [**matplotlib**](https://matplotlib.org/): visualization with Python
+- optional: *[**CustomerXPS**](https://github.com/tbohne/CustomerXPS): expert system that deals with customer complaints*
 
 ## Installation (from source)
 
