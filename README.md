@@ -2,6 +2,12 @@
 
 > Iterative, hybrid neuro-symbolic approach for anomaly detection and complex fault diagnosis, enabling knowledge-based (symbolic) methods to complement (neural) machine learning methods and vice versa. Explainability is indispensable for diagnosis and arises naturally in the system through the specific interplay of neural and symbolic methods. The reasoning of the system is encoded in a state machine architecture.
 
+## Neuro-Symbolic Architecture
+
+Essentially, the *Diag. Circuit* is implemented through this repository, the *Neural Network Architectures* through [**oscillogram_classification**](https://github.com/tbohne/oscillogram_classification), and the *Knowledge Graph* through [**obd_ontology**](https://github.com/tbohne/obd_ontology).
+
+![](img/nesy.svg)
+
 ## Dependencies
 
 - [**standalone-smach**](https://pypi.org/project/standalone-smach/): ROS SMACH fork for development of HSM outside of ROS
@@ -94,5 +100,8 @@ $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 ![](img/smach_low_level_v2.svg)
 
 ## Fault Isolation Result Example
-
 ![](img/fault_isolation.svg)
+
+## Paper Reference
+
+TBD.
