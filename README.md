@@ -1,5 +1,8 @@
 # Neuro-Symbolic Vehicle Diagnosis State Machine
 
+![unstable](https://img.shields.io/badge/stability-unstable-orange)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > Iterative, hybrid neuro-symbolic approach for anomaly detection and complex fault diagnosis, enabling knowledge-based (symbolic) methods to complement (neural) machine learning methods and vice versa. Explainability is indispensable for diagnosis and arises naturally in the system through the specific interplay of neural and symbolic methods. The reasoning of the system is encoded in a state machine architecture.
 
 ## Neuro-Symbolic Architecture
@@ -94,6 +97,6 @@ $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 ## Fault Isolation Result Example
 ![](img/fault_isolation.svg)
 
-## Paper Reference
+## Related Publications
 
 TBD.
