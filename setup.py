@@ -15,17 +15,18 @@ for i in range(len(required)):
 setup(
     name='vehicle_diag_smach',
     version=__version__,
-    description='State-machine-based prototype of a vehicle diagnosis system.',
+    description='Neuro-symbolic anomaly detection and complex fault diagnosis exemplified in the automotive domain.',
     author='Tim Bohne',
     author_email='tim.bohne@dfki.de',
     url=URL,
     download_url=f'{URL}/archive/{__version__}.tar.gz',
     keywords=[
-        'neural-network',
+        'neural-networks',
+        'knowledge-graphs',
+        'neuro-symbolic-ai',
         'state-machine',
-        'knowledge-graph',
-        'automotive',
-        'anomaly-detection'
+        'anomaly-detection',
+        'fault-diagnosis'
     ],
     python_requires='>=3.7, <3.11',
     install_requires=required,
