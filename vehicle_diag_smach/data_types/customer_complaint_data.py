@@ -7,10 +7,10 @@ import xml.etree.ElementTree as EleTree
 
 class CustomerComplaintData:
     """
-    Represents customer complaints submitted from the hub UI to smach.
+    Represents customer complaints submitted from the hub UI to the state machine.
     """
 
-    def __init__(self, xps_session_file: str = ""):
+    def __init__(self, xps_session_file: str = "") -> None:
         """
         Initializes the customer complaint data.
 
@@ -18,7 +18,7 @@ class CustomerComplaintData:
         """
         self.root = EleTree.parse(xps_session_file).getroot() if xps_session_file != "" else ""
 
-    def print_all_info(self, element: str = "", indent: int = 0):
+    def print_all_info(self, element: str = "", indent: int = 0) -> None:
         """
         Recursively prints all the information of the XPS session.
 

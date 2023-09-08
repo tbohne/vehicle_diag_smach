@@ -7,10 +7,10 @@ from typing import List
 
 class OscillogramData:
     """
-    Represents oscillogram data, which is communicated to the state machine.
+    Represents oscillogram data communicated to the state machine.
     """
 
-    def __init__(self, time_series: List[float], comp_name: str):
+    def __init__(self, time_series: List[float], comp_name: str) -> None:
         """
         Inits the oscillogram data.
 

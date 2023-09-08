@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
-from typing import List
+from typing import List, Dict
 
 
 class OnboardDiagnosisData:
     """
-    Represents onboard diagnosis data, which is communicated to the state machine.
+    Represents on-board diagnosis data, which is communicated to the state machine.
     """
 
-    def __init__(self, dtc_list: List[str], model: str, hsn: str, tsn: str, vin: str):
+    def __init__(self, dtc_list: List[str], model: str, hsn: str, tsn: str, vin: str) -> None:
         """
-        Inits the onboard diagnosis data.
+        Inits the on-board diagnosis data.
 
         :param dtc_list: list of diagnostic trouble codes
         :param model: model of the vehicle to be diagnosed
@@ -26,7 +26,7 @@ class OnboardDiagnosisData:
         self.tsn = tsn
         self.vin = vin
 
-    def get_json_representation(self) -> dict:
+    def get_json_representation(self) -> Dict[str]:
         """
         Returns a JSON representation of the OBD data.
 
@@ -40,5 +40,10 @@ class OnboardDiagnosisData:
             "vin": self.vin
         }
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Returns a string representation of the OBD data.
+
+        :return: string representation of OBD data
+        """
         return f"DTC list: {self.dtc_list},\nmodel: {self.model},\nHSN: {self.hsn},\nTSN: {self.tsn},\nVIN: {self.vin}"
