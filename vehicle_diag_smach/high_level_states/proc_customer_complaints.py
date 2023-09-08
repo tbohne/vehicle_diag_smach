@@ -18,7 +18,7 @@ class ProcCustomerComplaints(smach.State):
     to the processing system (fault tree, decision tree, XPS, ...).
     """
 
-    def __init__(self, data_accessor: DataAccessor, data_provider: DataProvider):
+    def __init__(self, data_accessor: DataAccessor, data_provider: DataProvider) -> None:
         """
         Initializes the state.
 
@@ -29,18 +29,24 @@ class ProcCustomerComplaints(smach.State):
         self.data_accessor = data_accessor
         self.data_provider = data_provider
 
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
+    @staticmethod
+    def log_state_info() -> None:
         """
-        Execution of 'PROC_CUSTOMER_COMPLAINTS' state.
-
-        :param userdata: input of state (provided user data)
-        :return: outcome of the state ("received_complaints" | "no_complaints")
+        Logs the state information.
         """
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
         print("executing", colored("PROC_CUSTOMER_COMPLAINTS", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
 
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
+        """
+        Execution of 'PROC_CUSTOMER_COMPLAINTS' state.
+
+        :param userdata: input of the state (provided user data)
+        :return: outcome of the state ("received_complaints" | "no_complaints")
+        """
+        self.log_state_info()
         customer_complaints = self.data_accessor.get_customer_complaints()
         if customer_complaints.root != "":
             print("customer complaints session:")
