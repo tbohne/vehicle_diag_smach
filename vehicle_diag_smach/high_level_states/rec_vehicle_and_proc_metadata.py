@@ -11,6 +11,7 @@ from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
+from vehicle_diag_smach.data_types.workshop_data import WorkshopData
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -21,7 +22,7 @@ class RecVehicleAndProcMetadata(smach.State):
     the metadata (data about the workshop, mechanic, etc.).
     """
 
-    def __init__(self, data_accessor: DataAccessor, data_provider: DataProvider):
+    def __init__(self, data_accessor: DataAccessor, data_provider: DataProvider) -> None:
         """
         Initializes the state.
 
@@ -32,40 +33,63 @@ class RecVehicleAndProcMetadata(smach.State):
         self.data_accessor = data_accessor
         self.data_provider = data_provider
 
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
+    @staticmethod
+    def log_state_info() -> None:
         """
-        Execution of 'REC_VEHICLE_AND_PROC_METADATA' state.
-
-        :param userdata: input of state
-        :return: outcome of the state ("processed_metadata")
+        Logs the state information.
         """
         print("\n\n############################################")
         print("executing", colored("REC_VEHICLE_AND_PROC_METADATA", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################\n")
-        workshop_info = self.data_accessor.get_workshop_info()
-        print("max num of parallel recordings:", workshop_info.num_of_parallel_rec)
-        print("date:", workshop_info.diag_date)
 
-        # if not present, create directory for session data
+    @staticmethod
+    def create_session_dir() -> None:
+        """
+        If not present, it creates the directory for session data.
+        If it already exists, it clears the outdated session data.
+        """
         if not os.path.exists(SESSION_DIR):
             print(colored("\n------ creating session data directory..", "green", "on_grey", ["bold"]))
             os.makedirs(SESSION_DIR + "/")
         else:
-            # if it already exists, clear outdated session data
             print(colored("\n------ clearing session data directory..", "green", "on_grey", ["bold"]))
             shutil.rmtree(SESSION_DIR)
             os.makedirs(SESSION_DIR + "/")
 
-        # init classification log
+    @staticmethod
+    def init_classification_log() -> None:
+        """
+        Initializes the classification log.
+        """
         with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, 'w') as f:
             json.dump([], f, indent=4)
 
-        # TODO: save workshop info in KG
+    @staticmethod
+    def write_metadata_to_session_dir(workshop_info: WorkshopData) -> None:
+        """
+        Writes metadata to the session directory.
 
-        # write metadata to session directory
+        :param workshop_info: workshop info (metadata) to be stored in session dir
+        """
         with open(SESSION_DIR + '/metadata.json', 'w') as f:
             print(colored("------ writing metadata to session directory..", "green", "on_grey", ["bold"]))
             json.dump(workshop_info.get_json_representation(), f, default=str)
+
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
+        """
+        Execution of 'REC_VEHICLE_AND_PROC_METADATA' state.
+
+        :param userdata: input of the state
+        :return: outcome of the state ("processed_metadata")
+        """
+        self.log_state_info()
+        workshop_info = self.data_accessor.get_workshop_info()
+        print("max num of parallel recordings:", workshop_info.num_of_parallel_rec)
+        print("date:", workshop_info.diag_date)
+        self.create_session_dir()
+        self.init_classification_log()
+        # TODO: save workshop info in KG
+        self.write_metadata_to_session_dir(workshop_info)
         self.data_provider.provide_state_transition(StateTransition(
             "REC_VEHICLE_AND_PROC_METADATA", "PROC_CUSTOMER_COMPLAINTS", "processed_metadata"
         ))
