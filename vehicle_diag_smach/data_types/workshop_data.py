@@ -22,7 +22,7 @@ class WorkshopData:
         self.num_of_parallel_rec = num_of_parallel_rec
         self.diag_date = diag_date
 
-    def get_json_representation(self) -> Dict[str]:
+    def get_json_representation(self) -> Dict:
         """
         Returns a JSON representation of the workshop data.
 
