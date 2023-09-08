@@ -4,13 +4,15 @@
 
 from datetime import date
 
+from typing import Dict
+
 
 class WorkshopData:
     """
-    Represents workshop data, which is communicated to the state machine.
+    Represents workshop data communicated to the state machine.
     """
 
-    def __init__(self, num_of_parallel_rec: int, diag_date: date):
+    def __init__(self, num_of_parallel_rec: int, diag_date: date) -> None:
         """
         Inits the workshop data.
 
@@ -20,7 +22,7 @@ class WorkshopData:
         self.num_of_parallel_rec = num_of_parallel_rec
         self.diag_date = diag_date
 
-    def get_json_representation(self) -> dict:
+    def get_json_representation(self) -> Dict[str]:
         """
         Returns a JSON representation of the workshop data.
 
@@ -31,5 +33,10 @@ class WorkshopData:
             "diag_date": self.diag_date
         }
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Returns a string representation of the workshop data.
+
+        :return: string representation of workshop data
+        """
         return "num of parallel rec: " + str(self.num_of_parallel_rec) + ", diag date: " + str(self.diag_date)

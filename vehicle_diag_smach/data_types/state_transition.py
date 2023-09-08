@@ -7,7 +7,7 @@ class StateTransition:
     Represents a transition in the state machine from one state to another using a particular link.
     """
 
-    def __init__(self, prev_state: str, curr_state: str, transition_link: str):
+    def __init__(self, prev_state: str, curr_state: str, transition_link: str) -> None:
         """
         Inits the state transition.
 
@@ -19,5 +19,10 @@ class StateTransition:
         self.curr_state = curr_state
         self.transition_link = transition_link
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Returns a string representation of the state transition.
+
+        :return: string representation of state transition
+        """
         return self.prev_state + " --- (" + self.transition_link + ") ---> " + self.curr_state
