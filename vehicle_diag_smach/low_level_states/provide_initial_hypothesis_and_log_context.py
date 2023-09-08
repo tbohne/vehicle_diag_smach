@@ -30,10 +30,8 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
         """
         smach.State.__init__(self, outcomes=['no_diag'], input_keys=[''], output_keys=[''])
         self.data_provider = data_provider
-        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=kg_url
-        )
-        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=kg_url)
+        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(kg_url=kg_url)
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=kg_url)
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """

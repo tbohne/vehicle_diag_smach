@@ -11,7 +11,7 @@ from obd_ontology import ontology_instance_generator, knowledge_graph_query_tool
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE, HISTORICAL_INFO_FILE, CC_TMP_FILE, \
-    OBD_ONTOLOGY_PATH, OBD_INFO_FILE
+    OBD_INFO_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -22,7 +22,7 @@ class EstablishInitialHypothesis(smach.State):
     on the provided information.
     """
 
-    def __init__(self, data_provider: DataProvider, kg_url: str):
+    def __init__(self, data_provider: DataProvider, kg_url: str) -> None:
         """
         Initializes the state.
 
@@ -34,22 +34,24 @@ class EstablishInitialHypothesis(smach.State):
                              input_keys=['vehicle_specific_instance_data'],
                              output_keys=['hypothesis'])
         self.data_provider = data_provider
-        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=kg_url
-        )
-        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=kg_url)
+        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(kg_url=kg_url)
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=kg_url)
+
+    @staticmethod
+    def log_state_info():
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
+        print("executing", colored("ESTABLISH_INITIAL_HYPOTHESIS", "yellow", "on_grey", ["bold"]), "state..")
+        print("############################################")
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ESTABLISH_INITIAL_HYPOTHESIS' state.
 
-        :param userdata: input of state
+        :param userdata: input of the state
         :return: outcome of the state ("established_init_hypothesis" | "no_DTC_and_no_CC")
         """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("ESTABLISH_INITIAL_HYPOTHESIS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
+        self.log_state_info()
 
         print("\nreading customer complaints session protocol..")
         initial_hypothesis = ""

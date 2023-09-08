@@ -48,9 +48,7 @@ class ClassifyComponents(smach.State):
         self.data_accessor = data_accessor
         self.data_provider = data_provider
 
-        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=kg_url
-        )
+        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(kg_url=kg_url)
 
     @staticmethod
     def log_classification_actions(

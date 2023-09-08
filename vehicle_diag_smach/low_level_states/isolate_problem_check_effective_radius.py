@@ -49,10 +49,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                              outcomes=['isolated_problem'],
                              input_keys=['classified_components'],
                              output_keys=['fault_paths'])
-        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=kg_url)
-        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=kg_url
-        )
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=kg_url)
+        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(kg_url=kg_url)
         self.data_accessor = data_accessor
         self.model_accessor = model_accessor
         self.data_provider = data_provider

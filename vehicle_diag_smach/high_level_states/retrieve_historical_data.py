@@ -49,7 +49,7 @@ class RetrieveHistoricalData(smach.State):
         print("\n\n############################################")
         print("executing", colored("RETRIEVE_HISTORICAL_DATA", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################\n")
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=self.kg_url)
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=self.kg_url)
         vin = userdata.vehicle_specific_instance_data_in.vin
         model = userdata.vehicle_specific_instance_data_in.model
 

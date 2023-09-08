@@ -47,7 +47,7 @@ class SuggestSuspectComponents(smach.State):
         print("############################################\n")
 
         # print("generated instance:", userdata.generated_instance)
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(local_kb=False, kg_url=self.kg_url)
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=self.kg_url)
 
         # should not be queried over and over again - just once for a session
         # -> then suggest as many as possible per execution of the state (write to session files)

@@ -36,9 +36,7 @@ class ReadOBDDataAndGenOntologyInstances(smach.State):
                              output_keys=['vehicle_specific_instance_data'])
         self.data_accessor = data_accessor
         self.data_provider = data_provider
-        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(
-            OBD_ONTOLOGY_PATH, local_kb=False, kg_url=kg_url
-        )
+        self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(kg_url=kg_url)
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
