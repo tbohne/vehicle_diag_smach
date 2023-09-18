@@ -4,6 +4,7 @@
 
 import json
 import os
+from typing import List, Dict
 
 import numpy as np
 import smach
@@ -13,8 +14,7 @@ from oscillogram_classification import preprocess
 from termcolor import colored
 
 from vehicle_diag_smach import util
-from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE, \
-    OBD_ONTOLOGY_PATH
+from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -26,12 +26,12 @@ class ClassifyComponents(smach.State):
     State in the low-level SMACH that represents situations in which the suggested physical components in the vehicle
     are classified:
         - synchronized sensor recordings are performed at the suggested suspect components
-        - recorded oscillograms are classified using the trained neural net model, i.e., detecting anomalies
+        - recorded oscillograms are classified using the trained neural net models, i.e., detecting anomalies
         - manual inspection of suspect components, for which oscilloscope diagnosis is not appropriate, is performed
     """
 
     def __init__(self, model_accessor: ModelAccessor, data_accessor: DataAccessor, data_provider: DataProvider,
-                 kg_url: str):
+                 kg_url: str) -> None:
         """
         Initializes the state.
 
@@ -47,12 +47,12 @@ class ClassifyComponents(smach.State):
         self.model_accessor = model_accessor
         self.data_accessor = data_accessor
         self.data_provider = data_provider
-
         self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(kg_url=kg_url)
 
     @staticmethod
     def log_classification_actions(
-            classified_components: dict, manually_inspected_components: list, classification_instances: dict
+            classified_components: Dict[str, bool], manually_inspected_components: List[str],
+            classification_instances: Dict[str, str]
     ) -> None:
         """
         Logs the classification actions to the session directory.

@@ -4,7 +4,7 @@
 
 from datetime import date
 
-from typing import Dict
+from typing import Dict, Union
 
 
 class WorkshopData:
@@ -22,7 +22,7 @@ class WorkshopData:
         self.num_of_parallel_rec = num_of_parallel_rec
         self.diag_date = diag_date
 
-    def get_json_representation(self) -> Dict:
+    def get_json_representation(self) -> Dict[str, Union[int, date]]:
         """
         Returns a JSON representation of the workshop data.
 

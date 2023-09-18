@@ -26,7 +26,7 @@ class OnboardDiagnosisData:
         self.tsn = tsn
         self.vin = vin
 
-    def get_json_representation(self) -> Dict:
+    def get_json_representation(self) -> Dict[str, str]:
         """
         Returns a JSON representation of the OBD data.
 
