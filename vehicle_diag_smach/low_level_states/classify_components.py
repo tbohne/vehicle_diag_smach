@@ -12,9 +12,10 @@ from obd_ontology import ontology_instance_generator
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from termcolor import colored
+from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 
 from vehicle_diag_smach import util
-from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE
+from vehicle_diag_smach.config import SESSION_DIR, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -93,8 +94,9 @@ class ClassifyComponents(smach.State):
         """
         Performs synchronized sensor recordings based on the provided suggestion list.
 
-        :param suggestion_list: suspect components suggested for recording
-        :return: tuple of components to be recorded and components to be manually verified
+        :param suggestion_list: suspect components suggested for analysis {comp_name: (reason_for, osci_usage)}
+        :return: tuple of components to be recorded and components to be verified manually
+                 ({comp: reason_for}, {comp: reason_for})
         """
         components_to_be_recorded = {k: v[0] for k, v in suggestion_list.items() if v[1]}
         components_to_be_manually_verified = {k: v[0] for k, v in suggestion_list.items() if not v[1]}
@@ -102,12 +104,145 @@ class ClassifyComponents(smach.State):
         print("components to be recorded:", components_to_be_recorded)
         print("components to be verified manually:", components_to_be_manually_verified)
         print("------------------------------------------")
-
         print(colored("\nperform synchronized sensor recordings at:", "green", "on_grey", ["bold"]))
         for comp in components_to_be_recorded.keys():
             print(colored("- " + comp, "green", "on_grey", ["bold"]))
-
         return components_to_be_recorded, components_to_be_manually_verified
+
+    @staticmethod
+    def no_trained_model_available(osci_data: OscillogramData, suggestion_list) -> None:
+        """
+        Handles cases where no trained model is available for the specified component.
+
+        :param osci_data: oscillogram data
+        :param suggestion_list: suggestion list to be updated
+        """
+        print("no trained model available for the signal (component) to be classified:", osci_data.comp_name)
+        print("adding it to the list of components to be verified manually..")
+        suggestion_list[osci_data.comp_name] = suggestion_list[osci_data.comp_name][0], False
+
+
+    @staticmethod
+    def invalid_model(osci_data, suggestion_list, error):
+        print("invalid model for the signal (component) to be classified:", osci_data.comp_name)
+        print("error:", error)
+        print("adding it to the list of components to be verified manually..")
+        suggestion_list[osci_data.comp_name] = False
+
+    @staticmethod
+    def construct_net_input(model, voltages):
+        net_input_size = model.layers[0].output_shape[0][1]
+        assert net_input_size == len(voltages)
+        net_input = np.asarray(voltages).astype('float32')
+        return net_input.reshape((net_input.shape[0], 1))
+
+    @staticmethod
+    def log_anomaly(pred_value):
+        print("#####################################")
+        print(colored("--> ANOMALY DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
+        print("#####################################")
+
+    @staticmethod
+    def log_regular(pred_value):
+        print("#####################################")
+        print(colored("--> NO ANOMALIES DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
+        print("#####################################")
+
+    @staticmethod
+    def gen_heatmaps(net_input, model, prediction):
+        return {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
+                "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
+                "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
+                "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
+
+    @staticmethod
+    def log_corresponding_dtc(osci_data):
+        # read DTC suggestion - assumption: it is always the latest suggestion
+        with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
+            suggestions = json.load(f)
+        assert osci_data.comp_name in list(suggestions.values())[0]
+        assert len(suggestions.keys()) == 1
+        dtc = list(suggestions.keys())[0]
+        print("DTC to set heatmap for:", dtc)
+
+    def get_osci_set_id(self, components_to_be_recorded):
+        osci_set_id = ""
+        if len(components_to_be_recorded.keys()) > 1:
+            osci_set_id = self.instance_gen.extend_knowledge_graph_with_parallel_rec_osci_set()
+        return osci_set_id
+
+    @staticmethod
+    def preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages):
+
+        # TODO: this depends on the trained model that is going to be applied
+        #       -> we need to save this kind of meta information for each trained model we have on the platform
+        #       -> all the preprocessing the model expects
+
+        print("model meta info:", model_meta_info)
+
+        if model_meta_info["normalization_method"] == "z_norm":
+            return preprocess.z_normalize_time_series(voltages)
+        elif model_meta_info["normalization_method"] == "min_max_norm":
+            return preprocess.min_max_normalize_time_series(voltages)
+        elif model_meta_info["normalization_method"] == "dec_norm":
+            return preprocess.decimal_scaling_normalize_time_series(voltages, 2)
+        elif model_meta_info["normalization_method"] == "log_norm":
+            return preprocess.logarithmic_normalize_time_series(voltages, 10)
+        return voltages
+
+    def process_oscillogram_recordings(
+            self, oscillograms, suggestion_list, anomalous_components, non_anomalous_components,
+            components_to_be_recorded, classification_instances
+    ):
+        osci_set_id = self.get_osci_set_id(components_to_be_recorded)
+        for osci_data in oscillograms:  # iteratively process parallel recorded oscilloscope recordings
+            osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(osci_data.time_series, osci_set_id)
+            print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
+            voltages = osci_data.time_series
+
+            model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(osci_data.comp_name)
+            if model is None:
+                self.no_trained_model_available(osci_data, suggestion_list)
+                continue
+            (model, model_meta_info) = model  # not only obtain the model here, but also meta info
+            voltages = self.preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages)
+            try:
+                util.validate_keras_model(model)
+            except ValueError as e:
+                self.invalid_model(osci_data, suggestion_list, e)
+                continue
+
+            net_input = self.construct_net_input(model, voltages)
+            prediction = model.predict(np.array([net_input]))
+            num_classes = len(prediction[0])
+
+            # addresses both models with one output neuron and those with several
+            anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
+            pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
+
+            if anomaly:
+                self.log_anomaly(pred_value)
+                anomalous_components.append(osci_data.comp_name)
+            else:
+                self.log_regular(pred_value)
+                non_anomalous_components.append(osci_data.comp_name)
+
+            heatmaps = self.gen_heatmaps(net_input, model, prediction)
+            res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
+            self.log_corresponding_dtc(osci_data)
+            print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+
+            # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+                "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+            )
+            heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, voltages, osci_data.comp_name + res_str)
+            self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
+            classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
+                anomaly, components_to_be_recorded[osci_data.comp_name], osci_data.comp_name, pred_value,
+                model_meta_info["model_id"], osci_id, heatmap_id
+            )
+            classification_instances[osci_data.comp_name] = classification_id
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -127,92 +262,10 @@ class ClassifyComponents(smach.State):
         non_anomalous_components = []
         classification_instances = {}
 
-        osci_set_id = ""
-        if len(components_to_be_recorded.keys()) > 1:
-            osci_set_id = self.instance_gen.extend_knowledge_graph_with_parallel_rec_osci_set()
-
-        # iteratively process parallel recorded oscilloscope recordings
-        for osci_data in oscillograms:
-            osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(osci_data.time_series, osci_set_id)
-            print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
-            voltages = osci_data.time_series
-
-            # TODO: this depends on the trained model that is going to be applied
-            #       -> we need to save this kind of meta information for each trained model we have on the platform
-            #       -> all the preprocessing the model expects
-            if Z_NORMALIZATION:
-                voltages = preprocess.z_normalize_time_series(voltages)
-
-            # TODO: we should probably not only obtain the model here, but also the meta info (see above)
-            model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(osci_data.comp_name)
-            if model is None:
-                print("no trained model available for the signal (component) to be classified:", osci_data.comp_name)
-                print("adding it to the list of components to be verified manually..")
-                userdata.suggestion_list[osci_data.comp_name] = False
-                continue
-            (model, model_meta_info) = model
-            print("model meta info:", model_meta_info)
-            try:
-                util.validate_keras_model(model)
-            except ValueError as e:
-                print("invalid model for the signal (component) to be classified:", osci_data.comp_name)
-                print("error:", e)
-                print("adding it to the list of components to be verified manually..")
-                userdata.suggestion_list[osci_data.comp_name] = False
-                continue
-
-            net_input_size = model.layers[0].output_shape[0][1]
-            assert net_input_size == len(voltages)
-            net_input = np.asarray(voltages).astype('float32')
-            net_input = net_input.reshape((net_input.shape[0], 1))
-
-            prediction = model.predict(np.array([net_input]))
-            num_classes = len(prediction[0])
-
-            # addresses both models with one output neuron and those with several
-            anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
-            pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
-
-            if anomaly:
-                print("#####################################")
-                print(colored("--> ANOMALY DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
-                print("#####################################")
-                anomalous_components.append(osci_data.comp_name)
-            else:
-                print("#####################################")
-                print(colored("--> NO ANOMALIES DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
-                print("#####################################")
-                non_anomalous_components.append(osci_data.comp_name)
-
-            heatmaps = {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
-                        "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
-                        "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
-                        "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
-
-            res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
-
-            # read DTC suggestion - assumption: it is always the latest suggestion
-            with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
-                suggestions = json.load(f)
-            assert osci_data.comp_name in list(suggestions.values())[0]
-            assert len(suggestions.keys()) == 1
-            dtc = list(suggestions.keys())[0]
-            print("DTC to set heatmap for:", dtc)
-            print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
-
-            # extend KG with generated heatmap
-            # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-                "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
-            )
-            heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, voltages, osci_data.comp_name + res_str)
-            self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
-
-            classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
-                anomaly, components_to_be_recorded[osci_data.comp_name], osci_data.comp_name, pred_value,
-                model_meta_info["model_id"], osci_id, heatmap_id
-            )
-            classification_instances[osci_data.comp_name] = classification_id
+        self.process_oscillogram_recordings(
+            oscillograms, userdata.suggestion_list, anomalous_components, non_anomalous_components,
+            components_to_be_recorded, classification_instances
+        )
 
         # classifying the subset of components that are to be classified manually
         for comp in components_to_be_manually_verified.keys():
