@@ -4,7 +4,7 @@
 
 import json
 import os
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import numpy as np
 import smach
@@ -75,12 +75,10 @@ class ClassifyComponents(smach.State):
         with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, "w") as f:
             json.dump(log_file, f, indent=4)
 
-    def execute(self, userdata: smach.user_data.Remapper) -> str:
+    @staticmethod
+    def log_state_info() -> None:
         """
-        Execution of 'CLASSIFY_COMPONENTS' state.
-
-        :param userdata: input of state
-        :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_no_more_comp")
+        Logs the state information.
         """
         os.system('cls' if os.name == 'nt' else 'clear')
         print("\n\n############################################")
@@ -88,9 +86,18 @@ class ClassifyComponents(smach.State):
               "state (applying trained model)..")
         print("############################################")
 
-        # perform synchronized sensor recordings
-        components_to_be_recorded = {k: v[0] for k, v in userdata.suggestion_list.items() if v[1]}
-        components_to_be_manually_verified = {k: v[0] for k, v in userdata.suggestion_list.items() if not v[1]}
+    @staticmethod
+    def perform_synchronized_sensor_recordings(
+            suggestion_list: Dict[str, Tuple[str, bool]]
+    ) -> Tuple[Dict[str, str], Dict[str, str]]:
+        """
+        Performs synchronized sensor recordings based on the provided suggestion list.
+
+        :param suggestion_list: suspect components suggested for recording
+        :return: tuple of components to be recorded and components to be manually verified
+        """
+        components_to_be_recorded = {k: v[0] for k, v in suggestion_list.items() if v[1]}
+        components_to_be_manually_verified = {k: v[0] for k, v in suggestion_list.items() if not v[1]}
         print("------------------------------------------")
         print("components to be recorded:", components_to_be_recorded)
         print("components to be verified manually:", components_to_be_manually_verified)
@@ -99,6 +106,21 @@ class ClassifyComponents(smach.State):
         print(colored("\nperform synchronized sensor recordings at:", "green", "on_grey", ["bold"]))
         for comp in components_to_be_recorded.keys():
             print(colored("- " + comp, "green", "on_grey", ["bold"]))
+
+        return components_to_be_recorded, components_to_be_manually_verified
+
+    def execute(self, userdata: smach.user_data.Remapper) -> str:
+        """
+        Execution of 'CLASSIFY_COMPONENTS' state.
+
+        :param userdata: input of state
+        :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_no_more_comp")
+        """
+        self.log_state_info()
+
+        components_to_be_recorded, components_to_be_manually_verified = self.perform_synchronized_sensor_recordings(
+            userdata.suggestion_list
+        )
 
         oscillograms = self.data_accessor.get_oscillograms_by_components(list(components_to_be_recorded.keys()))
         anomalous_components = []
