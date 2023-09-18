@@ -11,11 +11,12 @@ import smach
 from obd_ontology import ontology_instance_generator
 from oscillogram_classification import cam
 from oscillogram_classification import preprocess
+from tensorflow import keras
 from termcolor import colored
-from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, SUGGESTION_SESSION_FILE, CLASSIFICATION_LOG_FILE
+from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -110,54 +111,92 @@ class ClassifyComponents(smach.State):
         return components_to_be_recorded, components_to_be_manually_verified
 
     @staticmethod
-    def no_trained_model_available(osci_data: OscillogramData, suggestion_list) -> None:
+    def no_trained_model_available(osci_data: OscillogramData, suggestion_list: Dict[str, Tuple[str, bool]]) -> None:
         """
         Handles cases where no trained model is available for the specified component.
 
         :param osci_data: oscillogram data
-        :param suggestion_list: suggestion list to be updated
+        :param suggestion_list: suspect components suggested for analysis {comp_name: (reason_for, osci_usage)}
         """
         print("no trained model available for the signal (component) to be classified:", osci_data.comp_name)
         print("adding it to the list of components to be verified manually..")
         suggestion_list[osci_data.comp_name] = suggestion_list[osci_data.comp_name][0], False
 
-
     @staticmethod
-    def invalid_model(osci_data, suggestion_list, error):
+    def invalid_model(
+            osci_data: OscillogramData, suggestion_list: Dict[str, Tuple[str, bool]], error: ValueError
+    ) -> None:
+        """
+        Handles cases where no valid trained model is available for the specified component.
+
+        :param osci_data: oscillogram data
+        :param suggestion_list: suspect components suggested for analysis {comp_name: (reason_for, osci_usage)}
+        :param error: thrown value error
+        """
         print("invalid model for the signal (component) to be classified:", osci_data.comp_name)
         print("error:", error)
         print("adding it to the list of components to be verified manually..")
         suggestion_list[osci_data.comp_name] = suggestion_list[osci_data.comp_name][0], False
 
     @staticmethod
-    def construct_net_input(model, voltages):
+    def construct_net_input(model: keras.models.Model, voltages: List[float]) -> np.ndarray:
+        """
+        Constructs / reshapes the input for the trained neural net model.
+
+        :param model: trained neural net model
+        :param voltages: input voltage values (time series) to be reshaped
+        :return: constructed / reshaped input
+        """
         net_input_size = model.layers[0].output_shape[0][1]
         assert net_input_size == len(voltages)
         net_input = np.asarray(voltages).astype('float32')
         return net_input.reshape((net_input.shape[0], 1))
 
     @staticmethod
-    def log_anomaly(pred_value):
+    def log_anomaly(pred_value: float) -> None:
+        """
+        Logs anomalies.
+
+        :param pred_value: prediction (output value of neural net)
+        """
         print("#####################################")
         print(colored("--> ANOMALY DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
         print("#####################################")
 
     @staticmethod
-    def log_regular(pred_value):
+    def log_regular(pred_value: float) -> None:
+        """
+        Logs regular cases, i.e., non-anomalies.
+
+        :param pred_value: prediction (output value of neural net)
+        """
         print("#####################################")
         print(colored("--> NO ANOMALIES DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
         print("#####################################")
 
     @staticmethod
-    def gen_heatmaps(net_input, model, prediction):
+    def gen_heatmaps(net_input: np.ndarray, model: keras.models.Model, prediction: np.ndarray) -> Dict[str, np.ndarray]:
+        """
+        Generates the heatmaps (visual explanations) for the classification.
+
+        :param net_input: input sample
+        :param model: trained classification model
+        :param prediction: prediction, i.e., outcome of the model
+        :return: dictionary of different heatmaps
+        """
         return {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
                 "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
                 "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
                 "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
 
     @staticmethod
-    def log_corresponding_dtc(osci_data):
-        # read DTC suggestion - assumption: it is always the latest suggestion
+    def log_corresponding_dtc(osci_data: OscillogramData) -> None:
+        """
+        Logs the corresponding DTC to set the heatmaps for, i.e., reads the DTC suggestion.
+        Assumption: it is always the latest suggestion.
+
+        :param osci_data: oscillogram data
+        """
         with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
             suggestions = json.load(f)
         assert osci_data.comp_name in list(suggestions.values())[0]
@@ -165,21 +204,32 @@ class ClassifyComponents(smach.State):
         dtc = list(suggestions.keys())[0]
         print("DTC to set heatmap for:", dtc)
 
-    def get_osci_set_id(self, components_to_be_recorded):
+    def get_osci_set_id(self, components_to_be_recorded: Dict[str, str]) -> str:
+        """
+        Retrieves the oscillogram set ID in case of a number of parallel recorded oscillograms (else empty string).
+
+        :param components_to_be_recorded: components to be recorded (in parallel)
+        :return: oscillogram set ID
+        """
         osci_set_id = ""
         if len(components_to_be_recorded.keys()) > 1:
             osci_set_id = self.instance_gen.extend_knowledge_graph_with_parallel_rec_osci_set()
         return osci_set_id
 
     @staticmethod
-    def preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages):
+    def preprocess_time_series_based_on_model_meta_info(
+            model_meta_info: Dict[str, str], voltages: List[float]
+    ) -> List[float]:
+        """
+        Preprocesses the time series based on model metadata (e.g. normalization method).
+        The preprocessing always depends on the trained model that is going to be applied.
+        Therefore, this kind of meta information has to be saved for each trained model.
 
-        # TODO: this depends on the trained model that is going to be applied
-        #       -> we need to save this kind of meta information for each trained model we have on the platform
-        #       -> all the preprocessing the model expects
-
+        :param model_meta_info: metadata about the trained model (e.g. normalization method)
+        :param voltages: raw input (voltage values)
+        :return: preprocessed input (voltage values)
+        """
         print("model meta info:", model_meta_info)
-
         if model_meta_info["normalization_method"] == "z_norm":
             return preprocess.z_normalize_time_series(voltages)
         elif model_meta_info["normalization_method"] == "min_max_norm":
