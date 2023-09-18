@@ -37,7 +37,7 @@ class LocalModelAccessor(ModelAccessor):
             trained_model_file = TRAINED_MODEL_POOL + component + ".h5"
             print("loading trained model:", trained_model_file)
             model_meta_info = {
-                "normalization_method": "z-normalization",
+                "normalization_method": "z_norm",
                 "model_id": "keras_univariate_ts_classification_model_001"
             }
             return keras.models.load_model(trained_model_file), model_meta_info
