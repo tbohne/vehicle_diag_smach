@@ -56,7 +56,7 @@ class LocalDataAccessor(DataAccessor):
         return obd_data
 
     @staticmethod
-    def create_local_dummy_oscillograms():
+    def create_local_dummy_oscillograms() -> None:
         """
         Creates local dummy oscillograms to be used in the classification states.
         """
@@ -71,7 +71,7 @@ class LocalDataAccessor(DataAccessor):
             shutil.copy(src, osci_session_dir + str(src.split("/")[-1]))
 
         # create dummy oscillograms for fault isolation
-        # TODO: hard-coded for demo purposes - showing reasonable case
+        # --> hard-coded for demo purposes - showing reasonable case
         shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "Ladedruck-Regelventil" + ".csv")
         shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG2, osci_session_dir + "Ladedrucksteller-Positionssensor" + ".csv")
         shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "VTG-Abgasturbolader" + ".csv")
