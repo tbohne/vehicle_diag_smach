@@ -127,7 +127,7 @@ class ClassifyComponents(smach.State):
         print("invalid model for the signal (component) to be classified:", osci_data.comp_name)
         print("error:", error)
         print("adding it to the list of components to be verified manually..")
-        suggestion_list[osci_data.comp_name] = False
+        suggestion_list[osci_data.comp_name] = suggestion_list[osci_data.comp_name][0], False
 
     @staticmethod
     def construct_net_input(model, voltages):
