@@ -48,8 +48,7 @@ class DataAccessor(ABC):
     def get_customer_complaints(self) -> CustomerComplaintData:
         """
         Retrieves customer complaints for the vehicle to be diagnosed.
-
-        If there are no customer complaints, an empty object should be returned, i.e. CustomerComplaintData().
+        If there are no customer complaints, an empty object should be returned, i.e., CustomerComplaintData().
 
         :return: customer complaints
         """
