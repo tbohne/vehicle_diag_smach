@@ -362,6 +362,60 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         comp_id = sus_comp_resp[0].split("#")[1]
         return self.qt.query_suspect_component_name_by_id(comp_id)[0]
 
+    def work_through_unisolated_components(
+            self, unisolated_anomalous_components, explicitly_considered_links, already_checked_components, causal_path,
+            dtc, anomalous_comp
+    ):
+        while len(unisolated_anomalous_components) > 0:
+            comp_to_be_checked = unisolated_anomalous_components.pop(0)
+
+            print(colored("\ncomponent to be checked: " + comp_to_be_checked, "green", "on_grey", ["bold"]))
+            if comp_to_be_checked not in list(explicitly_considered_links.keys()):
+                explicitly_considered_links[comp_to_be_checked] = []
+
+            if comp_to_be_checked in already_checked_components.keys():
+                print("already checked this component - anomaly:",
+                      already_checked_components[comp_to_be_checked][0])
+
+                if already_checked_components[comp_to_be_checked][0]:
+                    causal_path.append(comp_to_be_checked)
+                    affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
+                    unisolated_anomalous_components += affecting_comps
+                    explicitly_considered_links[comp_to_be_checked] += affecting_comps.copy()
+                continue
+
+            use_oscilloscope = self.qt.query_oscilloscope_usage_by_suspect_component(comp_to_be_checked)[0]
+
+            if use_oscilloscope:
+                print("use oscilloscope..")
+                classification_res = self.classify_component(
+                    comp_to_be_checked, dtc, already_checked_components[anomalous_comp][1]
+                )
+                if classification_res is None:
+                    anomaly = self.data_accessor.get_manual_judgement_for_component(comp_to_be_checked)
+                    classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
+                        anomaly, already_checked_components[anomalous_comp][1], comp_to_be_checked
+                    )
+                else:
+                    (anomaly, classification_id) = classification_res
+
+                already_checked_components[comp_to_be_checked] = (anomaly, classification_id)
+            else:
+                anomaly = self.data_accessor.get_manual_judgement_for_component(comp_to_be_checked)
+                classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
+                    anomaly, already_checked_components[anomalous_comp][1], comp_to_be_checked
+                )
+                already_checked_components[comp_to_be_checked] = (anomaly, classification_id)
+
+            if anomaly:
+                causal_path.append(comp_to_be_checked)
+                affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
+                print("component potentially affected by:", affecting_comps)
+                unisolated_anomalous_components += affecting_comps
+                explicitly_considered_links[comp_to_be_checked] += affecting_comps.copy()
+
+            self.log_classification_action(comp_to_be_checked, bool(anomaly), use_oscilloscope, classification_id)
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
@@ -399,55 +453,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             unisolated_anomalous_components = affecting_components
             causal_path = [anomalous_comp]
 
-            while len(unisolated_anomalous_components) > 0:
-                comp_to_be_checked = unisolated_anomalous_components.pop(0)
-
-                print(colored("\ncomponent to be checked: " + comp_to_be_checked, "green", "on_grey", ["bold"]))
-                if comp_to_be_checked not in list(explicitly_considered_links.keys()):
-                    explicitly_considered_links[comp_to_be_checked] = []
-
-                if comp_to_be_checked in already_checked_components.keys():
-                    print("already checked this component - anomaly:",
-                          already_checked_components[comp_to_be_checked][0])
-
-                    if already_checked_components[comp_to_be_checked][0]:
-                        causal_path.append(comp_to_be_checked)
-                        affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
-                        unisolated_anomalous_components += affecting_comps
-                        explicitly_considered_links[comp_to_be_checked] += affecting_comps.copy()
-                    continue
-
-                use_oscilloscope = self.qt.query_oscilloscope_usage_by_suspect_component(comp_to_be_checked)[0]
-
-                if use_oscilloscope:
-                    print("use oscilloscope..")
-                    classification_res = self.classify_component(
-                        comp_to_be_checked, dtc, already_checked_components[anomalous_comp][1]
-                    )
-                    if classification_res is None:
-                        anomaly = self.data_accessor.get_manual_judgement_for_component(comp_to_be_checked)
-                        classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
-                            anomaly, already_checked_components[anomalous_comp][1], comp_to_be_checked
-                        )
-                    else:
-                        (anomaly, classification_id) = classification_res
-
-                    already_checked_components[comp_to_be_checked] = (anomaly, classification_id)
-                else:
-                    anomaly = self.data_accessor.get_manual_judgement_for_component(comp_to_be_checked)
-                    classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
-                        anomaly, already_checked_components[anomalous_comp][1], comp_to_be_checked
-                    )
-                    already_checked_components[comp_to_be_checked] = (anomaly, classification_id)
-
-                if anomaly:
-                    causal_path.append(comp_to_be_checked)
-                    affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
-                    print("component potentially affected by:", affecting_comps)
-                    unisolated_anomalous_components += affecting_comps
-                    explicitly_considered_links[comp_to_be_checked] += affecting_comps.copy()
-
-                self.log_classification_action(comp_to_be_checked, bool(anomaly), use_oscilloscope, classification_id)
+            self.work_through_unisolated_components(
+                unisolated_anomalous_components, explicitly_considered_links, already_checked_components, causal_path,
+                dtc, anomalous_comp
+            )
 
             anomalous_paths[anomalous_comp] = causal_path
 
