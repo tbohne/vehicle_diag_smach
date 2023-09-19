@@ -165,14 +165,14 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return self.construct_complete_graph(graph, components_to_process)
 
     @staticmethod
-    def create_legend_lines(colors: List[str], **kwargs) -> Line2D:
+    def create_legend_line(color: str, **kwargs) -> Line2D:
         """
         Creates the edge representations for the plot legend.
 
-        :param colors: colors for legend lines
-        :return: generated line representations
+        :param color: color for legend line
+        :return: generated line representation
         """
-        return Line2D([0, 1], [0, 1], color=colors, **kwargs)
+        return Line2D([0, 1], [0, 1], color=color, **kwargs)
 
     @staticmethod
     def compute_causal_links(
@@ -215,14 +215,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             print("isolation results, i.e., causal path:\n", key, ":", anomalous_paths[key])
         for key in complete_graphs.keys():
             print("visualizing graph for component:", key, "\n")
-
             plt.figure(figsize=(25, 18))
             plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=24, fontweight='bold')
-
             from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
             to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
             to_relations = [item for lst in to_relations for item in lst]
-
             causal_links = self.compute_causal_links(to_relations, key, anomalous_paths, from_relations)
 
             colors = ['g' if i not in causal_links else 'r' for i in range(len(to_relations))]
@@ -231,7 +228,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 if from_relations[i] not in explicitly_considered_links.keys() or to_relations[i] not in \
                         explicitly_considered_links[from_relations[i]]:
                     colors[i] = 'black'
-
             widths = [8 if i not in causal_links else 8 for i in range(len(to_relations))]
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
 
@@ -239,20 +235,17 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             pos = nx.spring_layout(g, scale=0.3, seed=5)
             nx.draw(g, pos=pos, with_labels=True, node_size=30000, font_size=10, alpha=0.75, arrows=True,
                     edge_color=colors, width=widths)
-
-            legend_lines = [self.create_legend_lines(clr, lw=5) for clr in ['r', 'g', 'black']]
+            legend_lines = [self.create_legend_line(clr, lw=5) for clr in ['r', 'g', 'black']]
             labels = ["fault path", "non-anomalous links", "disregarded"]
             # initial preview does not require a legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
                 plt.legend(legend_lines, labels, fontsize=20, loc='lower right')
 
-            # create bytes object and save matplotlib fig into it
-            buf = io.BytesIO()
+            buf = io.BytesIO()  # create bytes object and save matplotlib fig into it
             plt.savefig(buf, format='png')
             buf.seek(0)
             plt.close()
-            # create PIL image object
-            image = Image.open(buf)
+            image = Image.open(buf)  # create PIL image object
             visualizations.append(image)
         return visualizations
 
