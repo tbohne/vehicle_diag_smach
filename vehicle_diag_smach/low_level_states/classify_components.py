@@ -110,20 +110,6 @@ class ClassifyComponents(smach.State):
         return components_to_be_recorded, components_to_be_manually_verified
 
     @staticmethod
-    def construct_net_input(model: keras.models.Model, voltages: List[float]) -> np.ndarray:
-        """
-        Constructs / reshapes the input for the trained neural net model.
-
-        :param model: trained neural net model
-        :param voltages: input voltage values (time series) to be reshaped
-        :return: constructed / reshaped input
-        """
-        net_input_size = model.layers[0].output_shape[0][1]
-        assert net_input_size == len(voltages)
-        net_input = np.asarray(voltages).astype('float32')
-        return net_input.reshape((net_input.shape[0], 1))
-
-    @staticmethod
     def log_anomaly(pred_value: float) -> None:
         """
         Logs anomalies.
@@ -220,7 +206,7 @@ class ClassifyComponents(smach.State):
                 util.invalid_model(osci_data, suggestion_list, e)
                 continue
 
-            net_input = self.construct_net_input(model, voltages)
+            net_input = util.construct_net_input(model, voltages)
             prediction = model.predict(np.array([net_input]))
             num_classes = len(prediction[0])
             # addresses both models with one output neuron and those with several

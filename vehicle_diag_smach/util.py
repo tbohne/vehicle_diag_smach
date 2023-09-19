@@ -4,6 +4,7 @@
 
 from typing import Dict, List, Tuple
 
+import numpy as np
 from oscillogram_classification import preprocess
 from tensorflow import keras
 
@@ -83,3 +84,17 @@ def invalid_model(osci_data: OscillogramData, suggestion_list: Dict[str, Tuple[s
     print("error:", error)
     print("adding it to the list of components to be verified manually..")
     suggestion_list[osci_data.comp_name] = suggestion_list[osci_data.comp_name][0], False
+
+
+def construct_net_input(model: keras.models.Model, voltages: List[float]) -> np.ndarray:
+    """
+    Constructs / reshapes the input for the trained neural net model.
+
+    :param model: trained neural net model
+    :param voltages: input voltage values (time series) to be reshaped
+    :return: constructed / reshaped input
+    """
+    net_input_size = model.layers[0].output_shape[0][1]
+    assert net_input_size == len(voltages)
+    net_input = np.asarray(voltages).astype('float32')
+    return net_input.reshape((net_input.shape[0], 1))
