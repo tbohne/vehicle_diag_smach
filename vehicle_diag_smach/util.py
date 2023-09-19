@@ -7,6 +7,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 from oscillogram_classification import preprocess
 from tensorflow import keras
+from termcolor import colored
 
 from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 
@@ -98,3 +99,25 @@ def construct_net_input(model: keras.models.Model, voltages: List[float]) -> np.
     assert net_input_size == len(voltages)
     net_input = np.asarray(voltages).astype('float32')
     return net_input.reshape((net_input.shape[0], 1))
+
+
+def log_anomaly(pred_value: float) -> None:
+    """
+    Logs anomalies.
+
+    :param pred_value: prediction (output value of neural net)
+    """
+    print("#####################################")
+    print(colored("--> ANOMALY DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
+    print("#####################################")
+
+
+def log_regular(pred_value: float) -> None:
+    """
+    Logs regular cases, i.e., non-anomalies.
+
+    :param pred_value: prediction (output value of neural net)
+    """
+    print("#####################################")
+    print(colored("--> NO ANOMALIES DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
+    print("#####################################")

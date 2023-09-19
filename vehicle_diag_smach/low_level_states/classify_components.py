@@ -110,28 +110,6 @@ class ClassifyComponents(smach.State):
         return components_to_be_recorded, components_to_be_manually_verified
 
     @staticmethod
-    def log_anomaly(pred_value: float) -> None:
-        """
-        Logs anomalies.
-
-        :param pred_value: prediction (output value of neural net)
-        """
-        print("#####################################")
-        print(colored("--> ANOMALY DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
-        print("#####################################")
-
-    @staticmethod
-    def log_regular(pred_value: float) -> None:
-        """
-        Logs regular cases, i.e., non-anomalies.
-
-        :param pred_value: prediction (output value of neural net)
-        """
-        print("#####################################")
-        print(colored("--> NO ANOMALIES DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
-        print("#####################################")
-
-    @staticmethod
     def gen_heatmaps(net_input: np.ndarray, model: keras.models.Model, prediction: np.ndarray) -> Dict[str, np.ndarray]:
         """
         Generates the heatmaps (visual explanations) for the classification.
@@ -214,10 +192,10 @@ class ClassifyComponents(smach.State):
             pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
 
             if anomaly:
-                self.log_anomaly(pred_value)
+                util.log_anomaly(pred_value)
                 anomalous_components.append(osci_data.comp_name)
             else:
-                self.log_regular(pred_value)
+                util.log_regular(pred_value)
                 non_anomalous_components.append(osci_data.comp_name)
 
             heatmaps = self.gen_heatmaps(net_input, model, prediction)
