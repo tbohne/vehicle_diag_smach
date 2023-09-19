@@ -22,7 +22,7 @@ from termcolor import colored
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
-    CLASSIFICATION_LOG_FILE, OBD_ONTOLOGY_PATH
+    CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -35,8 +35,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
     task is to isolate the defective components based on their effective radius (structural knowledge).
     """
 
-    def __init__(self, data_accessor: DataAccessor, model_accessor: ModelAccessor, data_provider: DataProvider,
-                 kg_url: str):
+    def __init__(
+            self, data_accessor: DataAccessor, model_accessor: ModelAccessor, data_provider: DataProvider, kg_url: str
+    ) -> None:
         """
         Initializes the state.
 
@@ -55,6 +56,15 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         self.model_accessor = model_accessor
         self.data_provider = data_provider
 
+    @staticmethod
+    def create_session_data_dir() -> None:
+        """
+        Creates the session data directory.
+        """
+        osci_iso_session_dir = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/"
+        if not os.path.exists(osci_iso_session_dir):
+            os.makedirs(osci_iso_session_dir)
+
     def classify_component(
             self, affecting_comp: str, dtc: str, classification_reason: str
     ) -> Union[Tuple[bool, str], None]:
@@ -66,10 +76,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param classification_reason: reason for the classification (ID of another classification)
         :return: tuple of whether an anomaly has been detected and the corresponding classification ID
         """
-        # create session data directory
-        osci_iso_session_dir = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/"
-        if not os.path.exists(osci_iso_session_dir):
-            os.makedirs(osci_iso_session_dir)
+        self.create_session_data_dir()
 
         # in this state, there is only one component to be classified, but there could be several
         oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
