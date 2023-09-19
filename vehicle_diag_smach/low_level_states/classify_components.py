@@ -241,9 +241,20 @@ class ClassifyComponents(smach.State):
         return voltages
 
     def process_oscillogram_recordings(
-            self, oscillograms, suggestion_list, anomalous_components, non_anomalous_components,
-            components_to_be_recorded, classification_instances
-    ):
+            self, oscillograms: List[OscillogramData], suggestion_list: Dict[str, Tuple[str, bool]],
+            anomalous_components: List[str], non_anomalous_components: List[str],
+            components_to_be_recorded: Dict[str, str], classification_instances: Dict[str, str]
+    ) -> None:
+        """
+        Iteratively processes the oscillograms, i.e., classifies each recording and overlays heatmaps.
+
+        :param oscillograms: oscillograms to be classified
+        :param suggestion_list: suspect components suggested for analysis {comp_name: (reason_for, osci_usage)}
+        :param anomalous_components: list to be filled with anomalous components, i.e., detected anomalies
+        :param non_anomalous_components: list to be filled with regular components, i.e., no anomalies
+        :param components_to_be_recorded: tuple of recorded components
+        :param classification_instances: generated classification instances
+        """
         osci_set_id = self.get_osci_set_id(components_to_be_recorded)
         for osci_data in oscillograms:  # iteratively process parallel recorded oscilloscope recordings
             osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(osci_data.time_series, osci_set_id)
@@ -265,7 +276,6 @@ class ClassifyComponents(smach.State):
             net_input = self.construct_net_input(model, voltages)
             prediction = model.predict(np.array([net_input]))
             num_classes = len(prediction[0])
-
             # addresses both models with one output neuron and those with several
             anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
             pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
@@ -286,13 +296,37 @@ class ClassifyComponents(smach.State):
             heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
                 "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
             )
-            heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, voltages, osci_data.comp_name + res_str)
+            heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), osci_data.comp_name + res_str)
             self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
             classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
                 anomaly, components_to_be_recorded[osci_data.comp_name], osci_data.comp_name, pred_value,
                 model_meta_info["model_id"], osci_id, heatmap_id
             )
             classification_instances[osci_data.comp_name] = classification_id
+
+    def perform_manual_classifications(
+            self, components_to_be_manually_verified: Dict[str, str], classification_instances: Dict[str, str],
+            anomalous_components: List[str], non_anomalous_components: List[str]
+    ) -> None:
+        """
+        Classifies the subset of components that are to be classified manually.
+
+        :param components_to_be_manually_verified: components to be verified manually
+        :param classification_instances: dictionary of classification instances {comp: classification_ID}
+        :param anomalous_components: list of anomalous components (to be extended)
+        :param non_anomalous_components: list of regular components (to be extended)
+        """
+        for comp in components_to_be_manually_verified.keys():
+            print(colored("\n\nmanual inspection of component " + comp, "green", "on_grey", ["bold"]))
+            anomaly = self.data_accessor.get_manual_judgement_for_component(comp)
+            classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
+                anomaly, components_to_be_manually_verified[comp], comp
+            )
+            classification_instances[comp] = classification_id
+            if anomaly:
+                anomalous_components.append(comp)
+            else:
+                non_anomalous_components.append(comp)
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -302,11 +336,9 @@ class ClassifyComponents(smach.State):
         :return: outcome of the state ("detected_anomalies" | "no_anomaly" | "no_anomaly_no_more_comp")
         """
         self.log_state_info()
-
         components_to_be_recorded, components_to_be_manually_verified = self.perform_synchronized_sensor_recordings(
             userdata.suggestion_list
         )
-
         oscillograms = self.data_accessor.get_oscillograms_by_components(list(components_to_be_recorded.keys()))
         anomalous_components = []
         non_anomalous_components = []
@@ -317,19 +349,9 @@ class ClassifyComponents(smach.State):
             components_to_be_recorded, classification_instances
         )
 
-        # classifying the subset of components that are to be classified manually
-        for comp in components_to_be_manually_verified.keys():
-            print(colored("\n\nmanual inspection of component " + comp, "green", "on_grey", ["bold"]))
-            anomaly = self.data_accessor.get_manual_judgement_for_component(comp)
-            classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
-                anomaly, components_to_be_manually_verified[comp], comp
-            )
-            classification_instances[comp] = classification_id
-
-            if anomaly:
-                anomalous_components.append(comp)
-            else:
-                non_anomalous_components.append(comp)
+        self.perform_manual_classifications(
+            components_to_be_manually_verified, classification_instances, anomalous_components, non_anomalous_components
+        )
 
         classified_components = {}
         for comp in non_anomalous_components:
