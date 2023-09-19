@@ -5,7 +5,7 @@
 import io
 import json
 import os
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Dict
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -84,6 +84,21 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             # TODO: actually handle the case
         return model, model_meta_info
 
+    def provide_heatmaps(
+            self, affecting_comp: str, res_str: str, heatmaps: Dict[str, np.ndarray], voltages: List[float]
+    ) -> None:
+        """
+        Provides the generated heatmaps via the data provider.
+
+        :param affecting_comp: component to classify oscillogram for
+        :param res_str: result string (classification result + score)
+        :param heatmaps: heatmaps to be provided
+        :param voltages: classified voltage values (time series)
+        """
+        title = affecting_comp + "_" + res_str
+        heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), title)
+        self.data_provider.provide_heatmaps(heatmap_img, title)
+
     def classify_component(
             self, affecting_comp: str, dtc: str, classification_reason: str
     ) -> Union[Tuple[bool, str], None]:
@@ -96,7 +111,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :return: tuple of whether an anomaly has been detected and the corresponding classification ID
         """
         self.create_session_data_dir()
-
         # in this state, there is only one component to be classified, but there could be several
         oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
         assert len(oscillograms) == 1
@@ -104,7 +118,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(voltages)
         model, model_meta_info = self.get_model_and_metadata(affecting_comp)
         voltages = util.preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages)
-
         net_input = util.construct_net_input(model, voltages)
         prediction = model.predict(np.array([net_input]))
         num_classes = len(prediction[0])
@@ -116,25 +129,15 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         else:
             util.log_regular(prediction[0][0])
 
-        heatmaps = {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
-                    "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
-                    "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
-                    "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
-
+        heatmaps = util.gen_heatmaps(net_input, model, prediction)
         res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
-
         print("DTC to set heatmap for:", dtc)
         print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
-        # extend KG with generated heatmap
         # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
         heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
             "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
         )
-        title = affecting_comp + "_" + res_str
-        heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, voltages, title)
-        self.data_provider.provide_heatmaps(heatmap_img, title)
-
-        # extend KG with osci classification
+        self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltages)
         classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
             anomaly, classification_reason, affecting_comp, prediction[0][0], model_meta_info['model_id'],
             osci_id, heatmap_id
