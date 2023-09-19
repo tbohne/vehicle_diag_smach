@@ -250,8 +250,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
             pos = nx.spring_layout(g, scale=0.3, seed=5)
-            nx.draw(g, pos=pos, with_labels=True, node_size=30000, font_size=10, alpha=0.75, arrows=True,
-                    edge_color=colors, width=widths)
+            nx.draw(
+                g, pos=pos, with_labels=True, node_size=30000, font_size=10, alpha=0.75, arrows=True, edge_color=colors,
+                width=widths
+            )
             legend_lines = [self.create_legend_line(clr, lw=5) for clr in ['r', 'g', 'black']]
             labels = ["fault path", "non-anomalous links", "disregarded"]
 
@@ -288,6 +290,78 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         with open(SESSION_DIR + "/" + CLASSIFICATION_LOG_FILE, "w") as f:
             json.dump(log_file, f, indent=4)
 
+    @staticmethod
+    def log_state_info() -> None:
+        """
+        Logs the state information.
+        """
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
+        print("executing", colored("ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "yellow", "on_grey", ["bold"]), "state..")
+        print("############################################\n")
+
+    def retrieve_already_checked_components(self, classified_components: List[str]) -> Dict[str, Tuple[bool, str]]:
+        """
+        Retrieves the already checked components together with the corresponding results:
+            {comp: (prediction, classification_id)}
+        A prediction of "true" stands for a detected anomaly.
+
+        :param classified_components: list of classified components (IDs)
+        :return: dictionary of already checked components: {comp: (prediction, classification_id)}
+        """
+        already_checked_components = {}
+        for classification_id in classified_components:
+            sus_comp_resp = self.qt.query_suspect_component_by_classification(classification_id)
+            assert len(sus_comp_resp) == 1
+            comp_id = sus_comp_resp[0].split("#")[1]
+            comp_name = self.qt.query_suspect_component_name_by_id(comp_id)[0]
+            # the prediction is retrieved as a string, not boolean, thus the check
+            pred = self.qt.query_prediction_by_classification(classification_id)[0] == "True"
+            already_checked_components[comp_name] = (pred, classification_id)
+        return already_checked_components
+
+    @staticmethod
+    def read_dtc_suggestion(anomalous_comp: str) -> str:
+        """
+        Reads the DTC the component suggestion was based on - assumption: it is always the latest suggestion.
+
+        :param anomalous_comp: component to read the DTC the suggestion was based on for
+        :return: read DTC
+        """
+        with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
+            suggestions = json.load(f)
+        assert anomalous_comp in list(suggestions.values())[0]
+        assert len(suggestions.keys()) == 1
+        return list(suggestions.keys())[0]
+
+    def visualize_initial_graph(
+            self, anomalous_paths: Dict[str, List[str]], complete_graphs: Dict[str, Dict[str, List[str]]],
+            explicitly_considered_links: Dict[str, List[str]]
+    ) -> None:
+        """
+        Visualizes the initial graph (without highlighted edges / pre isolation).
+
+        :param anomalous_paths: the paths to the root cause
+        :param complete_graphs: the causal graphs
+        :param explicitly_considered_links: links that have been verified explicitly
+        """
+        visualizations = self.gen_causal_graph_visualizations(
+            anomalous_paths, complete_graphs, explicitly_considered_links
+        )
+        self.data_provider.provide_causal_graph_visualizations(visualizations)
+
+    def retrieve_sus_comp(self, class_id: str) -> str:
+        """
+        Retrieves the anomalous suspect component specified by the provided classification ID.
+
+        :param class_id: classification ID to retrieve component for
+        :return: suspect component for specified classification ID
+        """
+        sus_comp_resp = self.qt.query_suspect_component_by_classification(class_id)
+        assert len(sus_comp_resp) == 1
+        comp_id = sus_comp_resp[0].split("#")[1]
+        return self.qt.query_suspect_component_name_by_id(comp_id)[0]
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
@@ -296,53 +370,23 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("isolated_problem")
         """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################\n")
-
-        # already checked components together with the corresponding results: {comp: (prediction, classification_id)}
-        # a prediction of "true" -> anomaly
-        already_checked_components = {}
-        for classification_id in userdata.classified_components:
-            sus_comp_resp = self.qt.query_suspect_component_by_classification(classification_id)
-            assert len(sus_comp_resp) == 1
-            comp_id = sus_comp_resp[0].split("#")[1]
-            comp_name = self.qt.query_suspect_component_name_by_id(comp_id)[0]
-            # the prediction is retrieved as a string, not boolean, thus the check
-            pred = self.qt.query_prediction_by_classification(classification_id)[0] == "True"
-            already_checked_components[comp_name] = (pred, classification_id)
-
+        self.log_state_info()
+        already_checked_components = self.retrieve_already_checked_components(userdata.classified_components)
         anomalous_paths = {}
         print(colored("constructing causal graph, i.e., subgraph of structural component knowledge..\n",
                       "green", "on_grey", ["bold"]))
-
         complete_graphs = {comp: self.construct_complete_graph({}, [comp])
                            for comp in already_checked_components.keys() if already_checked_components[comp][0]}
         explicitly_considered_links = {}
-
-        # visualizing the initial graph (without highlighted edges / pre isolation)
-        visualizations = self.gen_causal_graph_visualizations(
-            anomalous_paths, complete_graphs, explicitly_considered_links
-        )
-        self.data_provider.provide_causal_graph_visualizations(visualizations)
+        self.visualize_initial_graph(anomalous_paths, complete_graphs, explicitly_considered_links)
 
         # important to compare to userdata here to not have a dictionary of changed size during iteration
         for class_id in userdata.classified_components:
-            sus_comp_resp = self.qt.query_suspect_component_by_classification(class_id)
-            assert len(sus_comp_resp) == 1
-            comp_id = sus_comp_resp[0].split("#")[1]
-            anomalous_comp = self.qt.query_suspect_component_name_by_id(comp_id)[0]
+            anomalous_comp = self.retrieve_sus_comp(class_id)
             if not already_checked_components[anomalous_comp][0]:
                 continue
 
-            # read DTC suggestion - assumption: it is always the latest suggestion
-            with open(SESSION_DIR + "/" + SUGGESTION_SESSION_FILE) as f:
-                suggestions = json.load(f)
-            assert anomalous_comp in list(suggestions.values())[0]
-            assert len(suggestions.keys()) == 1
-            dtc = list(suggestions.keys())[0]
-
+            dtc = self.read_dtc_suggestion(anomalous_comp)
             print(colored("isolating " + anomalous_comp + "..", "green", "on_grey", ["bold"]))
             affecting_components = self.qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
 
