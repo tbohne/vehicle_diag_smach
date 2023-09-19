@@ -208,7 +208,7 @@ class ClassifyComponents(smach.State):
             print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
             voltages = osci_data.time_series
 
-            model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component("TE")
+            model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(osci_data.comp_name)
             if model is None:
                 util.no_trained_model_available(osci_data, suggestion_list)
                 continue
