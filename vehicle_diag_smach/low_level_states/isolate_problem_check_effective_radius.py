@@ -17,11 +17,11 @@ from matplotlib.lines import Line2D
 from obd_ontology import knowledge_graph_query_tool
 from obd_ontology import ontology_instance_generator
 from oscillogram_classification import cam
-from oscillogram_classification import preprocess
+from tensorflow import keras
 from termcolor import colored
 
 from vehicle_diag_smach import util
-from vehicle_diag_smach.config import SESSION_DIR, Z_NORMALIZATION, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
+from vehicle_diag_smach.config import SESSION_DIR, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
     CLASSIFICATION_LOG_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
@@ -65,6 +65,25 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if not os.path.exists(osci_iso_session_dir):
             os.makedirs(osci_iso_session_dir)
 
+    def get_model_and_metadata(self, affecting_comp: str) -> Tuple[keras.models.Model, dict]:
+        """
+        Retrieves the trained model and the corresponding metadata.
+
+        :param affecting_comp: vehicle component to retrieve trained model for
+        :return: tuple of trained model and corresponding metadata
+        """
+        model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(affecting_comp)
+        if model is None:
+            pass  # TODO: handle model is None cases
+        (model, model_meta_info) = model
+        try:
+            util.validate_keras_model(model)
+        except ValueError as e:
+            print("invalid model for the signal (component) to be classified:", affecting_comp)
+            print("error:", e, "\nadding it to the list of components to be verified manually..")
+            # TODO: actually handle the case
+        return model, model_meta_info
+
     def classify_component(
             self, affecting_comp: str, dtc: str, classification_reason: str
     ) -> Union[Tuple[bool, str], None]:
@@ -83,28 +102,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         assert len(oscillograms) == 1
         voltages = oscillograms[0].time_series
         osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(voltages)
-
-        # TODO: should be based on model config (meta data) -- see `CLASSIFY_COMPONENTS`
-        if Z_NORMALIZATION:
-            voltages = preprocess.z_normalize_time_series(voltages)
-
-        model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(affecting_comp)
-
-        # TODO: handle model is None cases
-        if model is None:
-            pass
-        (model, model_meta_info) = model
-        print("model meta info:", model_meta_info)
-        try:
-            util.validate_keras_model(model)
-        except ValueError as e:
-            print("invalid model for the signal (component) to be classified:", affecting_comp)
-            print("error:", e)
-            print("adding it to the list of components to be verified manually..")
+        model, model_meta_info = self.get_model_and_metadata(affecting_comp)
+        voltages = util.preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages)
 
         net_input_size = model.layers[0].output_shape[0][1]
         assert net_input_size == len(voltages)
-
         net_input = np.asarray(voltages).astype('float32')
         net_input = net_input.reshape((net_input.shape[0], 1))
 
