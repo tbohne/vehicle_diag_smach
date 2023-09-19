@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from oscillogram_classification import preprocess
 from tensorflow import keras
+
+from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 
 
 def validate_keras_model(model: keras.models.Model) -> None:
@@ -55,3 +57,29 @@ def preprocess_time_series_based_on_model_meta_info(
     elif model_meta_info["normalization_method"] == "log_norm":
         return preprocess.logarithmic_normalize_time_series(voltages, 10)
     return voltages
+
+
+def no_trained_model_available(osci_data: OscillogramData, suggestion_list: Dict[str, Tuple[str, bool]]) -> None:
+    """
+    Handles cases where no trained model is available for the specified component.
+
+    :param osci_data: oscillogram data
+    :param suggestion_list: suspect components suggested for analysis {comp_name: (reason_for, osci_usage)}
+    """
+    print("no trained model available for the signal (component) to be classified:", osci_data.comp_name)
+    print("adding it to the list of components to be verified manually..")
+    suggestion_list[osci_data.comp_name] = suggestion_list[osci_data.comp_name][0], False
+
+
+def invalid_model(osci_data: OscillogramData, suggestion_list: Dict[str, Tuple[str, bool]], error: ValueError) -> None:
+    """
+    Handles cases where no valid trained model is available for the specified component.
+
+    :param osci_data: oscillogram data
+    :param suggestion_list: suspect components suggested for analysis {comp_name: (reason_for, osci_usage)}
+    :param error: thrown value error
+    """
+    print("invalid model for the signal (component) to be classified:", osci_data.comp_name)
+    print("error:", error)
+    print("adding it to the list of components to be verified manually..")
+    suggestion_list[osci_data.comp_name] = suggestion_list[osci_data.comp_name][0], False

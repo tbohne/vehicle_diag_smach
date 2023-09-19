@@ -110,34 +110,6 @@ class ClassifyComponents(smach.State):
         return components_to_be_recorded, components_to_be_manually_verified
 
     @staticmethod
-    def no_trained_model_available(osci_data: OscillogramData, suggestion_list: Dict[str, Tuple[str, bool]]) -> None:
-        """
-        Handles cases where no trained model is available for the specified component.
-
-        :param osci_data: oscillogram data
-        :param suggestion_list: suspect components suggested for analysis {comp_name: (reason_for, osci_usage)}
-        """
-        print("no trained model available for the signal (component) to be classified:", osci_data.comp_name)
-        print("adding it to the list of components to be verified manually..")
-        suggestion_list[osci_data.comp_name] = suggestion_list[osci_data.comp_name][0], False
-
-    @staticmethod
-    def invalid_model(
-            osci_data: OscillogramData, suggestion_list: Dict[str, Tuple[str, bool]], error: ValueError
-    ) -> None:
-        """
-        Handles cases where no valid trained model is available for the specified component.
-
-        :param osci_data: oscillogram data
-        :param suggestion_list: suspect components suggested for analysis {comp_name: (reason_for, osci_usage)}
-        :param error: thrown value error
-        """
-        print("invalid model for the signal (component) to be classified:", osci_data.comp_name)
-        print("error:", error)
-        print("adding it to the list of components to be verified manually..")
-        suggestion_list[osci_data.comp_name] = suggestion_list[osci_data.comp_name][0], False
-
-    @staticmethod
     def construct_net_input(model: keras.models.Model, voltages: List[float]) -> np.ndarray:
         """
         Constructs / reshapes the input for the trained neural net model.
@@ -236,16 +208,16 @@ class ClassifyComponents(smach.State):
             print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
             voltages = osci_data.time_series
 
-            model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(osci_data.comp_name)
+            model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component("TE")
             if model is None:
-                self.no_trained_model_available(osci_data, suggestion_list)
+                util.no_trained_model_available(osci_data, suggestion_list)
                 continue
             (model, model_meta_info) = model  # not only obtain the model here, but also meta info
             voltages = util.preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages)
             try:
                 util.validate_keras_model(model)
             except ValueError as e:
-                self.invalid_model(osci_data, suggestion_list, e)
+                util.invalid_model(osci_data, suggestion_list, e)
                 continue
 
             net_input = self.construct_net_input(model, voltages)
