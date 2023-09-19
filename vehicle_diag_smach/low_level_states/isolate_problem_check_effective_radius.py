@@ -198,6 +198,29 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         break
         return causal_links
 
+    @staticmethod
+    def set_edge_properties(
+            causal_links: List[int], to_relations: List[str], from_relations: List[str],
+            explicitly_considered_links: Dict[str, List[str]]
+    ) -> Tuple[List[str], List[int]]:
+        """
+        Sets the edge properties for the causal graph, i.e., sets edge colors and widths.
+
+        :param causal_links: causal links in the subgraph
+        :param to_relations: 'to relations' of the considered subgraph
+        :param from_relations: 'from relations' of the considered subgraph
+        :param explicitly_considered_links: links that have been verified explicitly
+        :return: tuple of edge colors and widths
+        """
+        colors = ['g' if i not in causal_links else 'r' for i in range(len(to_relations))]
+        for i in range(len(from_relations)):
+            # if the from-to relation is not part of the actually considered links, it should be black
+            if from_relations[i] not in explicitly_considered_links.keys() or to_relations[i] not in \
+                    explicitly_considered_links[from_relations[i]]:
+                colors[i] = 'black'
+        widths = [8 if i not in causal_links else 10 for i in range(len(to_relations))]
+        return colors, widths
+
     def gen_causal_graph_visualizations(
             self, anomalous_paths: Dict[str, List[str]], complete_graphs: Dict[str, Dict[str, List[str]]],
             explicitly_considered_links: Dict[str, List[str]]
@@ -221,22 +244,17 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
             to_relations = [item for lst in to_relations for item in lst]
             causal_links = self.compute_causal_links(to_relations, key, anomalous_paths, from_relations)
-
-            colors = ['g' if i not in causal_links else 'r' for i in range(len(to_relations))]
-            for i in range(len(from_relations)):
-                # if the from-to relation is not part of the actually considered links, it should be black
-                if from_relations[i] not in explicitly_considered_links.keys() or to_relations[i] not in \
-                        explicitly_considered_links[from_relations[i]]:
-                    colors[i] = 'black'
-            widths = [8 if i not in causal_links else 8 for i in range(len(to_relations))]
+            colors, widths = self.set_edge_properties(
+                causal_links, to_relations, from_relations, explicitly_considered_links
+            )
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
-
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
             pos = nx.spring_layout(g, scale=0.3, seed=5)
             nx.draw(g, pos=pos, with_labels=True, node_size=30000, font_size=10, alpha=0.75, arrows=True,
                     edge_color=colors, width=widths)
             legend_lines = [self.create_legend_line(clr, lw=5) for clr in ['r', 'g', 'black']]
             labels = ["fault path", "non-anomalous links", "disregarded"]
+
             # initial preview does not require a legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
                 plt.legend(legend_lines, labels, fontsize=20, loc='lower right')
