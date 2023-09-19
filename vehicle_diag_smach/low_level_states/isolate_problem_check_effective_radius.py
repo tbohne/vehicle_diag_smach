@@ -144,7 +144,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         )
         return np.argmax(prediction) == 0, classification_id
 
-    def construct_complete_graph(self, graph: dict, components_to_process: list) -> dict:
+    def construct_complete_graph(
+            self, graph: Dict[str, List[str]], components_to_process: List[str]
+    ) -> Dict[str, List[str]]:
         """
         Recursive function that constructs the complete causal graph for the specified components.
 
@@ -163,7 +165,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return self.construct_complete_graph(graph, components_to_process)
 
     @staticmethod
-    def create_legend_lines(colors: list, **kwargs) -> Line2D:
+    def create_legend_lines(colors: List[str], **kwargs) -> Line2D:
         """
         Creates the edge representations for the plot legend.
 
@@ -172,20 +174,45 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         """
         return Line2D([0, 1], [0, 1], color=colors, **kwargs)
 
-    def gen_causal_graph_visualizations(self, anomalous_paths: dict, complete_graphs: dict,
-                                        explicitly_considered_links: dict) -> List[Image.Image]:
+    @staticmethod
+    def compute_causal_links(
+            to_relations: List[str], key: str, anomalous_paths: Dict[str, List[str]], from_relations: List[str]
+    ) -> List[int]:
+        """
+        Computes the causal links in the subgraph of cause-effect relationships.
+
+        :param to_relations: 'to relations' of the considered subgraph
+        :param key: considered component
+        :param anomalous_paths: paths to the root cause
+        :param from_relations: 'from relations' of the considered subgraph
+        :return: causal links in the subgraph
+        """
+        causal_links = []
+        for i in range(len(to_relations)):
+            if key in anomalous_paths.keys():
+                for j in range(len(anomalous_paths[key]) - 1):
+                    # causal link check
+                    if (anomalous_paths[key][j] == from_relations[i]
+                            and anomalous_paths[key][j + 1] == to_relations[i]):
+                        causal_links.append(i)
+                        break
+        return causal_links
+
+    def gen_causal_graph_visualizations(
+            self, anomalous_paths: Dict[str, List[str]], complete_graphs: Dict[str, Dict[str, List[str]]],
+            explicitly_considered_links: Dict[str, List[str]]
+    ) -> List[Image.Image]:
         """
         Visualizes the causal graphs along with the actual paths to the root cause.
 
         :param anomalous_paths: the paths to the root cause
         :param complete_graphs: the causal graphs
         :param explicitly_considered_links: links that have been verified explicitly
+        :return: causal graph visualizations
         """
         visualizations = []
         for key in anomalous_paths.keys():
-            print("isolation results, i.e., causal path:")
-            print(key, ":", anomalous_paths[key])
-
+            print("isolation results, i.e., causal path:\n", key, ":", anomalous_paths[key])
         for key in complete_graphs.keys():
             print("visualizing graph for component:", key, "\n")
 
@@ -196,15 +223,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
             to_relations = [item for lst in to_relations for item in lst]
 
-            causal_links = []
-            for i in range(len(to_relations)):
-                if key in anomalous_paths.keys():
-                    for j in range(len(anomalous_paths[key]) - 1):
-                        # causal link check
-                        if (anomalous_paths[key][j] == from_relations[i]
-                                and anomalous_paths[key][j + 1] == to_relations[i]):
-                            causal_links.append(i)
-                            break
+            causal_links = self.compute_causal_links(to_relations, key, anomalous_paths, from_relations)
 
             colors = ['g' if i not in causal_links else 'r' for i in range(len(to_relations))]
             for i in range(len(from_relations)):
