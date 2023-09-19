@@ -328,6 +328,24 @@ class ClassifyComponents(smach.State):
             else:
                 non_anomalous_components.append(comp)
 
+    @staticmethod
+    def gen_classified_components_dict(
+            non_anomalous_components: List[str], anomalous_components: List[str]
+    ) -> Dict[str, bool]:
+        """
+        Generates the dictionary of classified components.
+
+        :param non_anomalous_components: list of regular components
+        :param anomalous_components: list of anomalous components
+        :return: classified components dict ({comp: anomaly})
+        """
+        classified_components = {}
+        for comp in non_anomalous_components:
+            classified_components[comp] = False
+        for comp in anomalous_components:
+            classified_components[comp] = True
+        return classified_components
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'CLASSIFY_COMPONENTS' state.
@@ -343,32 +361,22 @@ class ClassifyComponents(smach.State):
         anomalous_components = []
         non_anomalous_components = []
         classification_instances = {}
-
         self.process_oscillogram_recordings(
             oscillograms, userdata.suggestion_list, anomalous_components, non_anomalous_components,
             components_to_be_recorded, classification_instances
         )
-
         self.perform_manual_classifications(
             components_to_be_manually_verified, classification_instances, anomalous_components, non_anomalous_components
         )
-
-        classified_components = {}
-        for comp in non_anomalous_components:
-            classified_components[comp] = False
-        for comp in anomalous_components:
-            classified_components[comp] = True
-
+        classified_components = self.gen_classified_components_dict(non_anomalous_components, anomalous_components)
         userdata.classified_components = list(classification_instances.values())
         self.log_classification_actions(
             classified_components, list(components_to_be_manually_verified.keys()), classification_instances
         )
-
         # there are three options:
         #   1. there's only one recording at a time and thus only one classification
         #   2. there are as many parallel recordings as there are suspect components for the DTC
         #   3. there are multiple parallel recordings, but not as many as there are suspect components for the DTC
-
         # TODO: are there remaining suspect components? (atm every component is suggested each case)
         remaining_suspect_components = False
 
