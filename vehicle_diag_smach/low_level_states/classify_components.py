@@ -10,7 +10,6 @@ import numpy as np
 import smach
 from obd_ontology import ontology_instance_generator
 from oscillogram_classification import cam
-from oscillogram_classification import preprocess
 from tensorflow import keras
 from termcolor import colored
 
@@ -216,30 +215,6 @@ class ClassifyComponents(smach.State):
             osci_set_id = self.instance_gen.extend_knowledge_graph_with_parallel_rec_osci_set()
         return osci_set_id
 
-    @staticmethod
-    def preprocess_time_series_based_on_model_meta_info(
-            model_meta_info: Dict[str, str], voltages: List[float]
-    ) -> List[float]:
-        """
-        Preprocesses the time series based on model metadata (e.g. normalization method).
-        The preprocessing always depends on the trained model that is going to be applied.
-        Therefore, this kind of meta information has to be saved for each trained model.
-
-        :param model_meta_info: metadata about the trained model (e.g. normalization method)
-        :param voltages: raw input (voltage values)
-        :return: preprocessed input (voltage values)
-        """
-        print("model meta info:", model_meta_info)
-        if model_meta_info["normalization_method"] == "z_norm":
-            return preprocess.z_normalize_time_series(voltages)
-        elif model_meta_info["normalization_method"] == "min_max_norm":
-            return preprocess.min_max_normalize_time_series(voltages)
-        elif model_meta_info["normalization_method"] == "dec_norm":
-            return preprocess.decimal_scaling_normalize_time_series(voltages, 2)
-        elif model_meta_info["normalization_method"] == "log_norm":
-            return preprocess.logarithmic_normalize_time_series(voltages, 10)
-        return voltages
-
     def process_oscillogram_recordings(
             self, oscillograms: List[OscillogramData], suggestion_list: Dict[str, Tuple[str, bool]],
             anomalous_components: List[str], non_anomalous_components: List[str],
@@ -266,7 +241,7 @@ class ClassifyComponents(smach.State):
                 self.no_trained_model_available(osci_data, suggestion_list)
                 continue
             (model, model_meta_info) = model  # not only obtain the model here, but also meta info
-            voltages = self.preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages)
+            voltages = util.preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages)
             try:
                 util.validate_keras_model(model)
             except ValueError as e:
