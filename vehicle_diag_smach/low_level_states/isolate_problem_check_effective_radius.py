@@ -112,13 +112,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
 
         if anomaly:
-            print("#####################################")
-            print(colored("--> ANOMALY DETECTED (" + str(prediction[0][0]) + ")", "green", "on_grey", ["bold"]))
-            print("#####################################\n")
+            util.log_anomaly(prediction[0][0])
         else:
-            print("#####################################")
-            print(colored("--> NO ANOMALIES DETECTED (" + str(prediction[0][0]) + ")", "green", "on_grey", ["bold"]))
-            print("#####################################\n")
+            util.log_regular(prediction[0][0])
 
         heatmaps = {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
                     "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),

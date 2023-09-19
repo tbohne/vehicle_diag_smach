@@ -10,7 +10,6 @@ import numpy as np
 import smach
 from obd_ontology import ontology_instance_generator
 from oscillogram_classification import cam
-from tensorflow import keras
 from termcolor import colored
 
 from vehicle_diag_smach import util
@@ -110,21 +109,6 @@ class ClassifyComponents(smach.State):
         return components_to_be_recorded, components_to_be_manually_verified
 
     @staticmethod
-    def gen_heatmaps(net_input: np.ndarray, model: keras.models.Model, prediction: np.ndarray) -> Dict[str, np.ndarray]:
-        """
-        Generates the heatmaps (visual explanations) for the classification.
-
-        :param net_input: input sample
-        :param model: trained classification model
-        :param prediction: prediction, i.e., outcome of the model
-        :return: dictionary of different heatmaps
-        """
-        return {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
-                "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
-                "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
-                "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
-
-    @staticmethod
     def log_corresponding_dtc(osci_data: OscillogramData) -> None:
         """
         Logs the corresponding DTC to set the heatmaps for, i.e., reads the DTC suggestion.
@@ -198,7 +182,7 @@ class ClassifyComponents(smach.State):
                 util.log_regular(pred_value)
                 non_anomalous_components.append(osci_data.comp_name)
 
-            heatmaps = self.gen_heatmaps(net_input, model, prediction)
+            heatmaps = util.gen_heatmaps(net_input, model, prediction)
             res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
             self.log_corresponding_dtc(osci_data)
             print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])

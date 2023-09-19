@@ -5,6 +5,7 @@
 from typing import Dict, List, Tuple
 
 import numpy as np
+from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from tensorflow import keras
 from termcolor import colored
@@ -121,3 +122,18 @@ def log_regular(pred_value: float) -> None:
     print("#####################################")
     print(colored("--> NO ANOMALIES DETECTED (" + str(pred_value) + ")", "green", "on_grey", ["bold"]))
     print("#####################################")
+
+
+def gen_heatmaps(net_input: np.ndarray, model: keras.models.Model, prediction: np.ndarray) -> Dict[str, np.ndarray]:
+    """
+    Generates the heatmaps (visual explanations) for the classification.
+
+    :param net_input: input sample
+    :param model: trained classification model
+    :param prediction: prediction, i.e., outcome of the model
+    :return: dictionary of different heatmaps
+    """
+    return {"tf-keras-gradcam": cam.tf_keras_gradcam(np.array([net_input]), model, prediction),
+            "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
+            "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
+            "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
