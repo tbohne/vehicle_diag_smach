@@ -17,7 +17,7 @@ class GenArtificialInstanceBasedOnCC(smach.State):
     based on the customer complaints. Used for cases where no OBD information is available.
     """
 
-    def __init__(self, data_provider: DataProvider):
+    def __init__(self, data_provider: DataProvider) -> None:
         """
         Initializes the state.
 
@@ -29,6 +29,16 @@ class GenArtificialInstanceBasedOnCC(smach.State):
                              output_keys=['generated_instance'])
         self.data_provider = data_provider
 
+    @staticmethod
+    def log_state_info() -> None:
+        """
+        Logs the state information.
+        """
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
+        print("executing", colored("GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC", "yellow", "on_grey", ["bold"]), "state..")
+        print("############################################")
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC' state.
@@ -36,10 +46,7 @@ class GenArtificialInstanceBasedOnCC(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("generated_artificial_instance")
         """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
+        self.log_state_info()
         print("CC:", userdata.customer_complaints)
         # TODO: generate instance based on provided CC
         userdata.generated_instance = "P2563"
