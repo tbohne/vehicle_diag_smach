@@ -105,11 +105,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         model, model_meta_info = self.get_model_and_metadata(affecting_comp)
         voltages = util.preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages)
 
-        net_input_size = model.layers[0].output_shape[0][1]
-        assert net_input_size == len(voltages)
-        net_input = np.asarray(voltages).astype('float32')
-        net_input = net_input.reshape((net_input.shape[0], 1))
-
+        net_input = util.construct_net_input(model, voltages)
         prediction = model.predict(np.array([net_input]))
         num_classes = len(prediction[0])
         # addresses both models with one output neuron and those with several
