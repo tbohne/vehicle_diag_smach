@@ -20,7 +20,7 @@ class SuggestSuspectComponents(smach.State):
     vehicle are suggested to be investigated based on the available information (OBD, CC, etc.).
     """
 
-    def __init__(self, data_provider: DataProvider, kg_url: str):
+    def __init__(self, data_provider: DataProvider, kg_url: str) -> None:
         """
         Initializes the state.
 
@@ -32,7 +32,17 @@ class SuggestSuspectComponents(smach.State):
                              input_keys=['selected_instance', 'generated_instance'],
                              output_keys=['suggestion_list'])
         self.data_provider = data_provider
-        self.kg_url = kg_url
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=kg_url)
+
+    @staticmethod
+    def log_state_info() -> None:
+        """
+        Logs the state information.
+        """
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
+        print("executing", colored("SUGGEST_SUSPECT_COMPONENTS", "yellow", "on_grey", ["bold"]), "state..")
+        print("############################################\n")
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -41,21 +51,15 @@ class SuggestSuspectComponents(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("provided_suggestions")
         """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("SUGGEST_SUSPECT_COMPONENTS", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################\n")
-
-        # print("generated instance:", userdata.generated_instance)
-        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=self.kg_url)
+        self.log_state_info()
 
         # should not be queried over and over again - just once for a session
         # -> then suggest as many as possible per execution of the state (write to session files)
         if not os.path.exists(SESSION_DIR + "/" + SUS_COMP_TMP_FILE):
-            suspect_components = qt.query_suspect_components_by_dtc(userdata.selected_instance)
+            suspect_components = self.qt.query_suspect_components_by_dtc(userdata.selected_instance)
             # sort suspect components
             ordered_sus_comp = {
-                int(qt.query_priority_id_by_dtc_and_sus_comp(userdata.selected_instance, comp, False)[0]):
+                int(self.qt.query_priority_id_by_dtc_and_sus_comp(userdata.selected_instance, comp, False)[0]):
                     comp for comp in suspect_components
             }
             suspect_components = [ordered_sus_comp[i] for i in range(len(suspect_components))]
@@ -78,13 +82,13 @@ class SuggestSuspectComponents(smach.State):
         # decide whether oscilloscope required
         oscilloscope_usage = []
         for comp in suspect_components:
-            use = qt.query_oscilloscope_usage_by_suspect_component(comp)[0]
+            use = self.qt.query_oscilloscope_usage_by_suspect_component(comp)[0]
             print("comp:", comp, "// use oscilloscope:", use)
             oscilloscope_usage.append(use)
 
         suggestion_list = {
             comp: (
-                qt.query_diag_association_instance_by_dtc_and_sus_comp(
+                self.qt.query_diag_association_instance_by_dtc_and_sus_comp(
                     userdata.selected_instance, comp
                 )[0].split("#")[1], osci
             ) for comp, osci in zip(suspect_components, oscilloscope_usage)
