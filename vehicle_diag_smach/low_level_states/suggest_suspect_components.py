@@ -70,7 +70,7 @@ class SuggestSuspectComponents(smach.State):
         """
         Writes the suggestions to a session file - always the latest ones.
 
-        :param selected_instance: selected DTC instances
+        :param selected_instance: selected DTC instance
         :param suspect_components: list of suggested suspect components
         """
         suggestion = {selected_instance: str(suspect_components)}
@@ -110,7 +110,7 @@ class SuggestSuspectComponents(smach.State):
         }
 
     @staticmethod
-    def update_session_file(suspect_components, suggestions) -> None:
+    def update_session_file(suspect_components: List[str], suggestions: Dict[str, Tuple[str, bool]]) -> None:
         """
         Everything that is used here should be removed from the tmp file.
 
@@ -128,27 +128,21 @@ class SuggestSuspectComponents(smach.State):
         :return: outcome of the state ("provided_suggestions")
         """
         self.log_state_info()
-
         # should not be queried over and over again - just once for a session
         # -> then suggest as many as possible per execution of the state (write to session files)
         if not os.path.exists(SESSION_DIR + "/" + SUS_COMP_TMP_FILE):
             suspect_components = self.qt.query_suspect_components_by_dtc(userdata.selected_instance)
-            # sort suspect components
-            ordered_sus_comp = {
+            ordered_sus_comp = {  # sort suspect components
                 int(self.qt.query_priority_id_by_dtc_and_sus_comp(userdata.selected_instance, comp, False)[0]):
                     comp for comp in suspect_components
             }
             suspect_components = [ordered_sus_comp[i] for i in range(len(suspect_components))]
-
             self.write_components_to_file(suspect_components)
         else:
             suspect_components = self.read_components_from_file()
-
         print(colored("SUSPECT COMPONENTS: " + str(suspect_components) + "\n", "green", "on_grey", ["bold"]))
-
         self.write_suggestions_to_session_file(userdata.selected_instance, suspect_components)
         oscilloscope_usage = self.determine_oscilloscope_usage(suspect_components)
-
         suggestions = self.gen_suggestions(userdata.selected_instance, suspect_components, oscilloscope_usage)
         userdata.suggestion_list = suggestions
         self.update_session_file(suspect_components, suggestions)
