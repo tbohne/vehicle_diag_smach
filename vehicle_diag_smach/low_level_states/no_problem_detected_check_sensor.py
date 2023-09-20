@@ -19,19 +19,26 @@ class NoProblemDetectedCheckSensor(smach.State):
     state.
     """
 
-    def __init__(self, data_accessor: DataAccessor, data_provider: DataProvider):
+    def __init__(self, data_accessor: DataAccessor, data_provider: DataProvider) -> None:
         """
         Initializes the state.
 
         :param data_accessor: implementation of the data accessor interface
         :param data_provider: implementation of the data provider interface
         """
-        smach.State.__init__(self,
-                             outcomes=['sensor_works', 'sensor_defective'],
-                             input_keys=[''],
-                             output_keys=[''])
+        smach.State.__init__(self, outcomes=['sensor_works', 'sensor_defective'], input_keys=[''], output_keys=[''])
         self.data_accessor = data_accessor
         self.data_provider = data_provider
+
+    @staticmethod
+    def log_state_info() -> None:
+        """
+        Logs the state information.
+        """
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
+        print("executing", colored("NO_PROBLEM_DETECTED_CHECK_SENSOR", "yellow", "on_grey", ["bold"]), "state..")
+        print("############################################")
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -40,10 +47,7 @@ class NoProblemDetectedCheckSensor(smach.State):
         :param userdata: input of state
         :return: outcome of the state ("sensor_works" | "sensor_defective")
         """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("NO_PROBLEM_DETECTED_CHECK_SENSOR", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
+        self.log_state_info()
         # TODO: we should think about making the sensor explicit -- where to get this info?
         anomaly = self.data_accessor.get_manual_judgement_for_sensor()
         if anomaly:
