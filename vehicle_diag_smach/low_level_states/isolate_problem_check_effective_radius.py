@@ -131,8 +131,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         heatmaps = util.gen_heatmaps(net_input, model, prediction)
         res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
-        print("DTC to set heatmap for:", dtc)
-        print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+        print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
         # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
         heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
             "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
@@ -156,7 +155,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         """
         if len(components_to_process) == 0:
             return graph
-
         comp = components_to_process.pop(0)
         if comp not in graph.keys():
             affecting_comp = self.qt.query_affected_by_relations_by_suspect_component(comp, False)
@@ -270,7 +268,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return visualizations
 
     @staticmethod
-    def log_classification_action(comp: str, anomaly: bool, use_oscilloscope: bool, classification_id: str):
+    def log_classification_action(comp: str, anomaly: bool, use_oscilloscope: bool, classification_id: str) -> None:
         """
         Logs the classification actions to the session directory.
 
@@ -362,61 +360,82 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         comp_id = sus_comp_resp[0].split("#")[1]
         return self.qt.query_suspect_component_name_by_id(comp_id)[0]
 
-    def handle_anomaly(self, causal_path, comp_to_be_checked, unisolated_anomalous_components,
-                       explicitly_considered_links):
-        causal_path.append(comp_to_be_checked)
-        affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(comp_to_be_checked)
+    def handle_anomaly(
+            self, causal_path: List[str], checked_comp: str, unisolated_anomalous_components: List[str],
+            explicitly_considered_links: Dict[str, List[str]]
+    ) -> None:
+        """
+        Handles anomaly cases, i.e., extends the causal path, unisolated anomalous components, and explicitly
+        considered links.
+
+        :param causal_path: causal path to be extended
+        :param checked_comp: checked component (found anomaly)
+        :param unisolated_anomalous_components: list of unisolated anomalous components to be extended
+        :param explicitly_considered_links: list of explicitly considered links to be extended
+        """
+        causal_path.append(checked_comp)
+        affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(checked_comp)
         print("component potentially affected by:", affecting_comps)
         unisolated_anomalous_components += affecting_comps
-        explicitly_considered_links[comp_to_be_checked] += affecting_comps.copy()
+        explicitly_considered_links[checked_comp] += affecting_comps.copy()
 
     def work_through_unisolated_components(
-            self, unisolated_anomalous_components, explicitly_considered_links, already_checked_components, causal_path,
-            dtc, anomalous_comp
-    ):
-        while len(unisolated_anomalous_components) > 0:
-            comp_to_be_checked = unisolated_anomalous_components.pop(0)
+            self, unisolated_anomalous_comps: List[str], explicitly_considered_links: Dict[str, List[str]],
+            already_checked_comps: Dict[str, Tuple[bool, str]], causal_path: List[str], dtc: str, anomalous_comp: str
+    ) -> None:
+        """
+        Works through the unisolated components, i.e., performs fault isolation.
+
+        :param unisolated_anomalous_comps: unisolated anomalous components to work though
+        :param explicitly_considered_links: list of explicitly considered links
+        :param already_checked_comps: previously checked components (used to avoid redundant classifications)
+        :param causal_path: causal path to be extended
+        :param dtc: DTC the original component suggestion was based on
+        :param anomalous_comp: initial anomalous component (entry point)
+        """
+        while len(unisolated_anomalous_comps) > 0:
+            comp_to_be_checked = unisolated_anomalous_comps.pop(0)
             print(colored("\ncomponent to be checked: " + comp_to_be_checked, "green", "on_grey", ["bold"]))
             if comp_to_be_checked not in list(explicitly_considered_links.keys()):
                 explicitly_considered_links[comp_to_be_checked] = []
-            if comp_to_be_checked in already_checked_components.keys():
+            if comp_to_be_checked in already_checked_comps.keys():
                 print("already checked this component - anomaly:",
-                      already_checked_components[comp_to_be_checked][0])
-                if already_checked_components[comp_to_be_checked][0]:
+                      already_checked_comps[comp_to_be_checked][0])
+                if already_checked_comps[comp_to_be_checked][0]:
                     self.handle_anomaly(
-                        causal_path, comp_to_be_checked, unisolated_anomalous_components, explicitly_considered_links
+                        causal_path, comp_to_be_checked, unisolated_anomalous_comps, explicitly_considered_links
                     )
                 continue
             use_oscilloscope = self.qt.query_oscilloscope_usage_by_suspect_component(comp_to_be_checked)[0]
             if use_oscilloscope:
                 print("use oscilloscope..")
                 classification_res = self.classify_component(
-                    comp_to_be_checked, dtc, already_checked_components[anomalous_comp][1]
+                    comp_to_be_checked, dtc, already_checked_comps[anomalous_comp][1]
                 )
                 if classification_res is None:
                     anomaly = self.data_accessor.get_manual_judgement_for_component(comp_to_be_checked)
                     classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
-                        anomaly, already_checked_components[anomalous_comp][1], comp_to_be_checked
+                        anomaly, already_checked_comps[anomalous_comp][1], comp_to_be_checked
                     )
                 else:
                     (anomaly, classification_id) = classification_res
-                already_checked_components[comp_to_be_checked] = (anomaly, classification_id)
+                already_checked_comps[comp_to_be_checked] = (anomaly, classification_id)
             else:
                 anomaly = self.data_accessor.get_manual_judgement_for_component(comp_to_be_checked)
                 classification_id = self.instance_gen.extend_knowledge_graph_with_manual_inspection(
-                    anomaly, already_checked_components[anomalous_comp][1], comp_to_be_checked
+                    anomaly, already_checked_comps[anomalous_comp][1], comp_to_be_checked
                 )
-                already_checked_components[comp_to_be_checked] = (anomaly, classification_id)
+                already_checked_comps[comp_to_be_checked] = (anomaly, classification_id)
             if anomaly:
                 self.handle_anomaly(
-                    causal_path, comp_to_be_checked, unisolated_anomalous_components, explicitly_considered_links
+                    causal_path, comp_to_be_checked, unisolated_anomalous_comps, explicitly_considered_links
                 )
             self.log_classification_action(comp_to_be_checked, bool(anomaly), use_oscilloscope, classification_id)
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
-        Implements the search in the causal graph (effect network).
+        Implements the search in the causal graph (cause-effect network).
 
         :param userdata: input of state
         :return: outcome of the state ("isolated_problem")
@@ -436,8 +455,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             anomalous_comp = self.retrieve_sus_comp(class_id)
             if not already_checked_components[anomalous_comp][0]:
                 continue
-
-            dtc = self.read_dtc_suggestion(anomalous_comp)
             print(colored("isolating " + anomalous_comp + "..", "green", "on_grey", ["bold"]))
             affecting_components = self.qt.query_affected_by_relations_by_suspect_component(anomalous_comp)
 
@@ -449,19 +466,15 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             print("component potentially affected by:", affecting_components)
             unisolated_anomalous_components = affecting_components
             causal_path = [anomalous_comp]
-
             self.work_through_unisolated_components(
                 unisolated_anomalous_components, explicitly_considered_links, already_checked_components, causal_path,
-                dtc, anomalous_comp
+                self.read_dtc_suggestion(anomalous_comp), anomalous_comp
             )
-
             anomalous_paths[anomalous_comp] = causal_path
-
         visualizations = self.gen_causal_graph_visualizations(
             anomalous_paths, complete_graphs, explicitly_considered_links
         )
         self.data_provider.provide_causal_graph_visualizations(visualizations)
-
         userdata.fault_paths = anomalous_paths
         self.data_provider.provide_state_transition(StateTransition(
             "ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "PROVIDE_DIAG_AND_SHOW_TRACE", "isolated_problem"
