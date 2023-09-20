@@ -4,6 +4,7 @@
 
 import json
 import os
+from typing import List
 
 import smach
 from termcolor import colored
@@ -19,7 +20,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
     selected for further processing.
     """
 
-    def __init__(self, data_provider: DataProvider):
+    def __init__(self, data_provider: DataProvider) -> None:
         """
         Initializes the state.
 
@@ -33,7 +34,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         self.data_provider = data_provider
 
     @staticmethod
-    def remove_dtc_instance_from_tmp_file(remaining_instances: list) -> None:
+    def remove_dtc_instance_from_tmp_file(remaining_instances: List[str]) -> None:
         """
         Updates the list of unused DTC instances in the corresponding tmp file.
 
@@ -48,8 +49,17 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         Clears the customer complaints tmp file.
         """
         with open(SESSION_DIR + "/" + CC_TMP_FILE, 'w') as f:
-            # clear list, already used now
-            json.dump({'list': []}, f, default=str)
+            json.dump({'list': []}, f, default=str)  # clear list, already used now
+
+    @staticmethod
+    def log_state_info() -> None:
+        """
+        Logs the state information.
+        """
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("\n\n############################################")
+        print("executing", colored("SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE", "yellow", "on_grey", ["bold"]), "state..")
+        print("############################################")
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
@@ -59,10 +69,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         :return: outcome of the state ("selected_matching_instance(OBD_CC)" | "no_matching_selected_best_instance" |
                                        "no_instance" | "no_instance_and_CC_already_used")
         """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("\n\n############################################")
-        print("executing", colored("SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE", "yellow", "on_grey", ["bold"]), "state..")
-        print("############################################")
+        self.log_state_info()
 
         # load DTC instances from tmp file
         with open(SESSION_DIR + "/" + DTC_TMP_FILE) as f:
