@@ -137,3 +137,19 @@ def gen_heatmaps(net_input: np.ndarray, model: keras.models.Model, prediction: n
             "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
             "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
             "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
+
+
+def log_info(msg):
+    pass
+
+
+def log_warn(msg):
+    pass
+
+
+def log_debug(msg):
+    pass
+
+
+def log_err(msg):
+    print("[ ERROR ] : " + str(msg))
