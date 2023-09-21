@@ -28,8 +28,10 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
     High-level hierarchically structured state machine guiding the entire vehicle diagnosis process.
     """
 
-    def __init__(self, data_accessor: DataAccessor, model_accessor: ModelAccessor, data_provider: DataProvider,
-                 kg_url: str = KG_URL):
+    def __init__(
+            self, data_accessor: DataAccessor, model_accessor: ModelAccessor, data_provider: DataProvider,
+            kg_url: str = KG_URL
+    ) -> None:
         """
         Initializes the high-level state machine.
 
@@ -52,27 +54,23 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
         with self:
             self.add('REC_VEHICLE_AND_PROC_METADATA', RecVehicleAndProcMetadata(self.data_accessor, self.data_provider),
                      transitions={'processed_metadata': 'PROC_CUSTOMER_COMPLAINTS'},
-                     remapping={'input': 'sm_input',
-                                'user_data': 'sm_input'})
+                     remapping={'input': 'sm_input', 'user_data': 'sm_input'})
 
             self.add('PROC_CUSTOMER_COMPLAINTS', ProcCustomerComplaints(self.data_accessor, self.data_provider),
                      transitions={'received_complaints': 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES',
                                   'no_complaints': 'READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES'},
-                     remapping={'user_data': 'sm_input',
-                                'interview_protocol_file': 'sm_input'})
+                     remapping={'user_data': 'sm_input', 'interview_protocol_file': 'sm_input'})
 
             self.add('READ_OBD_DATA_AND_GEN_ONTOLOGY_INSTANCES',
                      ReadOBDDataAndGenOntologyInstances(self.data_accessor, self.data_provider, self.kg_url),
                      transitions={'processed_OBD_data': 'RETRIEVE_HISTORICAL_DATA',
                                   'no_DTC_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
-                     remapping={'interview_data': 'sm_input',
-                                'vehicle_specific_instance_data': 'sm_input'})
+                     remapping={'interview_data': 'sm_input', 'vehicle_specific_instance_data': 'sm_input'})
 
             self.add('ESTABLISH_INITIAL_HYPOTHESIS', EstablishInitialHypothesis(self.data_provider, self.kg_url),
                      transitions={'established_init_hypothesis': 'DIAGNOSIS',
                                   'no_DTC_and_no_CC': 'insufficient_data'},
-                     remapping={'vehicle_specific_instance_data': 'sm_input',
-                                'hypothesis': 'sm_input'})
+                     remapping={'vehicle_specific_instance_data': 'sm_input', 'hypothesis': 'sm_input'})
 
             self.add('RETRIEVE_HISTORICAL_DATA', RetrieveHistoricalData(self.data_provider, self.kg_url),
                      transitions={'processed_all_data': 'ESTABLISH_INITIAL_HYPOTHESIS'},
