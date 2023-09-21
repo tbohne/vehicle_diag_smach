@@ -29,7 +29,7 @@ class ProvideDiagAndShowTrace(smach.State):
         :param data_provider: implementation of the data provider interface
         :param kg_url: URL of the knowledge graph guiding the diagnosis
         """
-        smach.State.__init__(self, outcomes=['uploaded_diag'], input_keys=['diagnosis'], output_keys=[''])
+        smach.State.__init__(self, outcomes=['uploaded_diag'], input_keys=['diagnosis'], output_keys=['final_output'])
         self.data_provider = data_provider
         self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(kg_url=kg_url)
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=kg_url)
@@ -132,6 +132,7 @@ class ProvideDiagAndShowTrace(smach.State):
             fault_paths[fault_path_id] = fault_path
 
         self.data_provider.provide_diagnosis(list(fault_paths.values()))
+        userdata.final_output = list(fault_paths.values())
         self.data_provider.provide_state_transition(StateTransition(
             "PROVIDE_DIAG_AND_SHOW_TRACE", "diag", "uploaded_diag"
         ))

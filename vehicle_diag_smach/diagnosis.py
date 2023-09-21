@@ -36,7 +36,7 @@ class DiagnosisStateMachine(smach.StateMachine):
         :param kg_url: URL of the knowledge graph guiding the diagnosis
         """
         super(DiagnosisStateMachine, self).__init__(
-            outcomes=['refuted_hypothesis', 'diag'], input_keys=[], output_keys=[]
+            outcomes=['refuted_hypothesis', 'diag'], input_keys=[], output_keys=["final_output"]
         )
         self.model_accessor = model_accessor
         self.data_accessor = data_accessor
@@ -77,7 +77,7 @@ class DiagnosisStateMachine(smach.StateMachine):
 
             self.add('PROVIDE_DIAG_AND_SHOW_TRACE', ProvideDiagAndShowTrace(self.data_provider, self.kg_url),
                      transitions={'uploaded_diag': 'diag'},
-                     remapping={'diagnosis': 'sm_input'})
+                     remapping={'diagnosis': 'sm_input', 'final_output': 'final_output'})
 
             self.add('CLASSIFY_COMPONENTS',
                      ClassifyComponents(self.model_accessor, self.data_accessor, self.data_provider, self.kg_url),

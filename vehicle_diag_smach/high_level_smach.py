@@ -44,7 +44,7 @@ class VehicleDiagnosisStateMachine(smach.StateMachine):
         super(VehicleDiagnosisStateMachine, self).__init__(
             outcomes=['diag', 'insufficient_data', 'refuted_hypothesis'],
             input_keys=[],
-            output_keys=[]
+            output_keys=['final_output']
         )
         self.data_accessor = data_accessor
         self.model_accessor = model_accessor
@@ -95,3 +95,4 @@ if __name__ == '__main__':
     sm = VehicleDiagnosisStateMachine(data_acc, model_acc, data_prov)
     tf.get_logger().setLevel(logging.ERROR)
     sm.execute()
+    print("final output of smach execution (fault path(s)):", sm.userdata.final_output)
