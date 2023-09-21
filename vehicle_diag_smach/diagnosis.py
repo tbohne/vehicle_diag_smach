@@ -24,8 +24,9 @@ class DiagnosisStateMachine(smach.StateMachine):
     Low-level diagnosis state machine responsible for the details of the diagnostic process.
     """
 
-    def __init__(self, model_accessor: ModelAccessor, data_accessor: DataAccessor, data_provider: DataProvider,
-                 kg_url: str):
+    def __init__(
+            self, model_accessor: ModelAccessor, data_accessor: DataAccessor, data_provider: DataProvider, kg_url: str
+    ) -> None:
         """
         Initializes the low-level state machine.
 
@@ -35,9 +36,7 @@ class DiagnosisStateMachine(smach.StateMachine):
         :param kg_url: URL of the knowledge graph guiding the diagnosis
         """
         super(DiagnosisStateMachine, self).__init__(
-            outcomes=['refuted_hypothesis', 'diag'],
-            input_keys=[],
-            output_keys=[]
+            outcomes=['refuted_hypothesis', 'diag'], input_keys=[], output_keys=[]
         )
         self.model_accessor = model_accessor
         self.data_accessor = data_accessor
@@ -45,22 +44,21 @@ class DiagnosisStateMachine(smach.StateMachine):
         self.userdata.sm_input = []
         self.kg_url = kg_url
 
-        # defines states and transitions of the low-level diagnosis SMACH
-        with self:
+        with self:  # defines states and transitions of the low-level diagnosis SMACH
+
             self.add('SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE', SelectBestUnusedErrorCodeInstance(self.data_provider),
                      transitions={'selected_matching_instance(OBD_CC)': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'no_matching_selected_best_instance': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'no_instance': 'GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC',
                                   'no_instance_and_CC_already_used': 'NO_PROBLEM_DETECTED_CHECK_SENSOR'},
-                     remapping={'selected_instance': 'sm_input',
-                                'customer_complaints': 'sm_input'})
+                     remapping={'selected_instance': 'sm_input', 'customer_complaints': 'sm_input'})
 
             self.add('ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS',
-                     IsolateProblemCheckEffectiveRadius(self.data_accessor, self.model_accessor, self.data_provider,
-                                                        self.kg_url),
+                     IsolateProblemCheckEffectiveRadius(
+                         self.data_accessor, self.model_accessor, self.data_provider, self.kg_url
+                     ),
                      transitions={'isolated_problem': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
-                     remapping={'classified_components': 'sm_input',
-                                'fault_paths': 'sm_input'})
+                     remapping={'classified_components': 'sm_input', 'fault_paths': 'sm_input'})
 
             self.add('NO_PROBLEM_DETECTED_CHECK_SENSOR',
                      NoProblemDetectedCheckSensor(self.data_accessor, self.data_provider),
@@ -70,8 +68,7 @@ class DiagnosisStateMachine(smach.StateMachine):
 
             self.add('GEN_ARTIFICIAL_INSTANCE_BASED_ON_CC', GenArtificialInstanceBasedOnCC(self.data_provider),
                      transitions={'generated_artificial_instance': 'SUGGEST_SUSPECT_COMPONENTS'},
-                     remapping={'customer_complaints': 'sm_input',
-                                'generated_instance': 'sm_input'})
+                     remapping={'customer_complaints': 'sm_input', 'generated_instance': 'sm_input'})
 
             self.add('PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT',
                      ProvideInitialHypothesisAndLogContext(self.data_provider, self.kg_url),
@@ -82,16 +79,14 @@ class DiagnosisStateMachine(smach.StateMachine):
                      transitions={'uploaded_diag': 'diag'},
                      remapping={'diagnosis': 'sm_input'})
 
-            self.add('CLASSIFY_COMPONENTS', ClassifyComponents(self.model_accessor, self.data_accessor,
-                                                               self.data_provider, self.kg_url),
+            self.add('CLASSIFY_COMPONENTS',
+                     ClassifyComponents(self.model_accessor, self.data_accessor, self.data_provider, self.kg_url),
                      transitions={'no_anomaly_no_more_comp': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE',
                                   'no_anomaly': 'SUGGEST_SUSPECT_COMPONENTS',
                                   'detected_anomalies': 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS'},
-                     remapping={'suggestion_list': 'sm_input',
-                                'classified_components': 'sm_input'})
+                     remapping={'suggestion_list': 'sm_input', 'classified_components': 'sm_input'})
 
             self.add('SUGGEST_SUSPECT_COMPONENTS', SuggestSuspectComponents(self.data_provider, self.kg_url),
                      transitions={'provided_suggestions': 'CLASSIFY_COMPONENTS'},
-                     remapping={'selected_instance': 'sm_input',
-                                'generated_instance': 'sm_input',
+                     remapping={'selected_instance': 'sm_input', 'generated_instance': 'sm_input',
                                 'suggestion_list': 'sm_input'})
