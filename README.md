@@ -29,11 +29,11 @@ $ pip install .
 Set up *Apache Jena Fuseki* server:
 ```
 $ cd ..
-$ curl -L https://dlcdn.apache.org/jena/binaries/apache-jena-fuseki-4.6.1.tar.gz > apache-jena-fuseki-4.6.1.tar.gz
-$ tar -xvzf apache-jena-fuseki-4.6.1.tar.gz
-$ chmod +x apache-jena-fuseki-4.6.1/fuseki-server
+$ curl -L https://dlcdn.apache.org/jena/binaries/apache-jena-fuseki-VERSION.tar.gz > apache-jena-fuseki-VERSION.tar.gz
+$ tar -xvzf apache-jena-fuseki-VERSION.tar.gz
+$ chmod +x apache-jena-fuseki-VERSION/fuseki-server
 ```
-For configuration, i.e., hosting the knowledge graph, cf. [obd_ontology](https://github.com/tbohne/obd_ontology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
+For configuration, i.e., hosting the knowledge graph, cf. [obd_ontology](https://github.com/tbohne/obd_ontology) (section "*Launch knowledge graph from RDF serialization (e.g. `.nt` / `.owl` / `.ttl` file*").
 
 ## Installation (Docker)
 ```
@@ -50,7 +50,7 @@ Optionally, to use the customer XPS, create a `.jar` file with the *py4j* and *d
 
 Run server (knowledge graph) from *Apache Jena Fuseki* root directory (runs at `localhost:3030`):
 ```
-$ ./apache-jena-fuseki-4.6.1/fuseki-server
+$ ./apache-jena-fuseki-VERSION/fuseki-server
 ```
 Run state machine (in `vehicle_diag_smach/`):
 ```
@@ -73,7 +73,7 @@ Create and start docker container with visualizations on host system (*Apache Je
 ```
 $ docker run -v /tmp/.X11-unix/:/tmp/.X11-unix -e DISPLAY=unix$DISPLAY -ti diag_system
 ```
-For configuration, i.e., hosting the knowledge graph, cf. [obd_ontology](https://github.com/tbohne/obd_ontology) (section "*Launch knowledge graph from `.owl` / `.ttl` file*").
+For configuration, i.e., hosting the knowledge graph, cf. [obd_ontology](https://github.com/tbohne/obd_ontology) (section "*Launch knowledge graph from RDF serialization (e.g. `.nt` / `.owl` / `.ttl` file*").
 
 ### <u>Run existing container</u>
 
