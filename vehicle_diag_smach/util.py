@@ -15,7 +15,7 @@ from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 
 def validate_keras_model(model: keras.models.Model) -> None:
     """
-    The provided model is expected to be a Keras model satisfying the following assumptions:
+    The provided model is expected to be a `Keras` model satisfying the following assumptions:
         - input_shape: (None, len_of_ts, 1)
         - output_shape: (None, 1)
     Thus, in both cases we have a variable batch size due to `None`. For the input we expect a list of scalars and
@@ -31,11 +31,11 @@ def validate_keras_model(model: keras.models.Model) -> None:
     expected_out_shape = (None, 1)
 
     if len(in_shape) != len(expected_in_shape) or any(dim1 != dim2 for dim1, dim2 in zip(in_shape, expected_in_shape)):
-        raise ValueError(f"Unexpected input shape - expected: {expected_in_shape}, got: {in_shape}")
+        raise ValueError(f"unexpected input shape - expected: {expected_in_shape}, got: {in_shape}")
 
     if len(out_shape) != len(expected_out_shape) \
             or any(dim1 != dim2 for dim1, dim2 in zip(out_shape, expected_out_shape)):
-        raise ValueError(f"Unexpected output shape - expected: {expected_out_shape}, got: {out_shape}")
+        raise ValueError(f"unexpected output shape - expected: {expected_out_shape}, got: {out_shape}")
 
 
 def preprocess_time_series_based_on_model_meta_info(
@@ -46,7 +46,7 @@ def preprocess_time_series_based_on_model_meta_info(
     The preprocessing always depends on the trained model that is going to be applied.
     Therefore, this kind of meta information has to be saved for each trained model.
 
-    :param model_meta_info: metadata about the trained model (e.g. normalization method)
+    :param model_meta_info: metadata for the trained model (e.g. normalization method)
     :param voltages: raw input (voltage values)
     :return: preprocessed input (voltage values)
     """
@@ -139,17 +139,37 @@ def gen_heatmaps(net_input: np.ndarray, model: keras.models.Model, prediction: n
             "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
 
 
-def log_info(msg):
+def log_info(msg) -> None:
+    """
+    Custom logging to override defaults.
+
+    :param msg: msg to be logged
+    """
     pass
 
 
-def log_warn(msg):
+def log_warn(msg) -> None:
+    """
+    Custom logging to override defaults.
+
+    :param msg: msg to be logged
+    """
     pass
 
 
-def log_debug(msg):
+def log_debug(msg) -> None:
+    """
+    Custom logging to override defaults.
+
+    :param msg: msg to be logged
+    """
     pass
 
 
-def log_err(msg):
+def log_err(msg) -> None:
+    """
+    Custom logging to override defaults.
+
+    :param msg: msg to be logged
+    """
     print("[ ERROR ] : " + str(msg))
