@@ -141,7 +141,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             anomaly, classification_reason, affecting_comp, prediction[0][0], model_meta_info['model_id'],
             osci_id, heatmap_id
         )
-        return np.argmax(prediction) == 0, classification_id
+        return anomaly, classification_id
 
     def construct_complete_graph(
             self, graph: Dict[str, List[str]], components_to_process: List[str]
@@ -314,7 +314,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             comp_id = sus_comp_resp[0].split("#")[1]
             comp_name = self.qt.query_suspect_component_name_by_id(comp_id)[0]
             # the prediction is retrieved as a string, not boolean, thus the check
-            pred = self.qt.query_prediction_by_classification(classification_id)[0] == "True"
+            pred = self.qt.query_prediction_by_classification(classification_id)[0].lower() == "true"
             already_checked_components[comp_name] = (pred, classification_id)
         return already_checked_components
 
