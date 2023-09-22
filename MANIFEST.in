@@ -1,1 +1,1 @@
-recursive-include vehicle_diag_smach/res/* *
+recursive-include res/* *
