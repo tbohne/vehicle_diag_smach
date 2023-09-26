@@ -43,6 +43,9 @@ class TestHighLevelStateMachine(unittest.TestCase):
                              sorted(["C11", "C10", "C5"]))
         self.assertListEqual(qt.query_affected_by_relations_by_suspect_component("C11"), ["C13"])
 
+        # expected entry component
+        self.assertListEqual(qt.query_suspect_components_by_dtc("P0125"), ["C1"])
+
     def test_complete_diagnosis_scenario_zero(self) -> None:
         """
         Tests the state machine's functionality based on the defined test "scenario zero" with its expected outcome.
