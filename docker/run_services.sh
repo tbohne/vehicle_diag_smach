@@ -4,7 +4,7 @@
 tmux new-session -d -s session_one
 
 # run fuseki server
-tmux send-keys -t session_one "./apache-jena-fuseki-4.6.1/fuseki-server" Enter
+tmux send-keys -t session_one "./apache-jena-fuseki-4.9.0/fuseki-server" Enter
 
 # split terminal window horizontally
 tmux split-window -h -t session_one
