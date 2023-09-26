@@ -46,6 +46,27 @@ class TestHighLevelStateMachine(unittest.TestCase):
         # expected entry component
         self.assertListEqual(qt.query_suspect_components_by_dtc("P0125"), ["C1"])
 
+    def test_hosted_knowledge_graph_for_scenario_one(self) -> None:
+        """
+        Tests whether the correct (expected) KG is hosted for the unit tests:
+        https://github.com/tbohne/obd_ontology/tree/main/knowledge_base/unit_test_kg.nt.
+        Essentially, it verifies that the KG contains the assumed knowledge for test scenario one.
+        """
+        qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=KG_URL)
+
+        for i in range(14, 22):  # all expected components have to exist in the KG
+            self.assertEqual(len(qt.query_suspect_component_by_name("C" + str(i))), 1)
+
+        # check expected `affected_by` relations
+        self.assertListEqual(qt.query_affected_by_relations_by_suspect_component("C14"), ["C15"])
+        self.assertListEqual(sorted(qt.query_affected_by_relations_by_suspect_component("C15")),
+                             sorted(["C16", "C17", "C18"]))
+        self.assertListEqual(qt.query_affected_by_relations_by_suspect_component("C18"), ["C19"])
+        self.assertListEqual(sorted(qt.query_affected_by_relations_by_suspect_component("C19")), sorted(["C20", "C21"]))
+
+        # expected entry component
+        self.assertListEqual(qt.query_suspect_components_by_dtc("P0126"), ["C14"])
+
     def test_complete_diagnosis_scenario_zero(self) -> None:
         """
         Tests the state machine's functionality based on the defined test "scenario zero" with its expected outcome.
