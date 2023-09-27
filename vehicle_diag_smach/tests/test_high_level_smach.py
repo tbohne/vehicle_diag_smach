@@ -54,6 +54,19 @@ class TestHighLevelStateMachine(unittest.TestCase):
         # expected entry component
         self.assertListEqual(qt.query_suspect_components_by_dtc("P0125"), ["C1"])
 
+    def test_complete_diagnosis_scenario_zero(self) -> None:
+        """
+        Tests the state machine's functionality based on the defined test "scenario zero" with its expected outcome.
+        """
+        # init local implementations of I/O interfaces
+        data_acc = TestDataAccessor(0)  # scenario zero
+        data_prov = TestDataProvider()
+        model_acc = LocalModelAccessor()
+
+        sm = VehicleDiagnosisStateMachine(data_acc, model_acc, data_prov)
+        sm.execute()
+        self.assertEqual(sm.userdata.final_output, ['C5 -> C4 -> C3 -> C2 -> C1'])
+
     def test_model_availability_for_scenario_one(self) -> None:
         """
         Tests the availability of expected trained models for test scenario one.
@@ -82,18 +95,21 @@ class TestHighLevelStateMachine(unittest.TestCase):
         # expected entry component
         self.assertListEqual(qt.query_suspect_components_by_dtc("P0126"), ["C14"])
 
-    def test_complete_diagnosis_scenario_zero(self) -> None:
+    def test_complete_diagnosis_scenario_one(self) -> None:
         """
-        Tests the state machine's functionality based on the defined test "scenario zero" with its expected outcome.
+        Tests the state machine's functionality based on the defined test "scenario one" with its expected outcome.
         """
         # init local implementations of I/O interfaces
-        data_acc = TestDataAccessor(0)  # scenario zero
+        data_acc = TestDataAccessor(1)  # scenario one
         data_prov = TestDataProvider()
         model_acc = LocalModelAccessor()
 
         sm = VehicleDiagnosisStateMachine(data_acc, model_acc, data_prov)
         sm.execute()
-        self.assertEqual(sm.userdata.final_output, ['C5 -> C4 -> C3 -> C2 -> C1'])
+        self.assertEqual(
+            sorted(sm.userdata.final_output),
+            sorted(['C20 -> C19 -> C18 -> C15 -> C14', 'C21 -> C19 -> C18 -> C15 -> C14'])
+        )
 
 
 if __name__ == '__main__':
