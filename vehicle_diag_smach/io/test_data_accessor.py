@@ -51,7 +51,7 @@ class TestDataAccessor(DataAccessor):
         if self.test_scenario == 0:
             obd_data = OnboardDiagnosisData(['P0125'], "TestCar", "123", "456", "ABC")
         elif self.test_scenario == 1:
-            pass  # TODO
+            obd_data = OnboardDiagnosisData(['P0126'], "TestCar", "123", "456", "ABC")
         elif self.test_scenario == 2:
             pass  # TODO
         return obd_data
@@ -78,6 +78,11 @@ class TestDataAccessor(DataAccessor):
             shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "C9" + ".csv")
             shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "C11" + ".csv")
             shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "C13" + ".csv")
+        elif self.test_scenario == 1:
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "C15" + ".csv")
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "C17" + ".csv")
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "C19" + ".csv")
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "C21" + ".csv")
 
     def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
         """
@@ -109,7 +114,8 @@ class TestDataAccessor(DataAccessor):
         :param component: vehicle component to get manual judgement for
         :return: true -> anomaly, false -> regular
         """
-        if self.test_scenario == 0 and int(component[-1]) in [2, 4]:
+        if ((self.test_scenario == 0 and int(component[-1]) in [2, 4])
+                or (self.test_scenario == 1 and int(component[1:]) in [14, 18, 20])):
             return True
         return False
 
