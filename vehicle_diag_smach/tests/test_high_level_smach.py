@@ -3,6 +3,7 @@
 # @author Tim Bohne
 
 import logging
+import os
 import unittest
 
 import smach
@@ -21,6 +22,13 @@ class TestHighLevelStateMachine(unittest.TestCase):
     """
     Multiple test scenarios to ensure basic functionality of the entire diagnostic process.
     """
+
+    def test_model_availability_for_scenario_zero(self) -> None:
+        """
+        Tests the availability of expected trained models for test scenario zero.
+        """
+        for i in range(1, 14, 2):  # all odd components are expected to have a trained model
+            self.assertTrue(os.path.exists("res/trained_model_pool/C" + str(i) + ".h5"))
 
     def test_hosted_knowledge_graph_for_scenario_zero(self) -> None:
         """
@@ -45,6 +53,13 @@ class TestHighLevelStateMachine(unittest.TestCase):
 
         # expected entry component
         self.assertListEqual(qt.query_suspect_components_by_dtc("P0125"), ["C1"])
+
+    def test_model_availability_for_scenario_one(self) -> None:
+        """
+        Tests the availability of expected trained models for test scenario one.
+        """
+        for i in range(15, 22, 2):  # all odd components are expected to have a trained model
+            self.assertTrue(os.path.exists("res/trained_model_pool/C" + str(i) + ".h5"))
 
     def test_hosted_knowledge_graph_for_scenario_one(self) -> None:
         """
