@@ -149,8 +149,10 @@ class SuggestSuspectComponents(smach.State):
 
         if True in oscilloscope_usage:
             print("\n--> there is at least one suspect component that can be diagnosed using an oscilloscope..")
-            self.data_provider.provide_state_transition(StateTransition(
-                "SUGGEST_SUSPECT_COMPONENTS", "CLASSIFY_COMPONENTS", "provided_suggestions"
-            ))
-            return "provided_suggestions"
-        print("none of the identified suspect components can be diagnosed with an oscilloscope..")
+        else:
+            print("\n--> none of the identified suspect components can be diagnosed with an oscilloscope..")
+
+        self.data_provider.provide_state_transition(StateTransition(
+            "SUGGEST_SUSPECT_COMPONENTS", "CLASSIFY_COMPONENTS", "provided_suggestions"
+        ))
+        return "provided_suggestions"
