@@ -118,13 +118,6 @@ class TestHighLevelStateMachine(unittest.TestCase):
         for i in range(23, 30, 2):  # all odd components are expected to have a trained model
             self.assertTrue(os.path.exists("res/trained_model_pool/C" + str(i) + ".h5"))
 
-    def test_model_availability_for_scenario_three(self) -> None:
-        """
-        Tests the availability of expected trained models for test scenario three.
-        """
-        for i in range(31, 36, 2):  # all odd components are expected to have a trained model
-            self.assertTrue(os.path.exists("res/trained_model_pool/C" + str(i) + ".h5"))
-
     def test_hosted_knowledge_graph_for_scenario_two(self) -> None:
         """
         Tests whether the correct (expected) KG is hosted for the unit tests:
@@ -147,6 +140,30 @@ class TestHighLevelStateMachine(unittest.TestCase):
         # expected entry component
         self.assertListEqual(qt.query_suspect_components_by_dtc("P0127"), ["C22"])
 
+    def test_complete_diagnosis_scenario_two(self) -> None:
+        """
+        Tests the state machine's functionality based on the defined test "scenario two" with its expected outcome.
+        """
+        # init local implementations of I/O interfaces
+        data_acc = TestDataAccessor(2)  # scenario two
+        data_prov = TestDataProvider()
+        model_acc = LocalModelAccessor()
+
+        sm = VehicleDiagnosisStateMachine(data_acc, model_acc, data_prov)
+        sm.execute()
+        self.assertEqual(
+            sorted(sm.userdata.final_output),
+            sorted(['C29 -> C28 -> C26 -> C24 -> C22',
+                    'C29 -> C27 -> C25 -> C24 -> C22'])
+        )
+
+    def test_model_availability_for_scenario_three(self) -> None:
+        """
+        Tests the availability of expected trained models for test scenario three.
+        """
+        for i in range(31, 36, 2):  # all odd components are expected to have a trained model
+            self.assertTrue(os.path.exists("res/trained_model_pool/C" + str(i) + ".h5"))
+
     def test_hosted_knowledge_graph_for_scenario_three(self) -> None:
         """
         Tests whether the correct (expected) KG is hosted for the unit tests:
@@ -168,29 +185,12 @@ class TestHighLevelStateMachine(unittest.TestCase):
         # expected entry component
         self.assertListEqual(qt.query_suspect_components_by_dtc("P0128"), ["C30"])
 
-    def test_complete_diagnosis_scenario_two(self) -> None:
-        """
-        Tests the state machine's functionality based on the defined test "scenario two" with its expected outcome.
-        """
-        # init local implementations of I/O interfaces
-        data_acc = TestDataAccessor(2)  # scenario two
-        data_prov = TestDataProvider()
-        model_acc = LocalModelAccessor()
-
-        sm = VehicleDiagnosisStateMachine(data_acc, model_acc, data_prov)
-        sm.execute()
-        self.assertEqual(
-            sorted(sm.userdata.final_output),
-            sorted(['C29 -> C28 -> C26 -> C24 -> C22',
-                    'C29 -> C27 -> C25 -> C24 -> C22'])
-        )
-
     def test_complete_diagnosis_scenario_three(self) -> None:
         """
         Tests the state machine's functionality based on the defined test "scenario three" with its expected outcome.
         """
         # init local implementations of I/O interfaces
-        data_acc = TestDataAccessor(3)  # scenario two
+        data_acc = TestDataAccessor(3)  # scenario three
         data_prov = TestDataProvider()
         model_acc = LocalModelAccessor()
 
