@@ -53,7 +53,9 @@ class TestDataAccessor(DataAccessor):
         elif self.test_scenario == 1:
             obd_data = OnboardDiagnosisData(['P0126'], "TestCar", "123", "456", "ABC")
         elif self.test_scenario == 2:
-            pass  # TODO
+            obd_data = OnboardDiagnosisData(['P0127'], "TestCar", "123", "456", "ABC")
+        elif self.test_scenario == 3:
+            obd_data = OnboardDiagnosisData(['P0128'], "TestCar", "123", "456", "ABC")
         return obd_data
 
     def create_local_dummy_oscillograms(self) -> None:
@@ -83,6 +85,15 @@ class TestDataAccessor(DataAccessor):
             shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "C17" + ".csv")
             shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "C19" + ".csv")
             shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "C21" + ".csv")
+        elif self.test_scenario == 2:
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "C23" + ".csv")
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "C25" + ".csv")
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "C27" + ".csv")
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "C29" + ".csv")
+        elif self.test_scenario == 3:
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "C31" + ".csv")
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "C33" + ".csv")
+            shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "C35" + ".csv")
 
     def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
         """
@@ -115,7 +126,9 @@ class TestDataAccessor(DataAccessor):
         :return: true -> anomaly, false -> regular
         """
         if ((self.test_scenario == 0 and int(component[-1]) in [2, 4])
-                or (self.test_scenario == 1 and int(component[1:]) in [14, 18, 20])):
+                or (self.test_scenario == 1 and int(component[1:]) in [14, 18, 20])
+                or (self.test_scenario == 2 and int(component[1:]) in [22, 24, 26, 28])
+                or (self.test_scenario == 3 and int(component[1:]) in [30, 32, 34, 36])):
             return True
         return False
 
