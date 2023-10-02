@@ -45,17 +45,17 @@ class ProvideDiagAndShowTrace(smach.State):
         print("############################################")
 
     @staticmethod
-    def construct_fault_path(diagnosis: Dict[str, List[str]], anomalous_comp: str) -> str:
+    def construct_fault_paths(diagnosis: Dict[str, List[List[str]]], anomalous_comp: str) -> List[str]:
         """
-        Constructs the fault path from the given diagnosis.
+        Constructs the fault paths from the given diagnosis.
 
-        :param diagnosis: diagnosis to construct fault path from
+        :param diagnosis: diagnosis to construct fault paths from
         :param anomalous_comp: entry component
-        :return: constructed fault path
+        :return: constructed fault paths
         """
-        path = diagnosis[anomalous_comp][::-1]
-        path = [path[i] if i == len(path) - 1 else path[i] + " -> " for i in range(len(path))]
-        return "".join(path)
+        paths = [diagnosis[anomalous_comp][branch][::-1] for branch in range(len(diagnosis[anomalous_comp]))]
+        return ["".join([path[i] if i == len(path) - 1 else path[i] + " -> " for i in range(len(path))]) for path in
+                paths]
 
     def retrieve_fault_condition_id(self) -> str:
         """
@@ -126,10 +126,13 @@ class ProvideDiagAndShowTrace(smach.State):
 
         for key in userdata.diagnosis.keys():
             print("\nidentified anomalous component:", key)
-            fault_path = self.construct_fault_path(userdata.diagnosis, key)
+            branching_paths = self.construct_fault_paths(userdata.diagnosis, key)
             fault_condition_id = self.retrieve_fault_condition_id()
-            fault_path_id = self.instance_gen.extend_knowledge_graph_with_fault_path(fault_path, fault_condition_id)
-            fault_paths[fault_path_id] = fault_path
+            for branching_path in branching_paths:
+                fault_path_id = self.instance_gen.extend_knowledge_graph_with_fault_path(
+                    branching_path, fault_condition_id
+                )
+                fault_paths[fault_path_id] = branching_path
 
         self.data_provider.provide_diagnosis(list(fault_paths.values()))
         userdata.final_output = list(fault_paths.values())
