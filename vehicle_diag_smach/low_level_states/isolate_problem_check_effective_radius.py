@@ -22,7 +22,7 @@ from termcolor import colored
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
-    CLASSIFICATION_LOG_FILE
+    CLASSIFICATION_LOG_FILE, FAULT_PATH_TMP_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -47,7 +47,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param kg_url: URL of the knowledge graph guiding the diagnosis
         """
         smach.State.__init__(self,
-                             outcomes=['isolated_problem'],
+                             outcomes=['isolated_problem', 'isolated_problem_remaining_DTCs'],
                              input_keys=['classified_components'],
                              output_keys=['fault_paths'])
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=kg_url)
@@ -460,13 +460,33 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 )
             self.log_classification_action(comp_to_be_checked, bool(anomaly), use_oscilloscope, classification_id)
 
+    @staticmethod
+    def create_tmp_file_for_already_found_fault_paths(fault_paths: Dict[str, List[List[str]]]) -> None:
+        """
+        Creates a temporary file for already found fault paths.
+
+        :param fault_paths: already found fault paths to be saved in session dir
+        """
+        with open(SESSION_DIR + "/" + FAULT_PATH_TMP_FILE, "w") as f:
+            json.dump(fault_paths, f, default=str)
+
+    @staticmethod
+    def load_already_found_fault_paths() -> Dict[str, List[List[str]]]:
+        """
+        Loads the already found fault paths from the tmp file.
+
+        :return: already found fault paths
+        """
+        with open(SESSION_DIR + "/" + FAULT_PATH_TMP_FILE) as f:
+            return json.load(f)
+
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
         Execution of 'ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS' state.
         Implements the search in the causal graph (cause-effect network).
 
         :param userdata: input of state
-        :return: outcome of the state ("isolated_problem")
+        :return: outcome of the state ("isolated_problem" | "isolated_problem_remaining_DTCs")
         """
         self.log_state_info()
         already_checked_components = self.retrieve_already_checked_components(userdata.classified_components)
@@ -503,7 +523,20 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             anomalous_paths, complete_graphs, explicitly_considered_links
         )
         self.data_provider.provide_causal_graph_visualizations(visualizations)
-        userdata.fault_paths = anomalous_paths
+        remaining_dtc_instances = util.load_dtc_instances()
+        print("REMAINING DTCs:", remaining_dtc_instances)
+        if len(remaining_dtc_instances) > 0:
+            self.create_tmp_file_for_already_found_fault_paths(anomalous_paths)  # write anomalous paths to session file
+            self.data_provider.provide_state_transition(StateTransition(
+                "ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "SELECT_BEST_UNUSED_DTC_INSTANCE",
+                "isolated_problem_remaining_DTCs"
+            ))
+            return "isolated_problem_remaining_DTCs"
+
+        # load potential previous paths from session files
+        already_found_fault_paths = self.load_already_found_fault_paths()
+        already_found_fault_paths.update(anomalous_paths)  # merge dictionaries (already found + new ones)
+        userdata.fault_paths = already_found_fault_paths
         self.data_provider.provide_state_transition(StateTransition(
             "ISOLATE_PROBLEM_CHECK_EFFECTIVE_RADIUS", "PROVIDE_DIAG_AND_SHOW_TRACE", "isolated_problem"
         ))
