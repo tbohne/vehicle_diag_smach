@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+import json
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -10,6 +11,7 @@ from oscillogram_classification import preprocess
 from tensorflow import keras
 from termcolor import colored
 
+from vehicle_diag_smach.config import SESSION_DIR, DTC_TMP_FILE
 from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 
 
@@ -137,6 +139,16 @@ def gen_heatmaps(net_input: np.ndarray, model: keras.models.Model, prediction: n
             "tf-keras-gradcam++": cam.tf_keras_gradcam_plus_plus(np.array([net_input]), model, prediction),
             "tf-keras-scorecam": cam.tf_keras_scorecam(np.array([net_input]), model, prediction),
             "tf-keras-layercam": cam.tf_keras_layercam(np.array([net_input]), model, prediction)}
+
+
+def load_dtc_instances() -> List[str]:
+    """
+    Loads the DTC instances from the tmp file.
+
+    :return: list of DTCs
+    """
+    with open(SESSION_DIR + "/" + DTC_TMP_FILE) as f:
+        return json.load(f)['list']
 
 
 def log_info(msg) -> None:

@@ -9,6 +9,7 @@ from typing import List
 import smach
 from termcolor import colored
 
+from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, DTC_TMP_FILE, CC_TMP_FILE
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -60,16 +61,6 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
         print("\n\n############################################")
         print("executing", colored("SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE", "yellow", "on_grey", ["bold"]), "state..")
         print("############################################")
-
-    @staticmethod
-    def load_dtc_instances() -> List[str]:
-        """
-        Loads the DTC instances from the tmp file.
-
-        :return: list of DTCs
-        """
-        with open(SESSION_DIR + "/" + DTC_TMP_FILE) as f:
-            return json.load(f)['list']
 
     @staticmethod
     def load_customer_complaints() -> List[str]:
@@ -158,7 +149,7 @@ class SelectBestUnusedErrorCodeInstance(smach.State):
                                        "no_instance" | "no_instance_and_CC_already_used")
         """
         self.log_state_info()
-        dtc_list = self.load_dtc_instances()
+        dtc_list = util.load_dtc_instances()
         customer_complaints_list = self.load_customer_complaints()
 
         # case 1: no DTC instance provided, but CC still available
