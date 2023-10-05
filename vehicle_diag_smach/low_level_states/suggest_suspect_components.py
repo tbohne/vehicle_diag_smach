@@ -130,7 +130,7 @@ class SuggestSuspectComponents(smach.State):
         self.log_state_info()
         # should not be queried over and over again - just once for a session
         # -> then suggest as many as possible per execution of the state (write to session files)
-        if not os.path.exists(SESSION_DIR + "/" + SUS_COMP_TMP_FILE):
+        if not os.path.exists(SESSION_DIR + "/" + SUS_COMP_TMP_FILE) or len(self.read_components_from_file()) == 0:
             suspect_components = self.qt.query_suspect_components_by_dtc(userdata.selected_instance)
             ordered_sus_comp = {  # sort suspect components
                 int(self.qt.query_priority_id_by_dtc_and_sus_comp(userdata.selected_instance, comp, False)[0]):
