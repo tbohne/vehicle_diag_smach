@@ -477,8 +477,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         :return: already found fault paths
         """
-        with open(SESSION_DIR + "/" + FAULT_PATH_TMP_FILE) as f:
-            return json.load(f)
+        path = SESSION_DIR + "/" + FAULT_PATH_TMP_FILE
+        if os.path.exists(path):
+            with open(path) as f:
+                return json.load(f)
+        return {}
 
     def execute(self, userdata: smach.user_data.Remapper) -> str:
         """
