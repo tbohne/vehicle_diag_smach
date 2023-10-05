@@ -202,6 +202,23 @@ class TestHighLevelStateMachine(unittest.TestCase):
                     'C36 -> C34 -> C32 -> C31 -> C30'])
         )
 
+    def test_complete_diagnosis_scenario_four(self) -> None:
+        """
+        Tests the state machine's functionality based on the defined test "scenario four" with its expected outcome.
+        """
+        # init local implementations of I/O interfaces
+        data_acc = TestDataAccessor(4)  # scenario four
+        data_prov = TestDataProvider()
+        model_acc = LocalModelAccessor()
+
+        sm = VehicleDiagnosisStateMachine(data_acc, model_acc, data_prov)
+        sm.execute()
+        self.assertEqual(
+            sorted(sm.userdata.final_output),
+            sorted(['C29 -> C28 -> C26 -> C24 -> C22', 'C29 -> C27 -> C25 -> C24 -> C22',
+                    'C36 -> C34 -> C33 -> C31 -> C30', 'C36 -> C34 -> C32 -> C31 -> C30'])
+        )
+
 
 if __name__ == '__main__':
     smach.set_loggers(log_info, log_debug, log_warn, log_err)  # set custom logging functions
