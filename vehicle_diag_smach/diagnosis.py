@@ -57,7 +57,8 @@ class DiagnosisStateMachine(smach.StateMachine):
                      IsolateProblemCheckEffectiveRadius(
                          self.data_accessor, self.model_accessor, self.data_provider, self.kg_url
                      ),
-                     transitions={'isolated_problem': 'PROVIDE_DIAG_AND_SHOW_TRACE'},
+                     transitions={'isolated_problem': 'PROVIDE_DIAG_AND_SHOW_TRACE',
+                                  'isolated_problem_remaining_DTCs': 'SELECT_BEST_UNUSED_ERROR_CODE_INSTANCE'},
                      remapping={'classified_components': 'sm_input', 'fault_paths': 'sm_input'})
 
             self.add('NO_PROBLEM_DETECTED_CHECK_SENSOR',
