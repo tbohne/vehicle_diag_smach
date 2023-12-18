@@ -90,10 +90,10 @@ $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 ## State Machine Architecture
 
 **Hierarchical Diagnosis State Machine (High-Level)**
-![](img/smach_high_level_v2.svg)
+![](img/smach_high_level_v3.svg)
 
 **Embedded Diagnosis State Machine (Low-Level)**
-![](img/smach_low_level_v2.svg)
+![](img/smach_low_level_v3.svg)
 
 ## Fault Isolation Result Example
 ![](img/fault_isolation.svg)
