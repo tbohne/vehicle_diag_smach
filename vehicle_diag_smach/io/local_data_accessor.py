@@ -50,7 +50,7 @@ class LocalDataAccessor(DataAccessor):
         while val != "":
             val = input("\nlocal interface impl.: sim processing OBD data..")
         obd_data = OnboardDiagnosisData(
-            ['P2563'], "Mazda 3", "849357984", "453948539", "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
+            ['P0123'], "Bobbycar", "849357984", "453948539", "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
         )
         print(obd_data)
         return obd_data
@@ -72,11 +72,12 @@ class LocalDataAccessor(DataAccessor):
 
         # create dummy oscillograms for fault isolation
         # --> hard-coded for demo purposes - showing reasonable case
-        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "Ladedruck-Regelventil" + ".csv")
-        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG2, osci_session_dir + "Ladedrucksteller-Positionssensor" + ".csv")
-        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "VTG-Abgasturbolader" + ".csv")
-        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "Motor-Steuergerät" + ".csv")
-        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "Ladedruck-Magnetventil" + ".csv")
+        # shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "Ladedruck-Regelventil" + ".csv")
+        # shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG2, osci_session_dir + "Ladedrucksteller-Positionssensor" + ".csv")
+        # shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "VTG-Abgasturbolader" + ".csv")
+        # shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "Motor-Steuergerät" + ".csv")
+        # shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "Ladedruck-Magnetventil" + ".csv")
+        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "Lenkrad" + ".csv")
 
     def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
         """
