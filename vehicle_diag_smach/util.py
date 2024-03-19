@@ -11,6 +11,8 @@ from oscillogram_classification import preprocess
 from tensorflow import keras
 from termcolor import colored
 
+from tslearn.preprocessing import TimeSeriesResampler
+
 from vehicle_diag_smach.config import SESSION_DIR, DTC_TMP_FILE
 from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 
@@ -30,7 +32,7 @@ def validate_keras_model(model: keras.models.Model) -> None:
     in_shape = model.input_shape
     out_shape = model.output_shape
     expected_in_shape = (None, in_shape[1], 1)
-    expected_out_shape = (None, 1)
+    expected_out_shape = (None, 4)
 
     if len(in_shape) != len(expected_in_shape) or any(dim1 != dim2 for dim1, dim2 in zip(in_shape, expected_in_shape)):
         raise ValueError(f"unexpected input shape - expected: {expected_in_shape}, got: {in_shape}")
@@ -98,7 +100,14 @@ def construct_net_input(model: keras.models.Model, voltages: List[float]) -> np.
     :param voltages: input voltage values (time series) to be reshaped
     :return: constructed / reshaped input
     """
-    net_input_size = model.layers[0].output_shape[0][1]
+    # net_input_size = model.layers[0].output_shape[0][1]
+    net_input_size = model.input_shape[1]
+
+    print("input size:", net_input_size)
+    print("len(voltages):", len(voltages))
+    signal = TimeSeriesResampler(sz=net_input_size).fit_transform(voltages).tolist()[0]
+    voltages = [val[0] for val in signal]
+
     assert net_input_size == len(voltages)
     net_input = np.asarray(voltages).astype('float32')
     return net_input.reshape((net_input.shape[0], 1))
