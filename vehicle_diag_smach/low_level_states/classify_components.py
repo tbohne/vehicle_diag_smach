@@ -166,6 +166,8 @@ class ClassifyComponents(smach.State):
                 util.validate_keras_model(model)
             except ValueError as e:
                 util.invalid_model(osci_data, suggestion_list, e)
+                import time
+                time.sleep(10)
                 continue
 
             net_input = util.construct_net_input(model, voltages)
@@ -175,6 +177,13 @@ class ClassifyComponents(smach.State):
             anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
             pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
 
+            print("RESULT::::::::::::::::::::::::::::::::::::::::")
+            print("prediction:", prediction)
+            print("predicted class:", np.argmax(prediction))
+
+            import time
+            time.sleep(10)
+
             if anomaly:
                 util.log_anomaly(pred_value)
                 anomalous_components.append(osci_data.comp_name)
@@ -182,17 +191,18 @@ class ClassifyComponents(smach.State):
                 util.log_regular(pred_value)
                 non_anomalous_components.append(osci_data.comp_name)
 
-            heatmaps = util.gen_heatmaps(net_input, model, prediction)
-            res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
+            # heatmaps = util.gen_heatmaps(net_input, model, prediction)
+            # res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
             self.log_corresponding_dtc(osci_data)
-            print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+            # print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
 
-            # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-                "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
-            )
-            heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), osci_data.comp_name + res_str)
-            self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
+            # # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+            # heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+            #     "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+            # )
+            # heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), osci_data.comp_name + res_str)
+            # self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
+            heatmap_id = "no_heatmap"
             classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
                 anomaly, components_to_be_recorded[osci_data.comp_name], osci_data.comp_name, pred_value,
                 model_meta_info["model_id"], osci_id, heatmap_id
