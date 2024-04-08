@@ -61,6 +61,8 @@ def preprocess_time_series_based_on_model_meta_info(
         return preprocess.decimal_scaling_normalize_time_series(voltages, 2)
     elif model_meta_info["normalization_method"] == "log_norm":
         return preprocess.logarithmic_normalize_time_series(voltages, 10)
+    elif model_meta_info["normalization_method"] == "hm":
+        return [i / 100.0 for i in voltages]
     return voltages
 
 
@@ -98,7 +100,12 @@ def construct_net_input(model: keras.models.Model, voltages: List[float]) -> np.
     :param voltages: input voltage values (time series) to be reshaped
     :return: constructed / reshaped input
     """
-    net_input_size = model.layers[0].output_shape[0][1]
+    # net_input_size = model.layers[0].output_shape[0][1]
+    net_input_size = model.input_shape[1]
+    print("input size:", net_input_size)
+    print("len(voltages):", len(voltages))
+    # model expects input of len 512, we take the last 2048 data points with a step-width of 4
+    voltages = voltages[-2048::4]
     assert net_input_size == len(voltages)
     net_input = np.asarray(voltages).astype('float32')
     return net_input.reshape((net_input.shape[0], 1))
