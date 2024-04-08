@@ -239,7 +239,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         for key in complete_graphs.keys():
             print("visualizing graph for component:", key, "\n")
             plt.figure(figsize=(25, 18))
-            plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=24, fontweight='bold')
+            plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=32, fontweight='bold')
             from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
             to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
             to_relations = [item for lst in to_relations for item in lst]
@@ -249,9 +249,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             )
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
-            pos = nx.spring_layout(g, scale=0.3, seed=5)
+            pos = nx.spring_layout(g, scale=0.05, seed=5)
             nx.draw(
-                g, pos=pos, with_labels=True, node_size=30000, font_size=10, alpha=0.75, arrows=True, edge_color=colors,
+                g, pos=pos, with_labels=True, node_size=30000, font_size=20, alpha=0.75, arrows=True, edge_color=colors,
                 width=widths
             )
             legend_lines = [self.create_legend_line(clr, lw=5) for clr in ['r', 'g', 'black']]
@@ -259,7 +259,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             # initial preview does not require a legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
-                plt.legend(legend_lines, labels, fontsize=20, loc='lower right')
+                plt.legend(legend_lines, labels, fontsize=20, loc='best')
 
             buf = io.BytesIO()  # create bytes object and save matplotlib fig into it
             plt.savefig(buf, format='png')
