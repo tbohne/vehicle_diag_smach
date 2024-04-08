@@ -37,10 +37,25 @@ class LocalModelAccessor(ModelAccessor):
             trained_model_file = TRAINED_MODEL_POOL + component + ".h5"
             print("loading trained model:", trained_model_file)
             model_meta_info = {
-                "normalization_method": "z_norm",
+                "normalization_method": "hm",
                 "model_id": "keras_univariate_ts_classification_model_001"
             }
-            return keras.models.load_model(trained_model_file), model_meta_info
+
+            print("...MODEL INFO...")
+            model = keras.models.load_model(trained_model_file)
+            model.summary()
+
+            architecture_type = type(model).__name__
+            print("architecture type:", architecture_type)
+
+            input_shape = model.input_shape
+            print("input shape:", input_shape)
+            output_shape = model.output_shape
+            print("output shape:", output_shape)
+            val = None
+            while val != "":
+                val = input("\n......")
+            return model, model_meta_info
         except OSError as e:
             print("no trained model available for the signal (component) to be classified:", component)
             print("ERROR:", e)
