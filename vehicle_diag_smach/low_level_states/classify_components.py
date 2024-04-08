@@ -9,7 +9,6 @@ from typing import List, Dict, Tuple
 import numpy as np
 import smach
 from obd_ontology import ontology_instance_generator
-from oscillogram_classification import cam
 from termcolor import colored
 
 from vehicle_diag_smach import util
@@ -182,17 +181,18 @@ class ClassifyComponents(smach.State):
                 util.log_regular(pred_value)
                 non_anomalous_components.append(osci_data.comp_name)
 
-            heatmaps = util.gen_heatmaps(net_input, model, prediction)
-            res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
+            # heatmaps = util.gen_heatmaps(net_input, model, prediction)
+            # res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
             self.log_corresponding_dtc(osci_data)
-            print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+            # print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
 
-            # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-                "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
-            )
-            heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), osci_data.comp_name + res_str)
-            self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
+            # # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+            # heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+            #     "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+            # )
+            # heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), osci_data.comp_name + res_str)
+            # self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
+            heatmap_id = "no_heatmap"
             classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
                 anomaly, components_to_be_recorded[osci_data.comp_name], osci_data.comp_name, pred_value,
                 model_meta_info["model_id"], osci_id, heatmap_id

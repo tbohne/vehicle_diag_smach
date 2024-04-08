@@ -129,14 +129,15 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         else:
             util.log_regular(prediction[0][0])
 
-        heatmaps = util.gen_heatmaps(net_input, model, prediction)
-        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
-        print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
-        # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-        heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-            "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
-        )
-        self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltages)
+        # heatmaps = util.gen_heatmaps(net_input, model, prediction)
+        # res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
+        # print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+        # # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+        # heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+        #     "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+        # )
+        # self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltages)
+        heatmap_id = "no_heatmap"
         classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
             anomaly, classification_reason, affecting_comp, prediction[0][0], model_meta_info['model_id'],
             osci_id, heatmap_id
