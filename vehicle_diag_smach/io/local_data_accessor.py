@@ -72,8 +72,18 @@ class LocalDataAccessor(DataAccessor):
 
         # create dummy oscillograms for fault isolation
         # --> hard-coded for demo purposes - showing reasonable case
+
+        # both have anomaly
         shutil.copy(HM_LICHTMASCHINE_NEG, osci_session_dir + "Lichtmaschine" + ".csv")
         shutil.copy(HM_BATTERIE_NEG, osci_session_dir + "Batterie" + ".csv")
+
+        # anomaly at "Lichtmaschine" only -- not found based on the input error -> only "Scheinwerfer" then
+        # shutil.copy(HM_LICHTMASCHINE_NEG, osci_session_dir + "Lichtmaschine" + ".csv")
+        # shutil.copy(HM_BATTERIE_POS, osci_session_dir + "Batterie" + ".csv")
+
+        # anomaly at "Batterie" only
+        # shutil.copy(HM_LICHTMASCHINE_POS, osci_session_dir + "Lichtmaschine" + ".csv")
+        # shutil.copy(HM_BATTERIE_NEG, osci_session_dir + "Batterie" + ".csv")
 
     @staticmethod
     def read_oscilloscope_rec_hm(rec_file: str):
