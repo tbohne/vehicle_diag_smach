@@ -8,11 +8,10 @@ from datetime import date
 from pathlib import Path
 from typing import List
 
-from oscillogram_classification import preprocess
+import pandas as pd
 from py4j.java_gateway import JavaGateway
 
 from vehicle_diag_smach.config import DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, \
-    DUMMY_ISOLATION_OSCILLOGRAM_POS, DUMMY_ISOLATION_OSCILLOGRAM_NEG1, DUMMY_ISOLATION_OSCILLOGRAM_NEG2, \
     HM_LICHTMASCHINE_NEG, HM_BATTERIE_NEG
 from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE
 from vehicle_diag_smach.data_types.customer_complaint_data import CustomerComplaintData
@@ -76,6 +75,17 @@ class LocalDataAccessor(DataAccessor):
         shutil.copy(HM_LICHTMASCHINE_NEG, osci_session_dir + "Lichtmaschine" + ".csv")
         shutil.copy(HM_BATTERIE_NEG, osci_session_dir + "Batterie" + ".csv")
 
+    @staticmethod
+    def read_oscilloscope_rec_hm(rec_file: str):
+        # check whether it's a labeled file
+        if "pos" in str(rec_file).lower() or "neg" in str(rec_file).lower():
+            label = 1 if "pos" in str(rec_file).lower() else 0  # label: pos (1) / neg (0)
+        else:
+            label = None
+        df = pd.read_csv(rec_file, delimiter=',', na_values=['-∞', '∞'])
+        curr_voltages = df['Omniscope-E46228B163272D25'].to_list()
+        return label, curr_voltages
+
     def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
         """
         Retrieves the oscillogram data for the specified components.
@@ -91,7 +101,7 @@ class LocalDataAccessor(DataAccessor):
         oscillograms = []
         for comp in components:
             path = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/" + comp + ".csv"
-            _, voltages = preprocess.read_oscilloscope_recording(path)
+            _, voltages = self.read_oscilloscope_rec_hm(path)
             oscillograms.append(OscillogramData(voltages, comp))
         return oscillograms
 
