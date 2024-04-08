@@ -95,4 +95,7 @@ if __name__ == '__main__':
     sm = VehicleDiagnosisStateMachine(data_acc, model_acc, data_prov)
     tf.get_logger().setLevel(logging.ERROR)
     sm.execute()
-    print("final output of smach execution (fault path(s)):", sm.userdata.final_output)
+    if "final_output" in sm.userdata:
+        print("final output of smach execution (fault path(s)):", sm.userdata.final_output)
+    else:
+        print("final output of smach execution: no diag -- refuted hypothesis")
