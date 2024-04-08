@@ -19,3 +19,6 @@ DUMMY_OSCILLOGRAMS = "res/dummy_oscillograms/"
 DUMMY_ISOLATION_OSCILLOGRAM_POS = "res/dummy_isolation_oscillogram/dummy_isolation_POS.csv"
 DUMMY_ISOLATION_OSCILLOGRAM_NEG1 = "res/dummy_isolation_oscillogram/dummy_isolation_NEG1.csv"
 DUMMY_ISOLATION_OSCILLOGRAM_NEG2 = "res/dummy_isolation_oscillogram/dummy_isolation_NEG2.csv"
+# HM setup
+HM_LICHTMASCHINE_NEG = "res/HM_setup/waves_HMI_interpolated/waves_HMI_final/sawu/5_159/interpolated/test/test_0-2024-03-26T12-59.csv"
+HM_BATTERIE_NEG = "res/HM_setup/waves_HMI_interpolated/waves_HMI_final/sin/5_159/interpolated/test/test_0-2024-03-26T12-39.csv"
