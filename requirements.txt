@@ -8,5 +8,5 @@ termcolor
 matplotlib
 pandas
 numpy
-git+https://github.com/tbohne/obd_ontology.git@v0.1
-git+https://github.com/tbohne/oscillogram_classification.git@v0.1.1
+git+https://github.com/tbohne/obd_ontology.git
+git+https://github.com/tbohne/oscillogram_classification.git
