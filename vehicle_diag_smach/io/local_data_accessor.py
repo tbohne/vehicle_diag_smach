@@ -3,6 +3,7 @@
 # @author Tim Bohne
 
 import os
+import random
 import shutil
 from datetime import date
 from pathlib import Path
@@ -83,7 +84,14 @@ class LocalDataAccessor(DataAccessor):
         self.create_local_dummy_oscillograms()
         oscillograms = []
         for comp in components:
-            path = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/" + comp + ".csv"
+            comp_recordings = [f for f in os.listdir(SESSION_DIR + "/" + OSCI_SESSION_FILES + "/") if comp in f]
+            # TODO: we are typically interested in the NEG samples, i.e., the ones with anomaly
+            comp_recordings = [f for f in comp_recordings if "NEG" in f]
+            random.seed(42)
+            # select random sample for the corresponding component
+            random_rec = random.choice(comp_recordings)
+
+            path = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/" + random_rec
             _, voltages = preprocess.read_oscilloscope_recording(path)
             oscillograms.append(OscillogramData(voltages, comp))
         return oscillograms
