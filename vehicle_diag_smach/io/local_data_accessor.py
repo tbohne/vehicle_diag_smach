@@ -11,8 +11,7 @@ from typing import List
 from oscillogram_classification import preprocess
 from py4j.java_gateway import JavaGateway
 
-from vehicle_diag_smach.config import DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, \
-    DUMMY_ISOLATION_OSCILLOGRAM_POS, DUMMY_ISOLATION_OSCILLOGRAM_NEG1, DUMMY_ISOLATION_OSCILLOGRAM_NEG2
+from vehicle_diag_smach.config import OSCI_SESSION_FILES, FINAL_DEMO_TEST_SAMPLES
 from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE
 from vehicle_diag_smach.data_types.customer_complaint_data import CustomerComplaintData
 from vehicle_diag_smach.data_types.onboard_diagnosis_data import OnboardDiagnosisData
@@ -50,7 +49,7 @@ class LocalDataAccessor(DataAccessor):
         while val != "":
             val = input("\nlocal interface impl.: sim processing OBD data..")
         obd_data = OnboardDiagnosisData(
-            ['P2563'], "Mazda 3", "849357984", "453948539", "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
+            ['P0172'], "Mazda 3", "849357984", "453948539", "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
         )
         print(obd_data)
         return obd_data
@@ -65,18 +64,10 @@ class LocalDataAccessor(DataAccessor):
         if not os.path.exists(osci_session_dir):
             os.makedirs(osci_session_dir)
 
-        # create dummy oscillograms in '/session_files'
-        for path in Path(DUMMY_OSCILLOGRAMS).rglob('*.csv'):
+        # final demo - copy all test files to session dir
+        for path in Path(FINAL_DEMO_TEST_SAMPLES).rglob('*.csv'):
             src = str(path)
             shutil.copy(src, osci_session_dir + str(src.split("/")[-1]))
-
-        # create dummy oscillograms for fault isolation
-        # --> hard-coded for demo purposes - showing reasonable case
-        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "Ladedruck-Regelventil" + ".csv")
-        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG2, osci_session_dir + "Ladedrucksteller-Positionssensor" + ".csv")
-        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "VTG-Abgasturbolader" + ".csv")
-        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_POS, osci_session_dir + "Motor-Steuergerät" + ".csv")
-        shutil.copy(DUMMY_ISOLATION_OSCILLOGRAM_NEG1, osci_session_dir + "Ladedruck-Magnetventil" + ".csv")
 
     def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
         """
