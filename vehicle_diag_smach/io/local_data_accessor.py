@@ -12,7 +12,7 @@ from typing import List
 from oscillogram_classification import preprocess
 from py4j.java_gateway import JavaGateway
 
-from vehicle_diag_smach.config import OSCI_SESSION_FILES, FINAL_DEMO_TEST_SAMPLES
+from vehicle_diag_smach.config import OSCI_SESSION_FILES, FINAL_DEMO_TEST_SAMPLES, SEED
 from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE
 from vehicle_diag_smach.data_types.customer_complaint_data import CustomerComplaintData
 from vehicle_diag_smach.data_types.onboard_diagnosis_data import OnboardDiagnosisData
@@ -87,7 +87,7 @@ class LocalDataAccessor(DataAccessor):
             comp_recordings = [f for f in os.listdir(SESSION_DIR + "/" + OSCI_SESSION_FILES + "/") if comp in f]
             # TODO: we are typically interested in the NEG samples, i.e., the ones with anomaly
             comp_recordings = [f for f in comp_recordings if "NEG" in f]
-            random.seed(42)
+            random.seed(SEED)
             # select random sample for the corresponding component
             random_rec = random.choice(comp_recordings)
 

@@ -23,3 +23,4 @@ DUMMY_ISOLATION_OSCILLOGRAM_NEG2 = "res/dummy_isolation_oscillogram/dummy_isolat
 
 # final demo data
 FINAL_DEMO_TEST_SAMPLES = "res/final_demo_data/"
+SEED = 42
