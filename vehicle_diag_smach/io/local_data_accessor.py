@@ -92,8 +92,8 @@ class LocalDataAccessor(DataAccessor):
             random_rec = random.choice(comp_recordings)
 
             path = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/" + random_rec
-            _, voltages = preprocess.read_oscilloscope_recording(path)
-            oscillograms.append(OscillogramData(voltages, comp))
+            signal, _ = preprocess.gen_multivariate_signal_from_csv(path)
+            oscillograms.append(OscillogramData(signal, comp))
         return oscillograms
 
     def get_customer_complaints(self) -> CustomerComplaintData:
