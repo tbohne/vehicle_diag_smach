@@ -4,9 +4,10 @@
 
 from typing import Union, Tuple
 
+import torch
 from tensorflow import keras
 
-from vehicle_diag_smach.config import TRAINED_MODEL_POOL
+from vehicle_diag_smach.config import TRAINED_MODEL_POOL, FINAL_DEMO_MODELS
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 
 
@@ -36,11 +37,43 @@ class LocalModelAccessor(ModelAccessor):
         try:
             trained_model_file = TRAINED_MODEL_POOL + component + ".h5"
             print("loading trained model:", trained_model_file)
+            # TODO: I could obtain these information from the KG
             model_meta_info = {
                 "normalization_method": "z_norm",
                 "model_id": "keras_univariate_ts_classification_model_001"
             }
             return keras.models.load_model(trained_model_file), model_meta_info
+        except OSError as e:
+            print("no trained model available for the signal (component) to be classified:", component)
+            print("ERROR:", e)
+
+    def get_torch_multivariate_ts_classification_model_by_component(
+            self, component: str
+    ) -> Union[Tuple[torch.nn.Module, dict], None]:
+        """
+        Retrieves a trained model to classify signals of the specified vehicle component.
+
+        The provided model is expected to be a Torch model satisfying the following assumptions:
+            - input_shape: (None, len_of_ts, num_of_chan)
+            - output_shape: (None, 1)
+        Thus, in both cases we have a variable batch size due to `None`. For the input we expect a list of lists of
+        scalars and for the output exactly one scalar.
+
+        :param component: vehicle component to retrieve trained model for
+        :return: trained model and model meta info dictionary or `None` if unavailable
+        """
+        try:
+            trained_model_file = FINAL_DEMO_MODELS + component + ".pth"
+            print("loading trained model:", trained_model_file)
+            # TODO: I could obtain these information from the KG
+            model_meta_info = {
+                "normalization_method": "z_norm",
+                "model_id": component + "_XCM_v1_H5bqdN5pjTmTs6RGaCPEqL"
+            }
+            model = torch.load(trained_model_file)
+            # ensure model is in evaluation mode
+            model.eval()
+            return model, model_meta_info
         except OSError as e:
             print("no trained model available for the signal (component) to be classified:", component)
             print("ERROR:", e)
