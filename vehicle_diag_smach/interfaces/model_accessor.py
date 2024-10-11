@@ -5,6 +5,7 @@
 from abc import ABC, abstractmethod
 from typing import Union, Tuple
 
+import torch
 from tensorflow import keras
 
 
@@ -25,6 +26,24 @@ class ModelAccessor(ABC):
             - output_shape: (None, 1)
         Thus, in both cases we have a variable batch size due to `None`. For the input we expect a list of scalars and
         for the output exactly one scalar.
+
+        :param component: vehicle component to retrieve trained model for
+        :return: trained model and model meta info dictionary or `None` if unavailable
+        """
+        pass
+
+    @abstractmethod
+    def get_torch_multivariate_ts_classification_model_by_component(
+            self, component: str
+    ) -> Union[Tuple[torch.nn.Module, dict], None]:
+        """
+        Retrieves a trained model to classify signals of the specified vehicle component.
+
+        The provided model is expected to be a Torch model satisfying the following assumptions:
+            - input_shape: (None, len_of_ts, num_of_chan)
+            - output_shape: (None, 1)
+        Thus, in both cases we have a variable batch size due to `None`. For the input we expect a list of lists of
+        scalars and for the output exactly one scalar.
 
         :param component: vehicle component to retrieve trained model for
         :return: trained model and model meta info dictionary or `None` if unavailable
