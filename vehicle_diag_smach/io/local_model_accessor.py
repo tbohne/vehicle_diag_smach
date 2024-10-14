@@ -68,7 +68,8 @@ class LocalModelAccessor(ModelAccessor):
             # TODO: I could obtain these information from the KG
             model_meta_info = {
                 "normalization_method": "z_norm",
-                "model_id": component + "_XCM_v1_H5bqdN5pjTmTs6RGaCPEqL"
+                "model_id": component + "_XCM_v1_H5bqdN5pjTmTs6RGaCPEqL",
+                "input_length": 500
             }
             model = torch.load(trained_model_file)
             # ensure model is in evaluation mode
