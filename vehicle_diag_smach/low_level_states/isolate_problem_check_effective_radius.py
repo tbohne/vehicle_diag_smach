@@ -12,6 +12,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import smach
+import torch
 from PIL import Image
 from matplotlib.lines import Line2D
 from obd_ontology import knowledge_graph_query_tool
@@ -65,23 +66,36 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if not os.path.exists(osci_iso_session_dir):
             os.makedirs(osci_iso_session_dir)
 
-    def get_model_and_metadata(self, affecting_comp: str) -> Tuple[keras.models.Model, dict]:
+    def get_model_and_metadata(self, affecting_comp: str, voltage_dfs: List[pd.DataFrame]) -> Tuple[
+        keras.models.Model, dict]:
         """
         Retrieves the trained model and the corresponding metadata.
 
         :param affecting_comp: vehicle component to retrieve trained model for
+        :param voltage_dfs: list of oscillogram channels
         :return: tuple of trained model and corresponding metadata
         """
-        model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(affecting_comp)
+        # multivariate
+        if len(voltage_dfs) > 1:
+            model = self.model_accessor.get_torch_multivariate_ts_classification_model_by_component(affecting_comp)
+        # univariate
+        else:
+            model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(affecting_comp)
+
         if model is None:
             pass  # TODO: handle model is None cases
         (model, model_meta_info) = model
-        try:
-            util.validate_keras_model(model)
-        except ValueError as e:
-            print("invalid model for the signal (component) to be classified:", affecting_comp)
-            print("error:", e, "\nadding it to the list of components to be verified manually..")
-            # TODO: actually handle the case
+
+        if isinstance(model, keras.models.Model):
+            try:
+                util.validate_keras_model(model)
+            except ValueError as e:
+                print("invalid model for the signal (component) to be classified:", affecting_comp)
+                print("error:", e, "\nadding it to the list of components to be verified manually..")
+                # TODO: actually handle the case
+        elif isinstance(model, torch.nn.Module):
+            # TODO: potentially add torch model validation
+            pass
         return model, model_meta_info
 
     def provide_heatmaps(
@@ -114,31 +128,67 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         # in this state, there is only one component to be classified, but there could be several
         oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
         assert len(oscillograms) == 1
-        voltages = oscillograms[0].time_series
-        osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(voltages)
-        model, model_meta_info = self.get_model_and_metadata(affecting_comp)
-        voltages = util.preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages)
-        net_input = util.construct_net_input(model, voltages)
-        prediction = model.predict(np.array([net_input]))
-        num_classes = len(prediction[0])
-        # addresses both models with one output neuron and those with several
-        anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
+        voltage_dfs = oscillograms[0].time_series
+        # TODO: here, we need to distinguish between multivariate and univariate
+        osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(voltage_dfs)
+
+        model, model_meta_info = self.get_model_and_metadata(affecting_comp, voltage_dfs)
+
+        for df in range(len(voltage_dfs)):
+            processed_chan = util.preprocess_time_series_based_on_model_meta_info(
+                model_meta_info, voltage_dfs[df].to_numpy()
+            ).flatten()
+            voltage_dfs[df] = pd.DataFrame(processed_chan)
+
+        if isinstance(model, keras.models.Model):
+            print("KERAS MODEL")
+            net_input = util.construct_net_input(model, voltage_dfs)
+            prediction = model.predict(np.array([net_input]))
+            num_classes = len(prediction[0])
+            pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
+            # addresses both models with one output neuron and those with several
+            anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
+
+            heatmaps = util.gen_heatmaps(net_input, model, prediction)
+            print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+            # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+                "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+            )
+            res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
+            self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltage_dfs)
+
+        elif isinstance(model, torch.nn.Module):
+            print("TORCH MODEL")
+            multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
+            # expected shape for test signals: (1, chan, length)
+            multivariate_sample = multivariate_sample.reshape(
+                multivariate_sample.shape[2], multivariate_sample.shape[0], multivariate_sample.shape[1]
+            )
+            tensor = torch.from_numpy(multivariate_sample).float()
+            # assumes model outputs logits for a multi-class classification problem
+            logits = model(tensor)
+            # convert logits to probabilities using softmax
+            probas = torch.softmax(logits, dim=1)
+            num_classes = len(probas[0])
+
+            # addresses both models with one output neuron and those with several
+            anomaly = int(torch.argmax(probas, dim=1)) == 0 if num_classes > 1 else probas[0][0] <= 0.5
+            pred_value = float(probas.max()) if num_classes > 1 else probas[0][0]
+
+            # TODO: impl heatmap generation for torch model (XCM)
+            heatmap_id = ""
+        else:
+            print("unknown model:", type(model))
+            return
 
         if anomaly:
-            util.log_anomaly(prediction[0][0])
+            util.log_anomaly(pred_value)
         else:
-            util.log_regular(prediction[0][0])
+            util.log_regular(pred_value)
 
-        heatmaps = util.gen_heatmaps(net_input, model, prediction)
-        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
-        print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
-        # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-        heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-            "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
-        )
-        self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltages)
         classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
-            anomaly, classification_reason, affecting_comp, prediction[0][0], model_meta_info['model_id'],
+            anomaly, classification_reason, affecting_comp, pred_value, model_meta_info['model_id'],
             osci_id, heatmap_id
         )
         return anomaly, classification_id
