@@ -66,8 +66,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if not os.path.exists(osci_iso_session_dir):
             os.makedirs(osci_iso_session_dir)
 
-    def get_model_and_metadata(self, affecting_comp: str, voltage_dfs: List[pd.DataFrame]) -> Tuple[
-        keras.models.Model, dict]:
+    def get_model_and_metadata(
+            self, affecting_comp: str, voltage_dfs: List[pd.DataFrame]
+    ) -> Tuple[Union[keras.models.Model, torch.nn.Module], dict]:
         """
         Retrieves the trained model and the corresponding metadata.
 
