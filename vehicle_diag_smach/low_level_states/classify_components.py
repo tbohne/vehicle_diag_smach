@@ -226,6 +226,7 @@ class ClassifyComponents(smach.State):
                 heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
                     "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
                 )
+                res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
                 heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltage_dfs),
                                                           osci_data.comp_name + res_str)
                 self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
@@ -241,7 +242,6 @@ class ClassifyComponents(smach.State):
                 util.log_regular(pred_value)
                 non_anomalous_components.append(osci_data.comp_name)
 
-            res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
             self.log_corresponding_dtc(osci_data)
             classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
                 anomaly, components_to_be_recorded[osci_data.comp_name], osci_data.comp_name, pred_value,
