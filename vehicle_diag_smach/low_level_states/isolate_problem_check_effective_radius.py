@@ -209,6 +209,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         comp = components_to_process.pop(0)
         if comp not in graph.keys():
             affecting_comp = self.qt.query_affected_by_relations_by_suspect_component(comp, False)
+
+            # add sub-components
+            affecting_comp += self.qt.query_sub_components_by_component(comp)
+
             components_to_process += affecting_comp
             graph[comp] = affecting_comp
         return self.construct_complete_graph(graph, components_to_process)
@@ -268,7 +272,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             if from_relations[i] not in explicitly_considered_links.keys() or to_relations[i] not in \
                     explicitly_considered_links[from_relations[i]]:
                 colors[i] = 'black'
-        widths = [8 if i not in causal_links else 10 for i in range(len(to_relations))]
+        widths = [16 if i not in causal_links else 20 for i in range(len(to_relations))]
         return colors, widths
 
     def gen_causal_graph_visualizations(
@@ -299,7 +303,12 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             )
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
-            pos = nx.spring_layout(g, scale=0.3, seed=5)
+            # pos = nx.spring_layout(g, scale=1, seed=67)
+
+            pos = nx.bipartite_layout(g, ["Lambdasonde", "Signalleitung (Druck) des Saugrohrdrucksensors",
+                                          "Signalleitung (Temperatur) des Saugrohrdrucksensors",
+                                          "Masseleitung des Saugrohrdrucksensors",
+                                          "Versorgungsspannung des Saugrohrdrucksensors"])
             nx.draw(
                 g, pos=pos, with_labels=True, node_size=30000, font_size=10, alpha=0.75, arrows=True, edge_color=colors,
                 width=widths
