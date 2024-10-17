@@ -272,7 +272,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             if from_relations[i] not in explicitly_considered_links.keys() or to_relations[i] not in \
                     explicitly_considered_links[from_relations[i]]:
                 colors[i] = 'black'
-        widths = [16 if i not in causal_links else 20 for i in range(len(to_relations))]
+        widths = [26 if i not in causal_links else 32 for i in range(len(to_relations))]
         return colors, widths
 
     def gen_causal_graph_visualizations(
@@ -292,8 +292,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             print("isolation results, i.e., causal path:\n", key, ":", anomalous_paths[key])
         for key in complete_graphs.keys():
             print("visualizing graph for component:", key, "\n")
-            plt.figure(figsize=(25, 18))
-            plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=24, fontweight='bold')
+            plt.figure(figsize=(50, 35))
+            plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=50, fontweight='bold')
             from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
             to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
             to_relations = [item for lst in to_relations for item in lst]
@@ -309,21 +309,22 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             pos = nx.bipartite_layout(
                 G=g,
                 align='horizontal',
-                nodes=["Lambdasonde", "Signalleitung (Druck) des Saugrohrdrucksensors",
-                       "Signalleitung (Temperatur) des Saugrohrdrucksensors", "Masseleitung des Saugrohrdrucksensors",
-                       "Versorgungsspannung des Saugrohrdrucksensors"]
+                nodes=list(g.nodes)[:1] + list(g.nodes)[6:]  # those are the nodes for the first partition
             )
 
+            labels = {n: n.replace(" ", "\n") for n in g.nodes}
+
             nx.draw(
-                g, pos=pos, with_labels=True, node_size=30000, font_size=10, alpha=0.75, arrows=True, edge_color=colors,
-                width=widths
+                g, pos=pos, with_labels=False, node_size=86000, font_size=25, alpha=0.75, arrows=True,
+                edge_color=colors, width=widths
             )
-            legend_lines = [self.create_legend_line(clr, lw=5) for clr in ['r', 'g', 'black']]
+            nx.draw_networkx_labels(g, pos, labels=labels, font_size=25, font_color='black')
+            legend_lines = [self.create_legend_line(clr, lw=20) for clr in ['r', 'g', 'black']]
             labels = ["fault path", "non-anomalous links", "disregarded"]
 
             # initial preview does not require a legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
-                plt.legend(legend_lines, labels, fontsize=20, loc='center right')
+                plt.legend(legend_lines, labels, fontsize=40, loc='center right')
 
             buf = io.BytesIO()  # create bytes object and save matplotlib fig into it
             plt.savefig(buf, format='png')
