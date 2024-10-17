@@ -305,10 +305,15 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
             # pos = nx.spring_layout(g, scale=1, seed=67)
 
-            pos = nx.bipartite_layout(g, ["Lambdasonde", "Signalleitung (Druck) des Saugrohrdrucksensors",
-                                          "Signalleitung (Temperatur) des Saugrohrdrucksensors",
-                                          "Masseleitung des Saugrohrdrucksensors",
-                                          "Versorgungsspannung des Saugrohrdrucksensors"])
+            # TODO: put somewhere into demo config
+            pos = nx.bipartite_layout(
+                G=g,
+                align='horizontal',
+                nodes=["Lambdasonde", "Signalleitung (Druck) des Saugrohrdrucksensors",
+                       "Signalleitung (Temperatur) des Saugrohrdrucksensors", "Masseleitung des Saugrohrdrucksensors",
+                       "Versorgungsspannung des Saugrohrdrucksensors"]
+            )
+
             nx.draw(
                 g, pos=pos, with_labels=True, node_size=30000, font_size=10, alpha=0.75, arrows=True, edge_color=colors,
                 width=widths
