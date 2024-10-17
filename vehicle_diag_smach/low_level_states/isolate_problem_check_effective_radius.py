@@ -323,7 +323,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             # initial preview does not require a legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
-                plt.legend(legend_lines, labels, fontsize=20, loc='lower right')
+                plt.legend(legend_lines, labels, fontsize=20, loc='center right')
 
             buf = io.BytesIO()  # create bytes object and save matplotlib fig into it
             plt.savefig(buf, format='png')
