@@ -8,6 +8,8 @@ from typing import Union, Tuple
 import torch
 from tensorflow import keras
 
+from vehicle_diag_smach.interfaces.rule_based_model import RuleBasedModel
+
 
 class ModelAccessor(ABC):
     """
@@ -29,6 +31,22 @@ class ModelAccessor(ABC):
 
         :param component: vehicle component to retrieve trained model for
         :return: trained model and model meta info dictionary or `None` if unavailable
+        """
+        pass
+
+    @abstractmethod
+    def get_rule_based_univariate_ts_classification_model_by_component(
+            self, component: str
+    ) -> Union[Tuple[RuleBasedModel, dict], None]:
+        """
+        Retrieves a rule-based model to classify signals of the specified vehicle component.
+
+        The provided model is expected to be a rule-based model satisfying the following assumptions:
+            - input_shape: (len_of_ts, 1)
+            - output_shape: bool
+
+        :param component: vehicle component to retrieve rule-based model for
+        :return: rule-based model and model meta info dictionary or `None` if unavailable
         """
         pass
 
