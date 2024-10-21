@@ -66,7 +66,8 @@ class LocalModelAccessor(ModelAccessor):
         # TODO: I could obtain these information from the KG
         model_meta_info = {
             "normalization_method": "z_norm",
-            "model_id": "rule_based_univariate_ts_classification_model_001"
+            "model_id": component + "_rule_based_univariate_ts_classification_model_001",
+            "input_length": 500
         }
         if "Lambdasonde" in component:
             return Lambdasonde(), model_meta_info
