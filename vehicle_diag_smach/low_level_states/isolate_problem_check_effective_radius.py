@@ -529,6 +529,17 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 tmp.append("(" + sub_anomalies[i] + ")")
                 causal_paths.append(tmp)
 
+    @staticmethod
+    def create_sub_comp_paths(causal_paths: List[List[str]], idx: int, sub_anomalies: List[str]):
+        starter_path = causal_paths[idx].copy()
+        if len(sub_anomalies) > 0:
+            causal_paths[idx].append("(" + sub_anomalies[0] + ")")
+            # create sub-comp paths
+            for i in range(1, len(sub_anomalies)):
+                tmp = starter_path.copy()
+                tmp.append("(" + sub_anomalies[i] + ")")
+                causal_paths.append(tmp)
+
     def handle_anomaly(
             self, causal_paths: List[List[str]], checked_comp: str, unisolated_anomalous_components: List[str],
             explicitly_considered_links: Dict[str, List[str]], dtc: str, classification_reason: str
@@ -566,20 +577,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 if checked_comp in explicitly_considered_links[last_comp]:
                     found_link_in_path = True
                     path_indices.append(i)
-
-            # extend path
-            if found_link_in_path:
+            if found_link_in_path:  # extend path
                 for idx in path_indices:
                     causal_paths[idx].append(checked_comp)
-                    starter_path = causal_paths[idx].copy()
-                    if len(sub_anomalies) > 0:
-                        causal_paths[idx].append("(" + sub_anomalies[0] + ")")
-                        # create sub-comp paths
-                        for i in range(1, len(sub_anomalies)):
-                            tmp = starter_path.copy()
-                            tmp.append("(" + sub_anomalies[i] + ")")
-                            causal_paths.append(tmp)
-
+                    self.create_sub_comp_paths(causal_paths, idx, sub_anomalies)
             else:  # branch
                 for i in range(len(causal_paths)):
                     second_last_comp = causal_paths[i][-2]
