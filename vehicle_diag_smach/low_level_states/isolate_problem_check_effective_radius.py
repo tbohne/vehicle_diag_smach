@@ -28,6 +28,9 @@ from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
+from vehicle_diag_smach.interfaces.rule_based_model import RuleBasedModel
+from vehicle_diag_smach.rule_based_models.Lambdasonde import Lambdasonde
+from vehicle_diag_smach.rule_based_models.Saugrohrdrucksensor import Saugrohrdrucksensor
 
 
 class IsolateProblemCheckEffectiveRadius(smach.State):
@@ -67,24 +70,22 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             os.makedirs(osci_iso_session_dir)
 
     def get_model_and_metadata(
-            self, affecting_comp: str, voltage_dfs: List[pd.DataFrame]
+            self, affecting_comp: str, voltage_dfs: List[pd.DataFrame], sub_comp: bool = False
     ) -> Tuple[Union[keras.models.Model, torch.nn.Module], dict]:
         """
         Retrieves the trained model and the corresponding metadata.
 
         :param affecting_comp: vehicle component to retrieve trained model for
         :param voltage_dfs: list of oscillogram channels
+        :param sub_comp: whether the model is supposed to classify a subcomponent (single chan)
         :return: tuple of trained model and corresponding metadata
         """
-        # multivariate
-        if len(voltage_dfs) > 1:
+        if sub_comp:  # rule-based single chan classification
+            model = self.model_accessor.get_rule_based_univariate_ts_classification_model_by_component(affecting_comp)
+        elif len(voltage_dfs) > 1:  # multivariate
             model = self.model_accessor.get_torch_multivariate_ts_classification_model_by_component(affecting_comp)
-        # univariate
-        else:
+        else:  # univariate
             model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(affecting_comp)
-
-        if model is None:
-            pass  # TODO: handle model is None cases
         (model, model_meta_info) = model
 
         if isinstance(model, keras.models.Model):
@@ -115,7 +116,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         self.data_provider.provide_heatmaps(heatmap_img, title)
 
     def classify_component(
-            self, affecting_comp: str, dtc: str, classification_reason: str
+            self, affecting_comp: str, dtc: str, classification_reason: str, sub_comp: bool = False
     ) -> Union[Tuple[bool, str], None]:
         """
         Classifies the oscillogram for the specified vehicle component.
@@ -123,17 +124,33 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param affecting_comp: component to classify oscillogram for
         :param dtc: DTC the original component suggestion was based on
         :param classification_reason: reason for the classification (ID of another classification)
+        :param sub_comp: whether a subcomponent is classified (super component otherwise)
         :return: tuple of whether an anomaly has been detected and the corresponding classification ID
         """
         self.create_session_data_dir()
         # in this state, there is only one component to be classified, but there could be several
-        oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
+
+        if sub_comp:
+            # the data accessor requires the super component
+            super_comp = self.qt.query_super_component(affecting_comp)[0]
+            # TODO: in case of a subcomponent we actually already retrieved the multivariate data before
+            #   - --> should just be loaded here (from session files?)
+            oscillograms = self.data_accessor.get_oscillograms_by_components([super_comp])
+        else:
+            oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
+            # TODO: here, we have to write it to the session files, so that we can load it in the sub_comp case
+
         assert len(oscillograms) == 1
         voltage_dfs = oscillograms[0].time_series
         # TODO: here, we need to distinguish between multivariate and univariate
         osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(voltage_dfs)
 
-        model, model_meta_info = self.get_model_and_metadata(affecting_comp, voltage_dfs)
+        model, model_meta_info = self.get_model_and_metadata(affecting_comp, voltage_dfs, sub_comp)
+
+        if sub_comp:
+            channels_for_super_comp = self.qt.query_sub_components_by_component(super_comp)
+            idx = channels_for_super_comp.index(affecting_comp)
+            voltage_dfs = [voltage_dfs[idx]]
 
         for df in range(len(voltage_dfs)):
             processed_chan = util.preprocess_time_series_based_on_model_meta_info(
@@ -179,6 +196,13 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             # TODO: impl heatmap generation for torch model (XCM)
             heatmap_id = ""
+        elif isinstance(model, RuleBasedModel):
+            if isinstance(model, Lambdasonde) or isinstance(model, Saugrohrdrucksensor):
+                anomaly = model.predict(voltage_dfs[0].to_numpy(), affecting_comp)
+            else:
+                anomaly = model.predict(voltage_dfs[0].to_numpy())
+            pred_value = 1.0
+            heatmap_id = ""
         else:
             print("unknown model:", type(model))
             return
@@ -188,6 +212,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         else:
             util.log_regular(pred_value)
 
+        affecting_comp = super_comp if sub_comp else affecting_comp
         classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
             anomaly, classification_reason, affecting_comp, pred_value, model_meta_info['model_id'],
             osci_id, heatmap_id
@@ -228,8 +253,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return Line2D([0, 1], [0, 1], color=color, **kwargs)
 
     @staticmethod
+    def get_anomalous_paths_without_sub_components(key: str, anomalous_paths: Dict[str, List[List[str]]]):
+        anomalous_paths_without_sub = []
+        if key in anomalous_paths.keys():
+            for path in anomalous_paths[key]:
+                anomalous_paths_without_sub.append([comp for comp in path if comp[0] != "(" and comp[-1] != ")"])
+        return anomalous_paths_without_sub
+
     def compute_causal_links(
-            to_relations: List[str], key: str, anomalous_paths: Dict[str, List[List[str]]], from_relations: List[str]
+            self, to_relations: List[str], key: str, anomalous_paths: Dict[str, List[List[str]]],
+            from_relations: List[str]
     ) -> List[int]:
         """
         Computes the causal links in the subgraph of cause-effect relationships.
@@ -240,14 +273,31 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param from_relations: 'from relations' of the considered subgraph
         :return: causal links in the subgraph
         """
+        anomalous_paths_without_sub = self.get_anomalous_paths_without_sub_components(key, anomalous_paths)
         causal_links = []
         for i in range(len(to_relations)):
             if key in anomalous_paths.keys():
                 for j in range(len(anomalous_paths[key])):
                     for k in range(len(anomalous_paths[key][j]) - 1):
-                        # causal link check
+                        # default causal link check
                         if (anomalous_paths[key][j][k] == from_relations[i]
                                 and anomalous_paths[key][j][k + 1] == to_relations[i]):
+                            causal_links.append(i)
+                            break
+                        # super components with subcomponents in between
+                        if (j < len(anomalous_paths_without_sub) and k < len(anomalous_paths_without_sub[j]) - 1
+                                and (anomalous_paths_without_sub[j][k] == from_relations[i]
+                                     and anomalous_paths_without_sub[j][k + 1] == to_relations[i])):
+                            causal_links.append(i)
+                            break
+                        # subcomponent check (from sub to super)
+                        if (anomalous_paths[key][j][k][1:-1] == from_relations[i]
+                                and anomalous_paths[key][j][k + 1] == to_relations[i]):
+                            causal_links.append(i)
+                            break
+                        # subcomponent check (from super to sub)
+                        if (anomalous_paths[key][j][k] == from_relations[i]
+                                and anomalous_paths[key][j][k + 1][1:-1] == to_relations[i]):
                             causal_links.append(i)
                             break
         return causal_links
@@ -427,9 +477,48 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         comp_id = sus_comp_resp[0].split("#")[1]
         return self.qt.query_suspect_component_name_by_id(comp_id)[0]
 
+    def create_sub_component_paths_for_initial_comp(
+            self, causal_paths: List[List[str]], dtc: str, classification_reason: str,
+            explicitly_considered_links: Dict[str, List[str]]
+    ):
+        sub_anomalies = []
+        entry_comp = causal_paths[0][0]
+        for sub_comp in self.qt.query_sub_components_by_component(entry_comp):
+            classification_res = self.classify_component(sub_comp, dtc, classification_reason, True)
+            (anomaly, classification_id) = classification_res
+            if anomaly:
+                sub_anomalies.append(sub_comp)
+            explicitly_considered_links[entry_comp].append(sub_comp)
+
+        starter_path = causal_paths[0].copy()
+        causal_paths[0].append("(" + sub_anomalies[0] + ")")
+        for i in range(1, len(sub_anomalies)):
+            tmp = starter_path.copy()
+            tmp.append("(" + sub_anomalies[i] + ")")
+            causal_paths.append(tmp)
+
+    def classify_sub_components_for_anomaly(
+            self, checked_comp: str, dtc: str, classification_reason: str,
+    ) -> Tuple[List[str], List[str]]:
+        # classify subcomponents for anomaly (univariate classification)
+        sub_anomalies = []
+        sub_regulars = []
+        for sub_comp in self.qt.query_sub_components_by_component(checked_comp):
+            classification_res = self.classify_component(sub_comp, dtc, classification_reason, True)
+            if classification_res is None:
+                print("issue in classifying sub-component", sub_comp)
+            else:
+                (anomaly, classification_id) = classification_res
+                print("classification res for", sub_comp, ":", anomaly)
+                if anomaly:
+                    sub_anomalies.append(sub_comp)
+                else:
+                    sub_regulars.append(sub_comp)
+        return sub_anomalies, sub_regulars
+
     def handle_anomaly(
             self, causal_paths: List[List[str]], checked_comp: str, unisolated_anomalous_components: List[str],
-            explicitly_considered_links: Dict[str, List[str]]
+            explicitly_considered_links: Dict[str, List[str]], dtc: str, classification_reason: str
     ) -> None:
         """
         Handles anomaly cases, i.e., extends the causal path, unisolated anomalous components, and explicitly
@@ -439,7 +528,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param checked_comp: checked component (found anomaly)
         :param unisolated_anomalous_components: list of unisolated anomalous components to be extended
         :param explicitly_considered_links: list of explicitly considered links to be extended
+        :param dtc: DTC the original component suggestion was based on
+        :param classification_reason: reason for the classification (ID of another classification)
         """
+        # the very first component entered; the beginning of isolation
+        if len(causal_paths) == 1 and len(causal_paths[0]) == 1:
+            self.create_sub_component_paths_for_initial_comp(
+                causal_paths, dtc, classification_reason, explicitly_considered_links
+            )
+        sub_anomalies, sub_regulars = self.classify_sub_components_for_anomaly(checked_comp, dtc, classification_reason)
+
         already_in_path = False
         for i in range(len(causal_paths)):
             if checked_comp in causal_paths[i]:
@@ -450,6 +548,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             path_indices = []
             for i in range(len(causal_paths)):
                 last_comp = causal_paths[i][-1]
+                if "(" in last_comp:
+                    last_comp = causal_paths[i][-2]
                 if checked_comp in explicitly_considered_links[last_comp]:
                     found_link_in_path = True
                     path_indices.append(i)
@@ -458,6 +558,14 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             if found_link_in_path:
                 for idx in path_indices:
                     causal_paths[idx].append(checked_comp)
+                    starter_path = causal_paths[idx].copy()
+                    causal_paths[idx].append("(" + sub_anomalies[0] + ")")
+                    # create sub-comp paths
+                    for i in range(1, len(sub_anomalies)):
+                        tmp = starter_path.copy()
+                        tmp.append("(" + sub_anomalies[i] + ")")
+                        causal_paths.append(tmp)
+
             else:  # branch
                 for i in range(len(causal_paths)):
                     second_last_comp = causal_paths[i][-2]
@@ -465,12 +573,21 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         # this thing has to branch
                         prev_path = causal_paths[i][:len(causal_paths[i]) - 1].copy()
                         prev_path.append(checked_comp)
+                        starter_path = prev_path.copy()
+                        prev_path.append("(" + sub_anomalies[0] + ")")
                         causal_paths.append(prev_path)
+                        # create sub-comp paths
+                        for sa in range(1, len(sub_anomalies)):
+                            tmp = starter_path.copy()
+                            tmp.append("(" + sub_anomalies[sa] + ")")
+                            causal_paths.append(tmp)
 
         affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(checked_comp)
         print("component potentially affected by:", affecting_comps)
         unisolated_anomalous_components += affecting_comps
         explicitly_considered_links[checked_comp] += affecting_comps.copy()
+        explicitly_considered_links[checked_comp] += sub_regulars
+        explicitly_considered_links[checked_comp] += sub_anomalies
 
     def work_through_unisolated_components(
             self, unisolated_anomalous_comps: List[str], explicitly_considered_links: Dict[str, List[str]],
@@ -497,7 +614,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                       already_checked_comps[comp_to_be_checked][0])
                 if already_checked_comps[comp_to_be_checked][0]:
                     self.handle_anomaly(
-                        causal_paths, comp_to_be_checked, unisolated_anomalous_comps, explicitly_considered_links
+                        causal_paths, comp_to_be_checked, unisolated_anomalous_comps, explicitly_considered_links, dtc,
+                        already_checked_comps[anomalous_comp][1]
                     )
                 continue
             use_oscilloscope = self.qt.query_oscilloscope_usage_by_suspect_component(comp_to_be_checked)[0]
@@ -522,7 +640,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 already_checked_comps[comp_to_be_checked] = (anomaly, classification_id)
             if anomaly:
                 self.handle_anomaly(
-                    causal_paths, comp_to_be_checked, unisolated_anomalous_comps, explicitly_considered_links
+                    causal_paths, comp_to_be_checked, unisolated_anomalous_comps, explicitly_considered_links, dtc,
+                    already_checked_comps[anomalous_comp][1]
                 )
             self.log_classification_action(comp_to_be_checked, bool(anomaly), use_oscilloscope, classification_id)
 
