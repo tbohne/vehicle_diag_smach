@@ -490,12 +490,13 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 sub_anomalies.append(sub_comp)
             explicitly_considered_links[entry_comp].append(sub_comp)
 
-        starter_path = causal_paths[0].copy()
-        causal_paths[0].append("(" + sub_anomalies[0] + ")")
-        for i in range(1, len(sub_anomalies)):
-            tmp = starter_path.copy()
-            tmp.append("(" + sub_anomalies[i] + ")")
-            causal_paths.append(tmp)
+        if len(sub_anomalies) > 0:
+            starter_path = causal_paths[0].copy()
+            causal_paths[0].append("(" + sub_anomalies[0] + ")")
+            for i in range(1, len(sub_anomalies)):
+                tmp = starter_path.copy()
+                tmp.append("(" + sub_anomalies[i] + ")")
+                causal_paths.append(tmp)
 
     def classify_sub_components_for_anomaly(
             self, checked_comp: str, dtc: str, classification_reason: str,
@@ -559,12 +560,13 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 for idx in path_indices:
                     causal_paths[idx].append(checked_comp)
                     starter_path = causal_paths[idx].copy()
-                    causal_paths[idx].append("(" + sub_anomalies[0] + ")")
-                    # create sub-comp paths
-                    for i in range(1, len(sub_anomalies)):
-                        tmp = starter_path.copy()
-                        tmp.append("(" + sub_anomalies[i] + ")")
-                        causal_paths.append(tmp)
+                    if len(sub_anomalies) > 0:
+                        causal_paths[idx].append("(" + sub_anomalies[0] + ")")
+                        # create sub-comp paths
+                        for i in range(1, len(sub_anomalies)):
+                            tmp = starter_path.copy()
+                            tmp.append("(" + sub_anomalies[i] + ")")
+                            causal_paths.append(tmp)
 
             else:  # branch
                 for i in range(len(causal_paths)):
@@ -574,13 +576,14 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         prev_path = causal_paths[i][:len(causal_paths[i]) - 1].copy()
                         prev_path.append(checked_comp)
                         starter_path = prev_path.copy()
-                        prev_path.append("(" + sub_anomalies[0] + ")")
-                        causal_paths.append(prev_path)
-                        # create sub-comp paths
-                        for sa in range(1, len(sub_anomalies)):
-                            tmp = starter_path.copy()
-                            tmp.append("(" + sub_anomalies[sa] + ")")
-                            causal_paths.append(tmp)
+                        if len(sub_anomalies) > 0:
+                            prev_path.append("(" + sub_anomalies[0] + ")")
+                            causal_paths.append(prev_path)
+                            # create sub-comp paths
+                            for sa in range(1, len(sub_anomalies)):
+                                tmp = starter_path.copy()
+                                tmp.append("(" + sub_anomalies[sa] + ")")
+                                causal_paths.append(tmp)
 
         affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(checked_comp)
         print("component potentially affected by:", affecting_comps)
