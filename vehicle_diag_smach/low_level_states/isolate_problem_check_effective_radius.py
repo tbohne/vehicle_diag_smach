@@ -517,6 +517,18 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     sub_regulars.append(sub_comp)
         return sub_anomalies, sub_regulars
 
+    @staticmethod
+    def create_sub_comp_paths_and_branch(prev_path: List[str], sub_anomalies: List[str], causal_paths: List[List[str]]):
+        starter_path = prev_path.copy()
+        if len(sub_anomalies) > 0:
+            prev_path.append("(" + sub_anomalies[0] + ")")
+            causal_paths.append(prev_path)
+            # create sub-comp paths
+            for i in range(1, len(sub_anomalies)):
+                tmp = starter_path.copy()
+                tmp.append("(" + sub_anomalies[i] + ")")
+                causal_paths.append(tmp)
+
     def handle_anomaly(
             self, causal_paths: List[List[str]], checked_comp: str, unisolated_anomalous_components: List[str],
             explicitly_considered_links: Dict[str, List[str]], dtc: str, classification_reason: str
@@ -575,15 +587,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         # this thing has to branch
                         prev_path = causal_paths[i][:len(causal_paths[i]) - 1].copy()
                         prev_path.append(checked_comp)
-                        starter_path = prev_path.copy()
-                        if len(sub_anomalies) > 0:
-                            prev_path.append("(" + sub_anomalies[0] + ")")
-                            causal_paths.append(prev_path)
-                            # create sub-comp paths
-                            for sa in range(1, len(sub_anomalies)):
-                                tmp = starter_path.copy()
-                                tmp.append("(" + sub_anomalies[sa] + ")")
-                                causal_paths.append(tmp)
+                        self.create_sub_comp_paths_and_branch(prev_path, sub_anomalies, causal_paths)
 
         affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(checked_comp)
         print("component potentially affected by:", affecting_comps)
