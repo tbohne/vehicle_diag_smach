@@ -18,12 +18,14 @@ from matplotlib.lines import Line2D
 from obd_ontology import knowledge_graph_query_tool
 from obd_ontology import ontology_instance_generator
 from oscillogram_classification import cam
+from oscillogram_classification import preprocess
 from tensorflow import keras
 from termcolor import colored
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
-    CLASSIFICATION_LOG_FILE, FAULT_PATH_TMP_FILE
+    CLASSIFICATION_LOG_FILE, FAULT_PATH_TMP_FILE, SELECTED_OSCILLOGRAMS
+from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
@@ -131,14 +133,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         # in this state, there is only one component to be classified, but there could be several
 
         if sub_comp:
-            # the data accessor requires the super component
+            # in case of a subcomponent, we already recorded the multivariate data
+            # --> the data is stored under the name of the super component
             super_comp = self.qt.query_super_component(affecting_comp)[0]
-            # TODO: in case of a subcomponent we actually already retrieved the multivariate data before
-            #   - --> should just be loaded here (from session files?)
-            oscillograms = self.data_accessor.get_oscillograms_by_components([super_comp])
+            # read from selected oscillograms in session files
+            path = SESSION_DIR + "/" + SELECTED_OSCILLOGRAMS + "/"
+            comp_recordings = [f for f in os.listdir(path) if super_comp in f]
+            signal, _ = preprocess.gen_multivariate_signal_from_csv(path + comp_recordings[0])
+            oscillograms = [OscillogramData(signal, super_comp)]
         else:
             oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
-            # TODO: here, we have to write it to the session files, so that we can load it in the sub_comp case
 
         assert len(oscillograms) == 1
         voltage_dfs = oscillograms[0].time_series
