@@ -65,10 +65,10 @@ class LocalDataAccessor(DataAccessor):
         if not os.path.exists(osci_session_dir):
             os.makedirs(osci_session_dir)
 
-        # final demo - copy all test files to session dir
-        for path in Path(FINAL_DEMO_TEST_SAMPLES).rglob('*.csv'):
-            src = str(path)
-            shutil.copy(src, osci_session_dir + str(src.split("/")[-1]))
+            # final demo - copy all test files to session dir
+            for path in Path(FINAL_DEMO_TEST_SAMPLES).rglob('*.csv'):
+                src = str(path)
+                shutil.copy(src, osci_session_dir + str(src.split("/")[-1]))
 
     def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
         """
