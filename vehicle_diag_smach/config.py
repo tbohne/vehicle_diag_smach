@@ -5,6 +5,7 @@
 KG_URL = "http://127.0.0.1:3030"
 SESSION_DIR = "session_files"
 OSCI_SESSION_FILES = "oscillograms"
+SELECTED_OSCILLOGRAMS = "selected_oscillograms"
 XPS_SESSION_FILE = "xps_session.xml"
 SUGGESTION_SESSION_FILE = "session_suggestions.json"
 CLASSIFICATION_LOG_FILE = "classifications.json"

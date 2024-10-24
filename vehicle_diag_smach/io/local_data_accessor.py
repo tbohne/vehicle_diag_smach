@@ -12,7 +12,7 @@ from typing import List
 from oscillogram_classification import preprocess
 from py4j.java_gateway import JavaGateway
 
-from vehicle_diag_smach.config import OSCI_SESSION_FILES, FINAL_DEMO_TEST_SAMPLES, SEED
+from vehicle_diag_smach.config import OSCI_SESSION_FILES, FINAL_DEMO_TEST_SAMPLES, SEED, SELECTED_OSCILLOGRAMS
 from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE
 from vehicle_diag_smach.data_types.customer_complaint_data import CustomerComplaintData
 from vehicle_diag_smach.data_types.onboard_diagnosis_data import OnboardDiagnosisData
@@ -69,6 +69,10 @@ class LocalDataAccessor(DataAccessor):
             for path in Path(FINAL_DEMO_TEST_SAMPLES).rglob('*.csv'):
                 src = str(path)
                 shutil.copy(src, osci_session_dir + str(src.split("/")[-1]))
+
+        selected_osci_session_dir = SESSION_DIR + "/" + SELECTED_OSCILLOGRAMS + "/"
+        if not os.path.exists(selected_osci_session_dir):
+            os.makedirs(selected_osci_session_dir)
 
     def get_oscillograms_by_components(self, components: List[str]) -> List[OscillogramData]:
         """
