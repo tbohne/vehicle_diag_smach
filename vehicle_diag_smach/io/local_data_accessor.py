@@ -96,6 +96,10 @@ class LocalDataAccessor(DataAccessor):
             random_rec = random.choice(comp_recordings)
 
             path = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/" + random_rec
+            dst = SESSION_DIR + "/" + SELECTED_OSCILLOGRAMS + "/" + random_rec
+            # copy selected recording to corresponding dir
+            shutil.copy(path, dst)
+
             signal, _ = preprocess.gen_multivariate_signal_from_csv(path)
             oscillograms.append(OscillogramData(signal, comp))
         return oscillograms
