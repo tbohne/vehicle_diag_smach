@@ -29,7 +29,7 @@ class Lambdasonde(RuleBasedModel):
         elif chan_name == "Plusleitung der Heizung der Lambdasonde":
             return False
         elif chan_name == "Plusleitung der Lambdasonde":
-            return False
+            return True
         elif chan_name == "Masseleitung der Lambdasonde":
             return False
         else:

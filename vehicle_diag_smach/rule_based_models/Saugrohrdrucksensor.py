@@ -25,9 +25,9 @@ class Saugrohrdrucksensor(RuleBasedModel):
         :return: true -> anomaly, false -> no anomaly
         """
         if chan_name == "Signalleitung (Druck) des Saugrohrdrucksensors":
-            return False
+            return True
         elif chan_name == "Signalleitung (Temperatur) des Saugrohrdrucksensors":
-            return False
+            return True
         elif chan_name == "Masseleitung des Saugrohrdrucksensors":
             return False
         elif chan_name == "Versorgungsspannung des Saugrohrdrucksensors":
