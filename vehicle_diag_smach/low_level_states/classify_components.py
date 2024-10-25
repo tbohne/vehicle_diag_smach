@@ -138,6 +138,30 @@ class ClassifyComponents(smach.State):
             osci_set_id = self.instance_gen.extend_knowledge_graph_with_parallel_rec_osci_set()
         return osci_set_id
 
+    @staticmethod
+    def classify_with_torch_model(
+            model: torch.nn.Module, voltage_dfs: List[pd.DataFrame]
+    ) -> Tuple[bool, float, str]:
+        multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
+        # expected shape for test signals: (1, chan, length)
+        multivariate_sample = multivariate_sample.reshape(
+            multivariate_sample.shape[2], multivariate_sample.shape[0], multivariate_sample.shape[1]
+        )
+        tensor = torch.from_numpy(multivariate_sample).float()
+        # assumes model outputs logits for a multi-class classification problem
+        logits = model(tensor)
+        # convert logits to probabilities using softmax
+        probas = torch.softmax(logits, dim=1)
+        num_classes = len(probas[0])
+
+        # addresses both models with one output neuron and those with several
+        anomaly = int(torch.argmax(probas, dim=1)) == 0 if num_classes > 1 else probas[0][0] <= 0.5
+        pred_value = float(probas.max()) if num_classes > 1 else probas[0][0]
+
+        # TODO: impl heatmap generation for torch model (XCM) (cf., ISOLATE_PROBLEM...)
+        heatmap_id = ""
+        return anomaly, pred_value, heatmap_id
+
     def process_oscillogram_recordings(
             self, oscillograms: List[OscillogramData], suggestion_list: Dict[str, Tuple[str, bool]],
             anomalous_components: List[str], non_anomalous_components: List[str],
@@ -185,25 +209,7 @@ class ClassifyComponents(smach.State):
             if isinstance(model, torch.nn.Module):
                 print("TORCH MODEL")
                 # TODO: potentially add torch model validation
-
-                multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
-                # expected shape for test signals: (1, chan, length)
-                multivariate_sample = multivariate_sample.reshape(
-                    multivariate_sample.shape[2], multivariate_sample.shape[0], multivariate_sample.shape[1]
-                )
-                tensor = torch.from_numpy(multivariate_sample).float()
-                # assumes model outputs logits for a multi-class classification problem
-                logits = model(tensor)
-                # convert logits to probabilities using softmax
-                probas = torch.softmax(logits, dim=1)
-                num_classes = len(probas[0])
-
-                # addresses both models with one output neuron and those with several
-                anomaly = int(torch.argmax(probas, dim=1)) == 0 if num_classes > 1 else probas[0][0] <= 0.5
-                pred_value = float(probas.max()) if num_classes > 1 else probas[0][0]
-
-                # TODO: impl heatmap generation for torch model (XCM)
-                heatmap_id = ""
+                anomaly, pred_value, heatmap_id = self.classify_with_torch_model(model, voltage_dfs)
 
             elif isinstance(model, keras.models.Model):
                 print("KERAS MODEL")
