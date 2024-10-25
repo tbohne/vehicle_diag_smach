@@ -117,6 +117,39 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), title)
         self.data_provider.provide_heatmaps(heatmap_img, title)
 
+    @staticmethod
+    def classify_with_torch_model(
+            model: torch.nn.Module, voltage_dfs: List[pd.DataFrame]
+    ) -> Tuple[bool, float, str]:
+        multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
+        # expected shape for test signals: (1, chan, length)
+        multivariate_sample = multivariate_sample.reshape(
+            multivariate_sample.shape[2], multivariate_sample.shape[0], multivariate_sample.shape[1]
+        )
+        tensor = torch.from_numpy(multivariate_sample).float()
+        # assumes model outputs logits for a multi-class classification problem
+        logits = model(tensor)
+        # convert logits to probabilities using softmax
+        probas = torch.softmax(logits, dim=1)
+        num_classes = len(probas[0])
+
+        # addresses both models with one output neuron and those with several
+        anomaly = int(torch.argmax(probas, dim=1)) == 0 if num_classes > 1 else probas[0][0] <= 0.5
+        pred_value = float(probas.max()) if num_classes > 1 else probas[0][0]
+
+        heatmap_id = ""
+        # TODO: impl heatmap generation for torch model (XCM)
+        #   - the following sketches the expected steps
+        # heatmaps = util.gen_heatmaps(net_input, model, prediction)
+        # print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+        # heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+        #     "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+        # )
+        # res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
+        # self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltage_dfs)
+
+        return anomaly, pred_value, heatmap_id
+
     def classify_component(
             self, affecting_comp: str, dtc: str, classification_reason: str, sub_comp: bool = False
     ) -> Union[Tuple[bool, str], None]:
@@ -182,24 +215,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         elif isinstance(model, torch.nn.Module):
             print("TORCH MODEL")
-            multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
-            # expected shape for test signals: (1, chan, length)
-            multivariate_sample = multivariate_sample.reshape(
-                multivariate_sample.shape[2], multivariate_sample.shape[0], multivariate_sample.shape[1]
-            )
-            tensor = torch.from_numpy(multivariate_sample).float()
-            # assumes model outputs logits for a multi-class classification problem
-            logits = model(tensor)
-            # convert logits to probabilities using softmax
-            probas = torch.softmax(logits, dim=1)
-            num_classes = len(probas[0])
+            anomaly, pred_value, heatmap_id = self.classify_with_torch_model(model, voltage_dfs)
 
-            # addresses both models with one output neuron and those with several
-            anomaly = int(torch.argmax(probas, dim=1)) == 0 if num_classes > 1 else probas[0][0] <= 0.5
-            pred_value = float(probas.max()) if num_classes > 1 else probas[0][0]
-
-            # TODO: impl heatmap generation for torch model (XCM)
-            heatmap_id = ""
         elif isinstance(model, RuleBasedModel):
             if isinstance(model, Lambdasonde) or isinstance(model, Saugrohrdrucksensor):
                 anomaly = model.predict(voltage_dfs[0].to_numpy(), affecting_comp)
