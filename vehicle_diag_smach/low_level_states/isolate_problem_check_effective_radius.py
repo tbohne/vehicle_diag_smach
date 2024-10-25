@@ -117,6 +117,26 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), title)
         self.data_provider.provide_heatmaps(heatmap_img, title)
 
+    def classify_with_keras_model(
+            self, model: keras.models.Model, voltage_dfs: List[pd.DataFrame], dtc: str, affecting_comp: str
+    ) -> Tuple[bool, float, str]:
+        net_input = util.construct_net_input(model, voltage_dfs)
+        prediction = model.predict(np.array([net_input]))
+        num_classes = len(prediction[0])
+        pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
+        # addresses both models with one output neuron and those with several
+        anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
+
+        heatmaps = util.gen_heatmaps(net_input, model, prediction)
+        print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+        # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+        heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+            "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+        )
+        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
+        self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltage_dfs)
+        return anomaly, pred_value, heatmap_id
+
     @staticmethod
     def classify_with_torch_model(
             model: torch.nn.Module, voltage_dfs: List[pd.DataFrame]
@@ -197,21 +217,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         if isinstance(model, keras.models.Model):
             print("KERAS MODEL")
-            net_input = util.construct_net_input(model, voltage_dfs)
-            prediction = model.predict(np.array([net_input]))
-            num_classes = len(prediction[0])
-            pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
-            # addresses both models with one output neuron and those with several
-            anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
-
-            heatmaps = util.gen_heatmaps(net_input, model, prediction)
-            print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
-            # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-                "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
-            )
-            res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
-            self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltage_dfs)
+            anomaly, pred_value, heatmap_id = self.classify_with_keras_model(model, voltage_dfs, dtc, affecting_comp)
 
         elif isinstance(model, torch.nn.Module):
             print("TORCH MODEL")
@@ -222,6 +228,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 anomaly = model.predict(voltage_dfs[0].to_numpy(), affecting_comp)
             else:
                 anomaly = model.predict(voltage_dfs[0].to_numpy())
+            # no prediction values / heatmaps in case of the rule-based models
             pred_value = 1.0
             heatmap_id = ""
         else:
