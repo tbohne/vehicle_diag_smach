@@ -138,6 +138,28 @@ class ClassifyComponents(smach.State):
             osci_set_id = self.instance_gen.extend_knowledge_graph_with_parallel_rec_osci_set()
         return osci_set_id
 
+    def classify_with_keras_model(
+            self, model: keras.models.Model, voltage_dfs: List[pd.DataFrame], comp_name: str
+    ) -> Tuple[bool, float, str]:
+        net_input = util.construct_net_input(model, voltage_dfs)
+        prediction = model.predict(np.array([net_input]))
+
+        num_classes = len(prediction[0])
+        # addresses both models with one output neuron and those with several
+        anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
+        pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
+
+        heatmaps = util.gen_heatmaps(net_input, model, prediction)
+        print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+        # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+        heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+            "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+        )
+        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
+        heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltage_dfs), comp_name + res_str)
+        self.data_provider.provide_heatmaps(heatmap_img, comp_name + res_str)
+        return anomaly, pred_value, heatmap_id
+
     @staticmethod
     def classify_with_torch_model(
             model: torch.nn.Module, voltage_dfs: List[pd.DataFrame]
@@ -210,7 +232,6 @@ class ClassifyComponents(smach.State):
                 print("TORCH MODEL")
                 # TODO: potentially add torch model validation
                 anomaly, pred_value, heatmap_id = self.classify_with_torch_model(model, voltage_dfs)
-
             elif isinstance(model, keras.models.Model):
                 print("KERAS MODEL")
                 try:
@@ -218,25 +239,8 @@ class ClassifyComponents(smach.State):
                 except ValueError as e:
                     util.invalid_model(osci_data, suggestion_list, e)
                     continue
-                net_input = util.construct_net_input(model, voltage_dfs)
-                prediction = model.predict(np.array([net_input]))
-
-                num_classes = len(prediction[0])
-                # addresses both models with one output neuron and those with several
-                anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
-                pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
-
-                heatmaps = util.gen_heatmaps(net_input, model, prediction)
-                print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
-                # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-                heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-                    "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
-                )
-                res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
-                heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltage_dfs),
-                                                          osci_data.comp_name + res_str)
-                self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
-
+                anomaly, pred_value, heatmap_id = self.classify_with_keras_model(model, voltage_dfs,
+                                                                                 osci_data.comp_name)
             else:
                 print("unknown model:", type(model))
                 continue
