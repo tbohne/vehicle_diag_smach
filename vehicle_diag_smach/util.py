@@ -156,6 +156,15 @@ def load_dtc_instances() -> List[str]:
         return json.load(f)['list']
 
 
+def artificial_demo_pause() -> None:
+    """
+    Introduces an artificial pause to the diag process for presentation purposes.
+    """
+    val = None
+    while val != "":
+        val = input("\n..............................")
+
+
 def log_info(msg) -> None:
     """
     Custom logging to override defaults.
