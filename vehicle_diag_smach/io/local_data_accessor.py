@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # @author Tim Bohne
 
+import json
 import os
 import random
 import shutil
@@ -12,7 +13,8 @@ from typing import List
 from oscillogram_classification import preprocess
 from py4j.java_gateway import JavaGateway
 
-from vehicle_diag_smach.config import OSCI_SESSION_FILES, FINAL_DEMO_TEST_SAMPLES, SEED, SELECTED_OSCILLOGRAMS
+from vehicle_diag_smach.config import OSCI_SESSION_FILES, FINAL_DEMO_TEST_SAMPLES, SEED, SELECTED_OSCILLOGRAMS, \
+    VEHICLE_DATA, WORKSHOP_DATA
 from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE
 from vehicle_diag_smach.data_types.customer_complaint_data import CustomerComplaintData
 from vehicle_diag_smach.data_types.onboard_diagnosis_data import OnboardDiagnosisData
@@ -38,7 +40,10 @@ class LocalDataAccessor(DataAccessor):
         val = None
         while val != "":
             val = input("\nlocal interface impl.: simulation of mechanic providing these information..")
-        return WorkshopData(4, date.today())
+
+        with open(WORKSHOP_DATA, 'r') as file:
+            data = json.load(file)
+        return WorkshopData(data["num_of_parallel_rec"], date.today())
 
     def get_obd_data(self) -> OnboardDiagnosisData:
         """
@@ -49,9 +54,12 @@ class LocalDataAccessor(DataAccessor):
         val = None
         while val != "":
             val = input("\nlocal interface impl.: sim processing OBD data..")
-        obd_data = OnboardDiagnosisData(
-            ['P0172'], "Mazda 3", "849357984", "453948539", "1234567890ABCDEFGHJKLMNPRSTUVWXYZ"
-        )
+
+        with open(VEHICLE_DATA, 'r') as file:
+            data = json.load(file)
+            obd_data = OnboardDiagnosisData(
+                data["dtc_list"], data["model"], data["hsn"], data["tsn"], data["vin"]
+            )
         print(obd_data)
         return obd_data
 

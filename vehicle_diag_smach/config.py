@@ -26,3 +26,5 @@ DUMMY_ISOLATION_OSCILLOGRAM_NEG2 = "res/dummy_isolation_oscillogram/dummy_isolat
 FINAL_DEMO_TEST_SAMPLES = "res/final_demonstrator_res/final_demo_data/"
 SEED = 42
 FINAL_DEMO_MODELS = "res/final_demonstrator_res/final_demo_models/"
+VEHICLE_DATA = "res/final_demonstrator_res/vehicle_info.json"
+WORKSHOP_DATA = "res/final_demonstrator_res/workshop_info.json"
