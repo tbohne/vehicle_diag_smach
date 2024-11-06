@@ -3,6 +3,7 @@ Pillow>=10.0.1
 beautifulsoup4
 tensorflow
 py4j
+torch
 networkx
 termcolor
 matplotlib
