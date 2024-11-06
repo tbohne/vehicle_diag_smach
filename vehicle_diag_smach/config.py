@@ -23,6 +23,6 @@ DUMMY_ISOLATION_OSCILLOGRAM_NEG1 = "res/dummy_isolation_oscillogram/dummy_isolat
 DUMMY_ISOLATION_OSCILLOGRAM_NEG2 = "res/dummy_isolation_oscillogram/dummy_isolation_NEG2.csv"
 
 # final demo data
-FINAL_DEMO_TEST_SAMPLES = "res/final_demo_data/"
+FINAL_DEMO_TEST_SAMPLES = "res/final_demonstrator_res/final_demo_data/"
 SEED = 42
-FINAL_DEMO_MODELS = "res/final_demo_models/"
+FINAL_DEMO_MODELS = "res/final_demonstrator_res/final_demo_models/"
