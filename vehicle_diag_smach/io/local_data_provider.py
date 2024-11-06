@@ -9,6 +9,7 @@ from typing import List
 from PIL import Image
 from termcolor import colored
 
+from vehicle_diag_smach import util
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 
@@ -29,6 +30,7 @@ class LocalDataProvider(DataProvider):
         """
         for vis in visualizations:
             vis.show()
+        util.artificial_demo_pause()
 
     def provide_heatmaps(self, heatmaps: Image, title: str) -> None:
         """
@@ -46,6 +48,7 @@ class LocalDataProvider(DataProvider):
             os.system("open " + title)
         else:  # Linux
             os.system("xdg-open " + title)
+        util.artificial_demo_pause()
 
     def provide_diagnosis(self, fault_paths: List[str]) -> None:
         """
@@ -55,6 +58,7 @@ class LocalDataProvider(DataProvider):
         """
         for fault_path in fault_paths:
             print(colored(fault_path, "red", "on_white", ["bold"]))
+        util.artificial_demo_pause()
 
     def provide_state_transition(self, state_transition: StateTransition) -> None:
         """
@@ -65,3 +69,4 @@ class LocalDataProvider(DataProvider):
         print("-----------------------------------------------------------")
         print("Performed state transition:", state_transition)
         print("-----------------------------------------------------------")
+        util.artificial_demo_pause()
