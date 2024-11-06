@@ -12,21 +12,27 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import smach
+import torch
 from PIL import Image
 from matplotlib.lines import Line2D
 from obd_ontology import knowledge_graph_query_tool
 from obd_ontology import ontology_instance_generator
 from oscillogram_classification import cam
+from oscillogram_classification import preprocess
 from tensorflow import keras
 from termcolor import colored
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
-    CLASSIFICATION_LOG_FILE, FAULT_PATH_TMP_FILE
+    CLASSIFICATION_LOG_FILE, FAULT_PATH_TMP_FILE, SELECTED_OSCILLOGRAMS
+from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
 from vehicle_diag_smach.interfaces.data_provider import DataProvider
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
+from vehicle_diag_smach.interfaces.rule_based_model import RuleBasedModel
+from vehicle_diag_smach.rule_based_models.Lambdasonde import Lambdasonde
+from vehicle_diag_smach.rule_based_models.Saugrohrdrucksensor import Saugrohrdrucksensor
 
 
 class IsolateProblemCheckEffectiveRadius(smach.State):
@@ -65,23 +71,35 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if not os.path.exists(osci_iso_session_dir):
             os.makedirs(osci_iso_session_dir)
 
-    def get_model_and_metadata(self, affecting_comp: str) -> Tuple[keras.models.Model, dict]:
+    def get_model_and_metadata(
+            self, affecting_comp: str, voltage_dfs: List[pd.DataFrame], sub_comp: bool = False
+    ) -> Tuple[Union[keras.models.Model, torch.nn.Module], dict]:
         """
         Retrieves the trained model and the corresponding metadata.
 
         :param affecting_comp: vehicle component to retrieve trained model for
+        :param voltage_dfs: list of oscillogram channels
+        :param sub_comp: whether the model is supposed to classify a subcomponent (single chan)
         :return: tuple of trained model and corresponding metadata
         """
-        model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(affecting_comp)
-        if model is None:
-            pass  # TODO: handle model is None cases
+        if sub_comp:  # rule-based single chan classification
+            model = self.model_accessor.get_rule_based_univariate_ts_classification_model_by_component(affecting_comp)
+        elif len(voltage_dfs) > 1:  # multivariate
+            model = self.model_accessor.get_torch_multivariate_ts_classification_model_by_component(affecting_comp)
+        else:  # univariate
+            model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(affecting_comp)
         (model, model_meta_info) = model
-        try:
-            util.validate_keras_model(model)
-        except ValueError as e:
-            print("invalid model for the signal (component) to be classified:", affecting_comp)
-            print("error:", e, "\nadding it to the list of components to be verified manually..")
-            # TODO: actually handle the case
+
+        if isinstance(model, keras.models.Model):
+            try:
+                util.validate_keras_model(model)
+            except ValueError as e:
+                print("invalid model for the signal (component) to be classified:", affecting_comp)
+                print("error:", e, "\nadding it to the list of components to be verified manually..")
+                # TODO: actually handle the case
+        elif isinstance(model, torch.nn.Module):
+            # TODO: potentially add torch model validation
+            pass
         return model, model_meta_info
 
     def provide_heatmaps(
@@ -99,8 +117,61 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), title)
         self.data_provider.provide_heatmaps(heatmap_img, title)
 
+    def classify_with_keras_model(
+            self, model: keras.models.Model, voltage_dfs: List[pd.DataFrame], dtc: str, affecting_comp: str
+    ) -> Tuple[bool, float, str]:
+        net_input = util.construct_net_input(model, voltage_dfs)
+        prediction = model.predict(np.array([net_input]))
+        num_classes = len(prediction[0])
+        pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
+        # addresses both models with one output neuron and those with several
+        anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
+
+        heatmaps = util.gen_heatmaps(net_input, model, prediction)
+        print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+        # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+        heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+            "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+        )
+        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
+        self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltage_dfs)
+        return anomaly, pred_value, heatmap_id
+
+    @staticmethod
+    def classify_with_torch_model(
+            model: torch.nn.Module, voltage_dfs: List[pd.DataFrame]
+    ) -> Tuple[bool, float, str]:
+        multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
+        # expected shape for test signals: (1, chan, length)
+        multivariate_sample = multivariate_sample.reshape(
+            multivariate_sample.shape[2], multivariate_sample.shape[0], multivariate_sample.shape[1]
+        )
+        tensor = torch.from_numpy(multivariate_sample).float()
+        # assumes model outputs logits for a multi-class classification problem
+        logits = model(tensor)
+        # convert logits to probabilities using softmax
+        probas = torch.softmax(logits, dim=1)
+        num_classes = len(probas[0])
+
+        # addresses both models with one output neuron and those with several
+        anomaly = int(torch.argmax(probas, dim=1)) == 0 if num_classes > 1 else probas[0][0] <= 0.5
+        pred_value = float(probas.max()) if num_classes > 1 else probas[0][0]
+
+        heatmap_id = ""
+        # TODO: impl heatmap generation for torch model (XCM)
+        #   - the following sketches the expected steps
+        # heatmaps = util.gen_heatmaps(net_input, model, prediction)
+        # print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+        # heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+        #     "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+        # )
+        # res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
+        # self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltage_dfs)
+
+        return anomaly, pred_value, heatmap_id
+
     def classify_component(
-            self, affecting_comp: str, dtc: str, classification_reason: str
+            self, affecting_comp: str, dtc: str, classification_reason: str, sub_comp: bool = False
     ) -> Union[Tuple[bool, str], None]:
         """
         Classifies the oscillogram for the specified vehicle component.
@@ -108,37 +179,70 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param affecting_comp: component to classify oscillogram for
         :param dtc: DTC the original component suggestion was based on
         :param classification_reason: reason for the classification (ID of another classification)
+        :param sub_comp: whether a subcomponent is classified (super component otherwise)
         :return: tuple of whether an anomaly has been detected and the corresponding classification ID
         """
         self.create_session_data_dir()
         # in this state, there is only one component to be classified, but there could be several
-        oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
+
+        if sub_comp:
+            # in case of a subcomponent, we already recorded the multivariate data
+            # --> the data is stored under the name of the super component
+            super_comp = self.qt.query_super_component(affecting_comp)[0]
+            # read from selected oscillograms in session files
+            path = SESSION_DIR + "/" + SELECTED_OSCILLOGRAMS + "/"
+            comp_recordings = [f for f in os.listdir(path) if super_comp in f]
+            signal, _ = preprocess.gen_multivariate_signal_from_csv(path + comp_recordings[0])
+            oscillograms = [OscillogramData(signal, super_comp)]
+        else:
+            oscillograms = self.data_accessor.get_oscillograms_by_components([affecting_comp])
+
         assert len(oscillograms) == 1
-        voltages = oscillograms[0].time_series
-        osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(voltages)
-        model, model_meta_info = self.get_model_and_metadata(affecting_comp)
-        voltages = util.preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages)
-        net_input = util.construct_net_input(model, voltages)
-        prediction = model.predict(np.array([net_input]))
-        num_classes = len(prediction[0])
-        # addresses both models with one output neuron and those with several
-        anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
+        voltage_dfs = oscillograms[0].time_series
+        # TODO: here, we need to distinguish between multivariate and univariate
+        osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(voltage_dfs)
+
+        model, model_meta_info = self.get_model_and_metadata(affecting_comp, voltage_dfs, sub_comp)
+
+        if sub_comp:
+            channels_for_super_comp = self.qt.query_sub_components_by_component(super_comp)
+            idx = channels_for_super_comp.index(affecting_comp)
+            voltage_dfs = [voltage_dfs[idx]]
+
+        for df in range(len(voltage_dfs)):
+            processed_chan = util.preprocess_time_series_based_on_model_meta_info(
+                model_meta_info, voltage_dfs[df].to_numpy()
+            ).flatten()
+            voltage_dfs[df] = pd.DataFrame(processed_chan)
+
+        if isinstance(model, keras.models.Model):
+            print("KERAS MODEL")
+            anomaly, pred_value, heatmap_id = self.classify_with_keras_model(model, voltage_dfs, dtc, affecting_comp)
+
+        elif isinstance(model, torch.nn.Module):
+            print("TORCH MODEL")
+            anomaly, pred_value, heatmap_id = self.classify_with_torch_model(model, voltage_dfs)
+
+        elif isinstance(model, RuleBasedModel):
+            if isinstance(model, Lambdasonde) or isinstance(model, Saugrohrdrucksensor):
+                anomaly = model.predict(voltage_dfs[0].to_numpy(), affecting_comp)
+            else:
+                anomaly = model.predict(voltage_dfs[0].to_numpy())
+            # no prediction values / heatmaps in case of the rule-based models
+            pred_value = 1.0
+            heatmap_id = ""
+        else:
+            print("unknown model:", type(model))
+            return
 
         if anomaly:
-            util.log_anomaly(prediction[0][0])
+            util.log_anomaly(pred_value)
         else:
-            util.log_regular(prediction[0][0])
+            util.log_regular(pred_value)
 
-        heatmaps = util.gen_heatmaps(net_input, model, prediction)
-        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
-        print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
-        # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-        heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-            "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
-        )
-        self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltages)
+        affecting_comp = super_comp if sub_comp else affecting_comp
         classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
-            anomaly, classification_reason, affecting_comp, prediction[0][0], model_meta_info['model_id'],
+            anomaly, classification_reason, affecting_comp, pred_value, model_meta_info['model_id'],
             osci_id, heatmap_id
         )
         return anomaly, classification_id
@@ -158,6 +262,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         comp = components_to_process.pop(0)
         if comp not in graph.keys():
             affecting_comp = self.qt.query_affected_by_relations_by_suspect_component(comp, False)
+
+            # add sub-components
+            affecting_comp += self.qt.query_sub_components_by_component(comp)
+
             components_to_process += affecting_comp
             graph[comp] = affecting_comp
         return self.construct_complete_graph(graph, components_to_process)
@@ -173,8 +281,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return Line2D([0, 1], [0, 1], color=color, **kwargs)
 
     @staticmethod
+    def get_anomalous_paths_without_sub_components(key: str, anomalous_paths: Dict[str, List[List[str]]]):
+        anomalous_paths_without_sub = []
+        if key in anomalous_paths.keys():
+            for path in anomalous_paths[key]:
+                anomalous_paths_without_sub.append([comp for comp in path if comp[0] != "(" and comp[-1] != ")"])
+        return anomalous_paths_without_sub
+
     def compute_causal_links(
-            to_relations: List[str], key: str, anomalous_paths: Dict[str, List[List[str]]], from_relations: List[str]
+            self, to_relations: List[str], key: str, anomalous_paths: Dict[str, List[List[str]]],
+            from_relations: List[str]
     ) -> List[int]:
         """
         Computes the causal links in the subgraph of cause-effect relationships.
@@ -185,14 +301,31 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param from_relations: 'from relations' of the considered subgraph
         :return: causal links in the subgraph
         """
+        anomalous_paths_without_sub = self.get_anomalous_paths_without_sub_components(key, anomalous_paths)
         causal_links = []
         for i in range(len(to_relations)):
             if key in anomalous_paths.keys():
                 for j in range(len(anomalous_paths[key])):
                     for k in range(len(anomalous_paths[key][j]) - 1):
-                        # causal link check
+                        # default causal link check
                         if (anomalous_paths[key][j][k] == from_relations[i]
                                 and anomalous_paths[key][j][k + 1] == to_relations[i]):
+                            causal_links.append(i)
+                            break
+                        # super components with subcomponents in between
+                        if (j < len(anomalous_paths_without_sub) and k < len(anomalous_paths_without_sub[j]) - 1
+                                and (anomalous_paths_without_sub[j][k] == from_relations[i]
+                                     and anomalous_paths_without_sub[j][k + 1] == to_relations[i])):
+                            causal_links.append(i)
+                            break
+                        # subcomponent check (from sub to super)
+                        if (anomalous_paths[key][j][k][1:-1] == from_relations[i]
+                                and anomalous_paths[key][j][k + 1] == to_relations[i]):
+                            causal_links.append(i)
+                            break
+                        # subcomponent check (from super to sub)
+                        if (anomalous_paths[key][j][k] == from_relations[i]
+                                and anomalous_paths[key][j][k + 1][1:-1] == to_relations[i]):
                             causal_links.append(i)
                             break
         return causal_links
@@ -217,7 +350,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             if from_relations[i] not in explicitly_considered_links.keys() or to_relations[i] not in \
                     explicitly_considered_links[from_relations[i]]:
                 colors[i] = 'black'
-        widths = [8 if i not in causal_links else 10 for i in range(len(to_relations))]
+        widths = [26 if i not in causal_links else 32 for i in range(len(to_relations))]
         return colors, widths
 
     def gen_causal_graph_visualizations(
@@ -237,8 +370,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             print("isolation results, i.e., causal path:\n", key, ":", anomalous_paths[key])
         for key in complete_graphs.keys():
             print("visualizing graph for component:", key, "\n")
-            plt.figure(figsize=(25, 18))
-            plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=24, fontweight='bold')
+            plt.figure(figsize=(50, 35))
+            plt.title("Causal Graph (Network of Effective Connections) for " + key, fontsize=50, fontweight='bold')
             from_relations = [k for k in complete_graphs[key].keys() for _ in range(len(complete_graphs[key][k]))]
             to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
             to_relations = [item for lst in to_relations for item in lst]
@@ -248,17 +381,28 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             )
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
-            pos = nx.spring_layout(g, scale=0.3, seed=5)
-            nx.draw(
-                g, pos=pos, with_labels=True, node_size=30000, font_size=10, alpha=0.75, arrows=True, edge_color=colors,
-                width=widths
+            # pos = nx.spring_layout(g, scale=1, seed=67)
+
+            # TODO: put somewhere into demo config
+            pos = nx.bipartite_layout(
+                G=g,
+                align='horizontal',
+                nodes=list(g.nodes)[:1] + list(g.nodes)[6:]  # those are the nodes for the first partition
             )
-            legend_lines = [self.create_legend_line(clr, lw=5) for clr in ['r', 'g', 'black']]
+
+            labels = {n: n.replace(" ", "\n") for n in g.nodes}
+
+            nx.draw(
+                g, pos=pos, with_labels=False, node_size=86000, font_size=25, alpha=0.75, arrows=True,
+                edge_color=colors, width=widths
+            )
+            nx.draw_networkx_labels(g, pos, labels=labels, font_size=25, font_color='black')
+            legend_lines = [self.create_legend_line(clr, lw=20) for clr in ['r', 'g', 'black']]
             labels = ["fault path", "non-anomalous links", "disregarded"]
 
             # initial preview does not require a legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
-                plt.legend(legend_lines, labels, fontsize=20, loc='lower right')
+                plt.legend(legend_lines, labels, fontsize=40, loc='center right')
 
             buf = io.BytesIO()  # create bytes object and save matplotlib fig into it
             plt.savefig(buf, format='png')
@@ -361,9 +505,72 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         comp_id = sus_comp_resp[0].split("#")[1]
         return self.qt.query_suspect_component_name_by_id(comp_id)[0]
 
+    def create_sub_component_paths_for_initial_comp(
+            self, causal_paths: List[List[str]], dtc: str, classification_reason: str,
+            explicitly_considered_links: Dict[str, List[str]]
+    ):
+        sub_anomalies = []
+        entry_comp = causal_paths[0][0]
+        for sub_comp in self.qt.query_sub_components_by_component(entry_comp):
+            classification_res = self.classify_component(sub_comp, dtc, classification_reason, True)
+            (anomaly, classification_id) = classification_res
+            if anomaly:
+                sub_anomalies.append(sub_comp)
+            explicitly_considered_links[entry_comp].append(sub_comp)
+
+        if len(sub_anomalies) > 0:
+            starter_path = causal_paths[0].copy()
+            causal_paths[0].append("(" + sub_anomalies[0] + ")")
+            for i in range(1, len(sub_anomalies)):
+                tmp = starter_path.copy()
+                tmp.append("(" + sub_anomalies[i] + ")")
+                causal_paths.append(tmp)
+
+    def classify_sub_components_for_anomaly(
+            self, checked_comp: str, dtc: str, classification_reason: str,
+    ) -> Tuple[List[str], List[str]]:
+        # classify subcomponents for anomaly (univariate classification)
+        sub_anomalies = []
+        sub_regulars = []
+        for sub_comp in self.qt.query_sub_components_by_component(checked_comp):
+            classification_res = self.classify_component(sub_comp, dtc, classification_reason, True)
+            if classification_res is None:
+                print("issue in classifying sub-component", sub_comp)
+            else:
+                (anomaly, classification_id) = classification_res
+                print("classification res for", sub_comp, ":", anomaly)
+                if anomaly:
+                    sub_anomalies.append(sub_comp)
+                else:
+                    sub_regulars.append(sub_comp)
+        return sub_anomalies, sub_regulars
+
+    @staticmethod
+    def create_sub_comp_paths_and_branch(prev_path: List[str], sub_anomalies: List[str], causal_paths: List[List[str]]):
+        starter_path = prev_path.copy()
+        if len(sub_anomalies) > 0:
+            prev_path.append("(" + sub_anomalies[0] + ")")
+            causal_paths.append(prev_path)
+            # create sub-comp paths
+            for i in range(1, len(sub_anomalies)):
+                tmp = starter_path.copy()
+                tmp.append("(" + sub_anomalies[i] + ")")
+                causal_paths.append(tmp)
+
+    @staticmethod
+    def create_sub_comp_paths(causal_paths: List[List[str]], idx: int, sub_anomalies: List[str]):
+        starter_path = causal_paths[idx].copy()
+        if len(sub_anomalies) > 0:
+            causal_paths[idx].append("(" + sub_anomalies[0] + ")")
+            # create sub-comp paths
+            for i in range(1, len(sub_anomalies)):
+                tmp = starter_path.copy()
+                tmp.append("(" + sub_anomalies[i] + ")")
+                causal_paths.append(tmp)
+
     def handle_anomaly(
             self, causal_paths: List[List[str]], checked_comp: str, unisolated_anomalous_components: List[str],
-            explicitly_considered_links: Dict[str, List[str]]
+            explicitly_considered_links: Dict[str, List[str]], dtc: str, classification_reason: str
     ) -> None:
         """
         Handles anomaly cases, i.e., extends the causal path, unisolated anomalous components, and explicitly
@@ -373,7 +580,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param checked_comp: checked component (found anomaly)
         :param unisolated_anomalous_components: list of unisolated anomalous components to be extended
         :param explicitly_considered_links: list of explicitly considered links to be extended
+        :param dtc: DTC the original component suggestion was based on
+        :param classification_reason: reason for the classification (ID of another classification)
         """
+        # the very first component entered; the beginning of isolation
+        if len(causal_paths) == 1 and len(causal_paths[0]) == 1:
+            self.create_sub_component_paths_for_initial_comp(
+                causal_paths, dtc, classification_reason, explicitly_considered_links
+            )
+        sub_anomalies, sub_regulars = self.classify_sub_components_for_anomaly(checked_comp, dtc, classification_reason)
+
         already_in_path = False
         for i in range(len(causal_paths)):
             if checked_comp in causal_paths[i]:
@@ -384,14 +600,15 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             path_indices = []
             for i in range(len(causal_paths)):
                 last_comp = causal_paths[i][-1]
+                if "(" in last_comp:
+                    last_comp = causal_paths[i][-2]
                 if checked_comp in explicitly_considered_links[last_comp]:
                     found_link_in_path = True
                     path_indices.append(i)
-
-            # extend path
-            if found_link_in_path:
+            if found_link_in_path:  # extend path
                 for idx in path_indices:
                     causal_paths[idx].append(checked_comp)
+                    self.create_sub_comp_paths(causal_paths, idx, sub_anomalies)
             else:  # branch
                 for i in range(len(causal_paths)):
                     second_last_comp = causal_paths[i][-2]
@@ -399,12 +616,14 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         # this thing has to branch
                         prev_path = causal_paths[i][:len(causal_paths[i]) - 1].copy()
                         prev_path.append(checked_comp)
-                        causal_paths.append(prev_path)
+                        self.create_sub_comp_paths_and_branch(prev_path, sub_anomalies, causal_paths)
 
         affecting_comps = self.qt.query_affected_by_relations_by_suspect_component(checked_comp)
         print("component potentially affected by:", affecting_comps)
         unisolated_anomalous_components += affecting_comps
         explicitly_considered_links[checked_comp] += affecting_comps.copy()
+        explicitly_considered_links[checked_comp] += sub_regulars
+        explicitly_considered_links[checked_comp] += sub_anomalies
 
     def work_through_unisolated_components(
             self, unisolated_anomalous_comps: List[str], explicitly_considered_links: Dict[str, List[str]],
@@ -431,7 +650,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                       already_checked_comps[comp_to_be_checked][0])
                 if already_checked_comps[comp_to_be_checked][0]:
                     self.handle_anomaly(
-                        causal_paths, comp_to_be_checked, unisolated_anomalous_comps, explicitly_considered_links
+                        causal_paths, comp_to_be_checked, unisolated_anomalous_comps, explicitly_considered_links, dtc,
+                        already_checked_comps[anomalous_comp][1]
                     )
                 continue
             use_oscilloscope = self.qt.query_oscilloscope_usage_by_suspect_component(comp_to_be_checked)[0]
@@ -456,7 +676,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 already_checked_comps[comp_to_be_checked] = (anomaly, classification_id)
             if anomaly:
                 self.handle_anomaly(
-                    causal_paths, comp_to_be_checked, unisolated_anomalous_comps, explicitly_considered_links
+                    causal_paths, comp_to_be_checked, unisolated_anomalous_comps, explicitly_considered_links, dtc,
+                    already_checked_comps[anomalous_comp][1]
                 )
             self.log_classification_action(comp_to_be_checked, bool(anomaly), use_oscilloscope, classification_id)
 

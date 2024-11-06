@@ -40,27 +40,32 @@ def validate_keras_model(model: keras.models.Model) -> None:
         raise ValueError(f"unexpected output shape - expected: {expected_out_shape}, got: {out_shape}")
 
 
-def preprocess_time_series_based_on_model_meta_info(
-        model_meta_info: Dict[str, str], voltages: List[float]
-) -> List[float]:
+def preprocess_time_series_based_on_model_meta_info(model_meta_info: Dict, voltages: np.ndarray) -> np.ndarray:
     """
-    Preprocesses the time series based on model metadata (e.g. normalization method).
+    Preprocesses the time series based on model metadata (e.g., normalization method).
     The preprocessing always depends on the trained model that is going to be applied.
     Therefore, this kind of meta information has to be saved for each trained model.
 
-    :param model_meta_info: metadata for the trained model (e.g. normalization method)
+    :param model_meta_info: metadata for the trained model (e.g., normalization method)
     :param voltages: raw input (voltage values)
     :return: preprocessed input (voltage values)
     """
     print("model meta info:", model_meta_info)
+
+    # resampling
+    if model_meta_info["input_length"] != len(voltages):
+        voltages = preprocess.resample(voltages, model_meta_info["input_length"])
+
+    # normalization
     if model_meta_info["normalization_method"] == "z_norm":
-        return preprocess.z_normalize_time_series(voltages)
+        voltages = preprocess.z_normalize_time_series(voltages)
     elif model_meta_info["normalization_method"] == "min_max_norm":
-        return preprocess.min_max_normalize_time_series(voltages)
+        voltages = preprocess.min_max_normalize_time_series(voltages)
     elif model_meta_info["normalization_method"] == "dec_norm":
-        return preprocess.decimal_scaling_normalize_time_series(voltages, 2)
+        voltages = preprocess.decimal_scaling_normalize_time_series(voltages, 2)
     elif model_meta_info["normalization_method"] == "log_norm":
-        return preprocess.logarithmic_normalize_time_series(voltages, 10)
+        voltages = preprocess.logarithmic_normalize_time_series(voltages, 10)
+
     return voltages
 
 

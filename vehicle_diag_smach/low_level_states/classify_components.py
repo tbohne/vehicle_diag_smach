@@ -7,9 +7,12 @@ import os
 from typing import List, Dict, Tuple
 
 import numpy as np
+import pandas as pd
 import smach
+import torch
 from obd_ontology import ontology_instance_generator
 from oscillogram_classification import cam
+from tensorflow import keras
 from termcolor import colored
 
 from vehicle_diag_smach import util
@@ -135,6 +138,52 @@ class ClassifyComponents(smach.State):
             osci_set_id = self.instance_gen.extend_knowledge_graph_with_parallel_rec_osci_set()
         return osci_set_id
 
+    def classify_with_keras_model(
+            self, model: keras.models.Model, voltage_dfs: List[pd.DataFrame], comp_name: str
+    ) -> Tuple[bool, float, str]:
+        net_input = util.construct_net_input(model, voltage_dfs)
+        prediction = model.predict(np.array([net_input]))
+
+        num_classes = len(prediction[0])
+        # addresses both models with one output neuron and those with several
+        anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
+        pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
+
+        heatmaps = util.gen_heatmaps(net_input, model, prediction)
+        print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
+        # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
+        heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+            "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
+        )
+        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
+        heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltage_dfs), comp_name + res_str)
+        self.data_provider.provide_heatmaps(heatmap_img, comp_name + res_str)
+        return anomaly, pred_value, heatmap_id
+
+    @staticmethod
+    def classify_with_torch_model(
+            model: torch.nn.Module, voltage_dfs: List[pd.DataFrame]
+    ) -> Tuple[bool, float, str]:
+        multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
+        # expected shape for test signals: (1, chan, length)
+        multivariate_sample = multivariate_sample.reshape(
+            multivariate_sample.shape[2], multivariate_sample.shape[0], multivariate_sample.shape[1]
+        )
+        tensor = torch.from_numpy(multivariate_sample).float()
+        # assumes model outputs logits for a multi-class classification problem
+        logits = model(tensor)
+        # convert logits to probabilities using softmax
+        probas = torch.softmax(logits, dim=1)
+        num_classes = len(probas[0])
+
+        # addresses both models with one output neuron and those with several
+        anomaly = int(torch.argmax(probas, dim=1)) == 0 if num_classes > 1 else probas[0][0] <= 0.5
+        pred_value = float(probas.max()) if num_classes > 1 else probas[0][0]
+
+        # TODO: impl heatmap generation for torch model (XCM) (cf., ISOLATE_PROBLEM...)
+        heatmap_id = ""
+        return anomaly, pred_value, heatmap_id
+
     def process_oscillogram_recordings(
             self, oscillograms: List[OscillogramData], suggestion_list: Dict[str, Tuple[str, bool]],
             anomalous_components: List[str], non_anomalous_components: List[str],
@@ -152,28 +201,49 @@ class ClassifyComponents(smach.State):
         """
         osci_set_id = self.get_osci_set_id(components_to_be_recorded)
         for osci_data in oscillograms:  # iteratively process parallel recorded oscilloscope recordings
+            # TODO: here, we need to distinguish between multivariate and univariate
             osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(osci_data.time_series, osci_set_id)
             print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
-            voltages = osci_data.time_series
+            voltage_dfs = osci_data.time_series
 
-            model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(osci_data.comp_name)
+            # multivariate
+            if len(voltage_dfs) > 1:
+                model = self.model_accessor.get_torch_multivariate_ts_classification_model_by_component(
+                    osci_data.comp_name
+                )
+            # univariate
+            else:
+                model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(
+                    osci_data.comp_name
+                )
+
             if model is None:
                 util.no_trained_model_available(osci_data, suggestion_list)
                 continue
             (model, model_meta_info) = model  # not only obtain the model here, but also meta info
-            voltages = util.preprocess_time_series_based_on_model_meta_info(model_meta_info, voltages)
-            try:
-                util.validate_keras_model(model)
-            except ValueError as e:
-                util.invalid_model(osci_data, suggestion_list, e)
-                continue
 
-            net_input = util.construct_net_input(model, voltages)
-            prediction = model.predict(np.array([net_input]))
-            num_classes = len(prediction[0])
-            # addresses both models with one output neuron and those with several
-            anomaly = np.argmax(prediction) == 0 if num_classes > 1 else prediction[0][0] <= 0.5
-            pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
+            for df in range(len(voltage_dfs)):
+                processed_chan = util.preprocess_time_series_based_on_model_meta_info(
+                    model_meta_info, voltage_dfs[df].to_numpy()
+                ).flatten()
+                voltage_dfs[df] = pd.DataFrame(processed_chan)
+
+            if isinstance(model, torch.nn.Module):
+                print("TORCH MODEL")
+                # TODO: potentially add torch model validation
+                anomaly, pred_value, heatmap_id = self.classify_with_torch_model(model, voltage_dfs)
+            elif isinstance(model, keras.models.Model):
+                print("KERAS MODEL")
+                try:
+                    util.validate_keras_model(model)
+                except ValueError as e:
+                    util.invalid_model(osci_data, suggestion_list, e)
+                    continue
+                anomaly, pred_value, heatmap_id = self.classify_with_keras_model(model, voltage_dfs,
+                                                                                 osci_data.comp_name)
+            else:
+                print("unknown model:", type(model))
+                continue
 
             if anomaly:
                 util.log_anomaly(pred_value)
@@ -182,17 +252,7 @@ class ClassifyComponents(smach.State):
                 util.log_regular(pred_value)
                 non_anomalous_components.append(osci_data.comp_name)
 
-            heatmaps = util.gen_heatmaps(net_input, model, prediction)
-            res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
             self.log_corresponding_dtc(osci_data)
-            print("heatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
-
-            # TODO: which heatmap generation method result do we store here? for now, I'll use gradcam
-            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-                "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
-            )
-            heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), osci_data.comp_name + res_str)
-            self.data_provider.provide_heatmaps(heatmap_img, osci_data.comp_name + res_str)
             classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
                 anomaly, components_to_be_recorded[osci_data.comp_name], osci_data.comp_name, pred_value,
                 model_meta_info["model_id"], osci_id, heatmap_id
