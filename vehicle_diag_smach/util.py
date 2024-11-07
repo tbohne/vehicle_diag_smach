@@ -51,6 +51,8 @@ def preprocess_time_series_based_on_model_meta_info(model_meta_info: Dict, volta
     :return: preprocessed input (voltage values)
     """
     print("model meta info:", model_meta_info)
+    if len(voltages.shape) > 1:
+        voltages = voltages.flatten()
 
     # resampling
     if model_meta_info["input_length"] != len(voltages):
