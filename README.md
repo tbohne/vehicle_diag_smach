@@ -61,6 +61,18 @@ Optionally run customer XPS server (in `CustomerXPS/`):
 $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 ```
 
+## Multivariate `torch` demo
+
+- uncomment corresponding demo config in `config.py`
+- host corresponding demo KG, i.e., `vehicle_diag_smach/res/final_demonstrator_res/KG.nq.gz`
+- install + run
+
+## Univariate `keras` demo
+
+- uncomment corresponding demo config in `config.py`
+- host corresponding demo KG, i.e., `vehicle_diag_smach/res/prev_demonstrator_res/test_kg.nt`
+- install + run
+
 ## Docker Usage
 
 ### <u>Initial run (only for initial setup)</u>
