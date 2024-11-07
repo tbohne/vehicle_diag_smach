@@ -10,6 +10,7 @@ from datetime import date
 from pathlib import Path
 from typing import List
 
+import pandas as pd
 from oscillogram_classification import preprocess
 from py4j.java_gateway import JavaGateway
 
@@ -108,7 +109,13 @@ class LocalDataAccessor(DataAccessor):
             # copy selected recording to corresponding dir
             shutil.copy(path, dst)
 
-            signal, _ = preprocess.gen_multivariate_signal_from_csv(path)
+            # distinguish between multivariate / univariate
+            if "multivariate" in path:
+                signal, _ = preprocess.gen_multivariate_signal_from_csv(path)
+            else:  # univariate
+                _, signal = preprocess.read_oscilloscope_recording(path)
+                signal = [pd.DataFrame(signal)]
+
             oscillograms.append(OscillogramData(signal, comp))
         return oscillograms
 
