@@ -141,7 +141,10 @@ class ClassifyComponents(smach.State):
     def classify_with_keras_model(
             self, model: keras.models.Model, voltage_dfs: List[pd.DataFrame], comp_name: str
     ) -> Tuple[bool, float, str]:
-        net_input = util.construct_net_input(model, voltage_dfs)
+        voltages = list(voltage_dfs[0].to_numpy().flatten())
+        net_input = util.construct_net_input(model, voltages)
+        # TODO: fake time vals -- actually just data points
+        time_vals = [i for i in range(len(voltages))]
         prediction = model.predict(np.array([net_input]))
 
         num_classes = len(prediction[0])
@@ -156,7 +159,7 @@ class ClassifyComponents(smach.State):
             "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
         )
         res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
-        heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltage_dfs), comp_name + res_str)
+        heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), comp_name + res_str, time_vals)
         self.data_provider.provide_heatmaps(heatmap_img, comp_name + res_str)
         return anomaly, pred_value, heatmap_id
 
