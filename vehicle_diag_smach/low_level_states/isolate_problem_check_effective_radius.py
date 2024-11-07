@@ -114,13 +114,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param voltages: classified voltage values (time series)
         """
         title = affecting_comp + "_" + res_str
-        heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), title)
+        # TODO: fake time vals -- actually just data points
+        time_vals = [i for i in range(len(voltages))]
+        heatmap_img = cam.gen_heatmaps_as_overlay(heatmaps, np.array(voltages), title, time_vals)
         self.data_provider.provide_heatmaps(heatmap_img, title)
 
     def classify_with_keras_model(
             self, model: keras.models.Model, voltage_dfs: List[pd.DataFrame], dtc: str, affecting_comp: str
     ) -> Tuple[bool, float, str]:
-        net_input = util.construct_net_input(model, voltage_dfs)
+        voltages = list(voltage_dfs[0].to_numpy().flatten())
+        net_input = util.construct_net_input(model, voltages)
         prediction = model.predict(np.array([net_input]))
         num_classes = len(prediction[0])
         pred_value = prediction.max() if num_classes > 1 else prediction[0][0]
@@ -134,7 +137,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
         )
         res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
-        self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltage_dfs)
+        self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltages)
         return anomaly, pred_value, heatmap_id
 
     @staticmethod
