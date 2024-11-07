@@ -77,7 +77,8 @@ class LocalDataAccessor(DataAccessor):
             # final demo - copy all test files to session dir
             for path in Path(FINAL_DEMO_TEST_SAMPLES).rglob('*.csv'):
                 src = str(path)
-                shutil.copy(src, osci_session_dir + str(src.split("/")[-1]))
+                data_type = "multivariate" if "multivariate" in FINAL_DEMO_TEST_SAMPLES else "univariate"
+                shutil.copy(src, osci_session_dir + data_type + "_" + str(src.split("/")[-1]))
 
         selected_osci_session_dir = SESSION_DIR + "/" + SELECTED_OSCILLOGRAMS + "/"
         if not os.path.exists(selected_osci_session_dir):
