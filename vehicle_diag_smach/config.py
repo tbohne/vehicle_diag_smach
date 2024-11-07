@@ -23,15 +23,15 @@ DUMMY_ISOLATION_OSCILLOGRAM_NEG1 = "res/dummy_isolation_oscillogram/dummy_isolat
 DUMMY_ISOLATION_OSCILLOGRAM_NEG2 = "res/dummy_isolation_oscillogram/dummy_isolation_NEG2.csv"
 
 # univariate keras demo data -- make sure to host corresponding KG
-FINAL_DEMO_TEST_SAMPLES = "res/prev_demonstrator_res/univariate_signals/"
-FINAL_DEMO_MODELS = "res/prev_demonstrator_res/keras_models/"
-SEED = 42
-VEHICLE_DATA = "res/prev_demonstrator_res/vehicle_info.json"
-WORKSHOP_DATA = "res/prev_demonstrator_res/workshop_info.json"
+# FINAL_DEMO_TEST_SAMPLES = "res/prev_demonstrator_res/univariate_signals/"
+# FINAL_DEMO_MODELS = "res/prev_demonstrator_res/keras_models/"
+# SEED = 42
+# VEHICLE_DATA = "res/prev_demonstrator_res/vehicle_info.json"
+# WORKSHOP_DATA = "res/prev_demonstrator_res/workshop_info.json"
 
 # multivariate torch demo data -- make sure to host corresponding KG
-# FINAL_DEMO_TEST_SAMPLES = "res/final_demonstrator_res/multivariate_signals/"
-# FINAL_DEMO_MODELS = "res/final_demonstrator_res/final_demo_models/"
-# SEED = 42
-# VEHICLE_DATA = "res/final_demonstrator_res/vehicle_info.json"
-# WORKSHOP_DATA = "res/final_demonstrator_res/workshop_info.json"
+FINAL_DEMO_TEST_SAMPLES = "res/final_demonstrator_res/multivariate_signals/"
+FINAL_DEMO_MODELS = "res/final_demonstrator_res/final_demo_models/"
+SEED = 42
+VEHICLE_DATA = "res/final_demonstrator_res/vehicle_info.json"
+WORKSHOP_DATA = "res/final_demonstrator_res/workshop_info.json"
