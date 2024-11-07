@@ -43,7 +43,8 @@ class LocalModelAccessor(ModelAccessor):
             # TODO: I could obtain these information from the KG
             model_meta_info = {
                 "normalization_method": "z_norm",
-                "model_id": "keras_univariate_ts_classification_model_001"
+                "model_id": "keras_univariate_ts_classification_model_001",
+                "input_length": 23040
             }
             return keras.models.load_model(trained_model_file), model_meta_info
         except OSError as e:
