@@ -42,6 +42,7 @@ class LocalModelAccessor(ModelAccessor):
             trained_model_file = TRAINED_MODEL_POOL + component + ".h5"
             print("loading trained model:", trained_model_file)
             # TODO: I could obtain these information from the KG
+            #   - however, not with the deprecated prev demo KG
             model_meta_info = {
                 "normalization_method": "z_norm",
                 "model_id": "keras_univariate_ts_classification_model_001",
