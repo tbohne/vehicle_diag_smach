@@ -93,12 +93,9 @@ class LocalModelAccessor(ModelAccessor):
         try:
             trained_model_file = FINAL_DEMO_MODELS + component + ".pth"
             print("loading trained model:", trained_model_file)
-            # TODO: I could obtain these information from the KG
-            model_meta_info = {
-                "normalization_method": "z_norm",
-                "model_id": component + "_XCM_v1_H5bqdN5pjTmTs6RGaCPEqL",
-                "input_length": 500
-            }
+            # obtain meta info from the KG
+            norm, model_id, input_len = self.qt.query_xcm_model_meta_info_by_component(component)[0]
+            model_meta_info = {"normalization_method": norm, "model_id": model_id, "input_length": int(input_len)}
             model = torch.load(trained_model_file)
             # ensure model is in evaluation mode
             model.eval()
