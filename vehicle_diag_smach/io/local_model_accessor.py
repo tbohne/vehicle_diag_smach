@@ -5,9 +5,10 @@
 from typing import Union, Tuple
 
 import torch
+from obd_ontology import knowledge_graph_query_tool
 from tensorflow import keras
 
-from vehicle_diag_smach.config import TRAINED_MODEL_POOL, FINAL_DEMO_MODELS
+from vehicle_diag_smach.config import TRAINED_MODEL_POOL, FINAL_DEMO_MODELS, KG_URL
 from vehicle_diag_smach.interfaces.model_accessor import ModelAccessor
 from vehicle_diag_smach.interfaces.rule_based_model import RuleBasedModel
 from vehicle_diag_smach.rule_based_models.Lambdasonde import Lambdasonde
@@ -20,7 +21,7 @@ class LocalModelAccessor(ModelAccessor):
     """
 
     def __init__(self):
-        pass
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=KG_URL)
 
     def get_keras_univariate_ts_classification_model_by_component(
             self, component: str
@@ -64,12 +65,10 @@ class LocalModelAccessor(ModelAccessor):
         :param component: vehicle component to retrieve rule-based model for
         :return: rule-based model and model meta info dictionary or `None` if unavailable
         """
-        # TODO: I could obtain these information from the KG
-        model_meta_info = {
-            "normalization_method": "z_norm",
-            "model_id": component + "_rule_based_univariate_ts_classification_model_001",
-            "input_length": 500
-        }
+        super_component = self.qt.query_super_component(component)[0]
+        # obtain meta info from the KG
+        norm, model_id, input_len = self.qt.query_rule_based_model_meta_info_by_component(super_component)[0]
+        model_meta_info = {"normalization_method": norm, "model_id": model_id, "input_length": int(input_len)}
         if "Lambdasonde" in component:
             return Lambdasonde(), model_meta_info
         elif "Saugrohrdrucksensor" in component:
