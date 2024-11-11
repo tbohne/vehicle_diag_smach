@@ -26,7 +26,7 @@ from tsai.models.XCM import XCM
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
-    CLASSIFICATION_LOG_FILE, FAULT_PATH_TMP_FILE, SELECTED_OSCILLOGRAMS
+    CLASSIFICATION_LOG_FILE, FAULT_PATH_TMP_FILE, SELECTED_OSCILLOGRAMS, FINAL_DEMO_TEST_SAMPLES
 from vehicle_diag_smach.data_types.oscillogram_data import OscillogramData
 from vehicle_diag_smach.data_types.state_transition import StateTransition
 from vehicle_diag_smach.interfaces.data_accessor import DataAccessor
@@ -202,9 +202,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             )
         res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
 
+        # TODO: could use actual time values instead of list(range(len(tensor[0, 0]))
         var_attr_heatmap_img = cam.gen_multi_chan_heatmaps_as_overlay(
             var_attr_heatmaps, tensor[0].numpy(), comp_name + res_str, list(range(len(tensor[0, 0])))
         )
+        # TODO: could use actual time values instead of list(range(len(tensor[0, 0]))
         time_attr_heatmap_img = cam.gen_multi_chan_heatmaps_as_overlay(
             time_attr_heatmaps, tensor[0].numpy(), comp_name + res_str, list(range(len(tensor[0, 0])))
         )
@@ -424,14 +426,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             )
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
             g = nx.from_pandas_edgelist(df, 'from', 'to', create_using=nx.DiGraph())
-            # pos = nx.spring_layout(g, scale=1, seed=67)
 
-            # TODO: put somewhere into demo config
-            pos = nx.bipartite_layout(
-                G=g,
-                align='horizontal',
-                nodes=list(g.nodes)[:1] + list(g.nodes)[6:]  # those are the nodes for the first partition
-            )
+            # different graph layouts for the two demo scenarios
+            if "multivariate" in FINAL_DEMO_TEST_SAMPLES:
+                pos = nx.bipartite_layout(
+                    G=g,
+                    align='horizontal',
+                    nodes=list(g.nodes)[:1] + list(g.nodes)[6:]  # those are the nodes for the first partition
+                )
+            else:
+                pos = nx.spring_layout(g, scale=1, seed=67)
 
             labels = {n: n.replace(" ", "\n") for n in g.nodes}
 
