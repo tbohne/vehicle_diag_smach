@@ -21,6 +21,8 @@ from oscillogram_classification import cam
 from oscillogram_classification import preprocess
 from tensorflow import keras
 from termcolor import colored
+from tsai.all import get_attribution_map
+from tsai.models.XCM import XCM
 
 from vehicle_diag_smach import util
 from vehicle_diag_smach.config import SESSION_DIR, SUGGESTION_SESSION_FILE, OSCI_SESSION_FILES, \
@@ -140,9 +142,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltages)
         return anomaly, pred_value, heatmap_id
 
-    @staticmethod
     def classify_with_torch_model(
-            model: torch.nn.Module, voltage_dfs: List[pd.DataFrame]
+            self, model: torch.nn.Module, voltage_dfs: List[pd.DataFrame], comp_name: str
     ) -> Tuple[bool, float, str]:
         multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
         # expected shape for test signals: (1, chan, length)
@@ -160,17 +161,56 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         anomaly = int(torch.argmax(probas, dim=1)) == 0 if num_classes > 1 else probas[0][0] <= 0.5
         pred_value = float(probas.max()) if num_classes > 1 else probas[0][0]
 
+        # heatmap generation for torch model (XCM)
         heatmap_id = ""
-        # TODO: impl heatmap generation for torch model (XCM)
-        #   - the following sketches the expected steps
-        # heatmaps = util.gen_heatmaps(net_input, model, prediction)
-        # print("DTC to set heatmap for:", dtc, "\nheatmap excerpt:", heatmaps["tf-keras-gradcam"][:5])
-        # heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-        #     "tf-keras-gradcam", heatmaps["tf-keras-gradcam"].tolist()
-        # )
-        # res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(prediction[0][0]) + "]"
-        # self.provide_heatmaps(affecting_comp, res_str, heatmaps, voltage_dfs)
+        xcm_model = XCM(c_in=len(voltage_dfs), c_out=2, seq_len=multivariate_sample.shape[2])
+        xcm_model.load_state_dict(model.state_dict())
+        assert type(xcm_model) == XCM
+        # XCM's builtin way of displaying heatmaps
+        # xcm_model.show_gradcam(tensor, TensorCategory(pred_value), figsize=(1920, 1080))
 
+        att_maps = get_attribution_map(
+            xcm_model,
+            [xcm_model.conv2dblock, xcm_model.conv1dblock],
+            tensor,
+            detach=True,
+            apply_relu=True
+        )
+        att_maps[0] = (att_maps[0] - att_maps[0].min()) / (att_maps[0].max() - att_maps[0].min())
+        att_maps[1] = (att_maps[1] - att_maps[1].min()) / (att_maps[1].max() - att_maps[1].min())
+
+        var_attr_heatmaps = {"var. attr. map " + str(i): att_maps[0].numpy()[i] for i in range(len(voltage_dfs))}
+        # plot_multi_chan_heatmaps_as_overlay(
+        #     var_attr_heatmaps,
+        #     tensor[0].numpy(),
+        #     'test_plot',
+        #     list(range(len(tensor[0, 0]))),
+        #     True
+        # )
+        time_attr_heatmaps = {"time attr. map " + str(i): att_maps[1].numpy()[i] for i in range(len(voltage_dfs))}
+        # plot_multi_chan_heatmaps_as_overlay(
+        #     time_attr_heatmaps,
+        #     tensor[0].numpy(),
+        #     'test_plot',
+        #     list(range(len(tensor[0, 0]))),
+        #     False
+        # )
+
+        for i in range(len(var_attr_heatmaps)):
+            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
+                "XCM GradCAM", var_attr_heatmaps["var. attr. map " + str(i)].tolist()
+            )
+        res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
+
+        var_attr_heatmap_img = cam.gen_multi_chan_heatmaps_as_overlay(
+            var_attr_heatmaps, tensor[0].numpy(), comp_name + res_str, list(range(len(tensor[0, 0])))
+        )
+        time_attr_heatmap_img = cam.gen_multi_chan_heatmaps_as_overlay(
+            time_attr_heatmaps, tensor[0].numpy(), comp_name + res_str, list(range(len(tensor[0, 0])))
+        )
+        self.data_provider.provide_heatmaps(var_attr_heatmap_img, comp_name + res_str + "_var_attr")
+        self.data_provider.provide_heatmaps(time_attr_heatmap_img, comp_name + res_str + "_time_attr")
+        # TODO: generally, we would want to store all heatmap IDs, i.e., for all channels
         return anomaly, pred_value, heatmap_id
 
     def classify_component(
@@ -224,7 +264,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         elif isinstance(model, torch.nn.Module):
             print("TORCH MODEL")
-            anomaly, pred_value, heatmap_id = self.classify_with_torch_model(model, voltage_dfs)
+            anomaly, pred_value, heatmap_id = self.classify_with_torch_model(model, voltage_dfs, affecting_comp)
 
         elif isinstance(model, RuleBasedModel):
             if isinstance(model, Lambdasonde) or isinstance(model, Saugrohrdrucksensor):
