@@ -389,13 +389,14 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param explicitly_considered_links: links that have been verified explicitly
         :return: tuple of edge colors and widths
         """
-        colors = ['g' if i not in causal_links else 'r' for i in range(len(to_relations))]
+        colors = ["#056517" if i not in causal_links else "#bf1029" for i in range(len(to_relations))]
         for i in range(len(from_relations)):
             # if the from-to relation is not part of the actually considered links, it should be black
             if from_relations[i] not in explicitly_considered_links.keys() or to_relations[i] not in \
                     explicitly_considered_links[from_relations[i]]:
-                colors[i] = 'black'
-        widths = [26 if i not in causal_links else 32 for i in range(len(to_relations))]
+                colors[i] = "black"
+        # atm no diff between causal and non-causal
+        widths = [30 if i not in causal_links else 30 for i in range(len(to_relations))]
         return colors, widths
 
     def gen_causal_graph_visualizations(
@@ -421,7 +422,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
             to_relations = [item for lst in to_relations for item in lst]
             causal_links = self.compute_causal_links(to_relations, key, anomalous_paths, from_relations)
-            colors, widths = self.set_edge_properties(
+            edge_colors, widths = self.set_edge_properties(
                 causal_links, to_relations, from_relations, explicitly_considered_links
             )
             df = pd.DataFrame({'from': from_relations, 'to': to_relations})
@@ -439,13 +440,31 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             labels = {n: n.replace(" ", "\n") for n in g.nodes}
 
+            # set default node color to light grey and outline to black
+            node_colors = ["#4c5759" for _ in g.nodes]
+            node_outlines = ["black" for _ in g.nodes]
+
+            if len(anomalous_paths) > 0:
+                for i, node in enumerate(g.nodes):
+                    if node in from_relations:  # set anomalous super components to red
+                        node_colors[i] = "#f5cdcb"
+                        node_outlines[i] = "#bf1029"
+                    if node in to_relations and node not in from_relations:
+                        for k in anomalous_paths.keys():
+                            for path in anomalous_paths[k]:
+                                if "(" + node + ")" in path:
+                                    # set anomalous sub component outline to red
+                                    node_outlines[i] = "#bf1029"
+
             nx.draw(
                 g, pos=pos, with_labels=False, node_size=86000, font_size=25, alpha=0.75, arrows=True,
-                edge_color=colors, width=widths
+                edge_color=edge_colors, width=widths, node_color=node_colors, edgecolors=node_outlines,
+                linewidths=12
             )
             nx.draw_networkx_labels(g, pos, labels=labels, font_size=25, font_color='black')
-            legend_lines = [self.create_legend_line(clr, lw=20) for clr in ['r', 'g', 'black']]
-            labels = ["fault path", "non-anomalous links", "disregarded"]
+            legend_lines = [self.create_legend_line(clr, lw=20) for clr in
+                            ['#bf1029', '#056517', 'black', '#f5cdcb', '#4c5759']]
+            labels = ["fault path", "non-anomalous links", "disregarded", "components", "sub components"]
 
             # initial preview does not require a legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
