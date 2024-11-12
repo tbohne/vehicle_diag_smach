@@ -33,7 +33,7 @@ $ curl -L https://dlcdn.apache.org/jena/binaries/apache-jena-fuseki-VERSION.tar.
 $ tar -xvzf apache-jena-fuseki-VERSION.tar.gz
 $ chmod +x apache-jena-fuseki-VERSION/fuseki-server
 ```
-For configuration, i.e., hosting the knowledge graph, cf. [obd_ontology](https://github.com/tbohne/obd_ontology) (section "*Launch knowledge graph from RDF serialization (e.g. `.nt` / `.owl` / `.ttl` file*").
+For configuration, i.e., hosting the knowledge graph, cf. [obd_ontology](https://github.com/tbohne/obd_ontology) (section "*Launch knowledge graph from RDF serialization (e.g., `.nq.gz` / `.nt` / `.owl` / `.ttl` file*").
 
 ## Installation (Docker)
 ```
