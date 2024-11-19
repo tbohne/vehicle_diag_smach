@@ -462,7 +462,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         node_outlines[i] = "#bf1029"
 
             nx.draw(
-                g, pos=pos, with_labels=False, node_size=86000, font_size=25, alpha=0.75, arrows=True,
+                g, pos=pos, with_labels=False, node_size=95000, font_size=25, alpha=0.75, arrows=True,
                 edge_color=edge_colors, node_color=node_colors, edgecolors=node_outlines,
                 linewidths=12, arrowstyle='simple', arrowsize=100
             )
