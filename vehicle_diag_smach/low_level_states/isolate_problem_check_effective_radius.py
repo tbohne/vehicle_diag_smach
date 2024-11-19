@@ -473,6 +473,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                                 ['#bf1029', '#056517', 'black', '#f5cdcb', '#596466']]
                 labels = ["fault path", "non-anomalous links", "disregarded", "components", "sub components"]
                 plt.legend(legend_lines, labels, fontsize=40, loc='center right')
+            else:  # initial graph legend
+                legend_lines = [self.create_legend_line(clr, lw=20) for clr in ["#596466", "#a8b3b5"]]
+                labels = ["components", "sub components"]
+                plt.legend(legend_lines, labels, fontsize=40, loc='center right')
 
             buf = io.BytesIO()  # create bytes object and save matplotlib fig into it
             plt.savefig(buf, format='png')
