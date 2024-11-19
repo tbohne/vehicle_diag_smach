@@ -422,6 +422,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             to_relations = [complete_graphs[key][k] for k in complete_graphs[key].keys()]
             to_relations = [item for lst in to_relations for item in lst]
             causal_links = self.compute_causal_links(to_relations, key, anomalous_paths, from_relations)
+            # widths no longer used below (atm) -- changed arrow style
             edge_colors, widths = self.set_edge_properties(
                 causal_links, to_relations, from_relations, explicitly_considered_links
             )
@@ -440,34 +441,37 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             labels = {n: n.replace(" ", "\n") for n in g.nodes}
 
-            # set default node color to light grey and outline to black
-            node_colors = ["#4c5759" for _ in g.nodes]
+            # assumption: each sub component is part of KG
+            sub_components = [node for node in g.nodes if len(self.qt.query_sub_component_by_name(node)) == 1]
+
+            # visually distinguish sub components from components
+            node_colors = ["#a8b3b5" if node in sub_components else "#596466" for node in g.nodes]
+            # set default outline to black
             node_outlines = ["black" for _ in g.nodes]
 
             if len(anomalous_paths) > 0:
                 for i, node in enumerate(g.nodes):
-                    if node in from_relations:  # set anomalous super components to red
-                        node_colors[i] = "#f5cdcb"
-                        node_outlines[i] = "#bf1029"
-                    if node in to_relations and node not in from_relations:
+                    if node in sub_components:
                         for k in anomalous_paths.keys():
                             for path in anomalous_paths[k]:
                                 if "(" + node + ")" in path:
                                     # set anomalous sub component outline to red
                                     node_outlines[i] = "#bf1029"
+                    else:  # set anomalous super components to red
+                        node_colors[i] = "#f5cdcb"
+                        node_outlines[i] = "#bf1029"
 
             nx.draw(
                 g, pos=pos, with_labels=False, node_size=86000, font_size=25, alpha=0.75, arrows=True,
-                edge_color=edge_colors, width=widths, node_color=node_colors, edgecolors=node_outlines,
-                linewidths=12
+                edge_color=edge_colors, node_color=node_colors, edgecolors=node_outlines,
+                linewidths=12, arrowstyle='simple', arrowsize=100
             )
             nx.draw_networkx_labels(g, pos, labels=labels, font_size=25, font_color='black')
-            legend_lines = [self.create_legend_line(clr, lw=20) for clr in
-                            ['#bf1029', '#056517', 'black', '#f5cdcb', '#4c5759']]
-            labels = ["fault path", "non-anomalous links", "disregarded", "components", "sub components"]
-
-            # initial preview does not require a legend
+            # initial preview does not require the same legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
+                legend_lines = [self.create_legend_line(clr, lw=20) for clr in
+                                ['#bf1029', '#056517', 'black', '#f5cdcb', '#596466']]
+                labels = ["fault path", "non-anomalous links", "disregarded", "components", "sub components"]
                 plt.legend(legend_lines, labels, fontsize=40, loc='center right')
 
             buf = io.BytesIO()  # create bytes object and save matplotlib fig into it
