@@ -29,7 +29,7 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
         :param data_provider: implementation of the data provider interface
         :param kg_url: URL of the knowledge graph guiding the diagnosis
         """
-        smach.State.__init__(self, outcomes=['no_diag'], input_keys=[''], output_keys=[''])
+        smach.State.__init__(self, outcomes=['no_diag'], input_keys=[''], output_keys=['final_output'])
         self.data_provider = data_provider
         self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(kg_url=kg_url)
         self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=kg_url)
@@ -105,4 +105,5 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
         self.instance_gen.extend_knowledge_graph_with_diag_log(
             data["diag_date"], data["max_num_of_parallel_rec"], obd_data["dtc_list"], [], classification_ids, vehicle_id
         )
+        userdata.final_output = []
         return "no_diag"
