@@ -658,11 +658,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param dtc: DTC the original component suggestion was based on
         :param classification_reason: reason for the classification (ID of another classification)
         """
-        # the very first component entered; the beginning of isolation
-        if len(causal_paths) == 1 and len(causal_paths[0]) == 1:
-            self.create_sub_component_paths_for_initial_comp(
-                causal_paths, dtc, classification_reason, explicitly_considered_links
-            )
         sub_anomalies, sub_regulars = self.classify_sub_components_for_anomaly(checked_comp, dtc, classification_reason)
 
         already_in_path = False
@@ -715,6 +710,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param dtc: DTC the original component suggestion was based on
         :param anomalous_comp: initial anomalous component (entry point)
         """
+        # the very first component entered; the beginning of isolation
+        if len(causal_paths) == 1 and len(causal_paths[0]) == 1:
+            self.create_sub_component_paths_for_initial_comp(
+                causal_paths, dtc, already_checked_comps[anomalous_comp][1], explicitly_considered_links
+            )
         while len(unisolated_anomalous_comps) > 0:
             comp_to_be_checked = unisolated_anomalous_comps.pop(0)
             print(colored("\ncomponent to be checked: " + comp_to_be_checked, "green", "on_grey", ["bold"]))
