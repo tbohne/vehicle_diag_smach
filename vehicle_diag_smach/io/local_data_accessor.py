@@ -113,11 +113,11 @@ class LocalDataAccessor(DataAccessor):
                 # if there is a recording with such an index for the current component, choose it
                 matches = [rec for rec in comp_recordings for comb in possible_combinations if comb in rec]
                 sel_rec = matches[0] if len(matches) > 0 else ""
-                print("selected rec:", sel_rec)
             if sel_rec == "":
                 random.seed(SEED)
                 # select random sample for the corresponding component
                 sel_rec = random.choice(comp_recordings)
+            print("selected rec:", sel_rec)
 
             path = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/" + sel_rec
             dst = SESSION_DIR + "/" + SELECTED_OSCILLOGRAMS + "/" + sel_rec
