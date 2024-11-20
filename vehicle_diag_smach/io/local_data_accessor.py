@@ -15,7 +15,7 @@ from oscillogram_classification import preprocess
 from py4j.java_gateway import JavaGateway
 
 from vehicle_diag_smach.config import OSCI_SESSION_FILES, FINAL_DEMO_TEST_SAMPLES, SEED, SELECTED_OSCILLOGRAMS, \
-    VEHICLE_DATA, WORKSHOP_DATA, ONLY_NEG_SAMPLES
+    VEHICLE_DATA, WORKSHOP_DATA, ONLY_NEG_SAMPLES, SYNC_SAMPLES
 from vehicle_diag_smach.config import SESSION_DIR, XPS_SESSION_FILE
 from vehicle_diag_smach.data_types.customer_complaint_data import CustomerComplaintData
 from vehicle_diag_smach.data_types.onboard_diagnosis_data import OnboardDiagnosisData
@@ -102,12 +102,25 @@ class LocalDataAccessor(DataAccessor):
             # we are typically interested in the NEG samples, i.e., the ones with anomaly
             if ONLY_NEG_SAMPLES:
                 comp_recordings = [f for f in comp_recordings if "NEG" in f]
-            random.seed(SEED)
-            # select random sample for the corresponding component
-            random_rec = random.choice(comp_recordings)
 
-            path = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/" + random_rec
-            dst = SESSION_DIR + "/" + SELECTED_OSCILLOGRAMS + "/" + random_rec
+            sel_rec = ""
+            if SYNC_SAMPLES:  # by default, select corresponding (sync) recording if applicable
+                # find indices of recordings already part of selected rec
+                already_selected_indices = ["_".join(str(f).split(".")[0].split("_")[-2:])
+                                            for f in os.listdir(SESSION_DIR + "/" + SELECTED_OSCILLOGRAMS + "/")]
+                print("already selected indices:", already_selected_indices)
+                possible_combinations = [comp + "_" + i + ".csv" for i in already_selected_indices]
+                # if there is a recording with such an index for the current component, choose it
+                matches = [rec for rec in comp_recordings for comb in possible_combinations if comb in rec]
+                sel_rec = matches[0] if len(matches) > 0 else ""
+            if sel_rec == "":
+                random.seed(SEED)
+                # select random sample for the corresponding component
+                sel_rec = random.choice(comp_recordings)
+            print("selected rec:", sel_rec)
+
+            path = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/" + sel_rec
+            dst = SESSION_DIR + "/" + SELECTED_OSCILLOGRAMS + "/" + sel_rec
             # copy selected recording to corresponding dir
             shutil.copy(path, dst)
 

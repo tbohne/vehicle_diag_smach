@@ -471,8 +471,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             # initial preview does not require the same legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
                 legend_lines = [self.create_legend_line(clr, lw=20) for clr in
-                                ['#bf1029', '#056517', 'black', '#f5cdcb', '#a8b3b5']]
-                labels = ["fault path", "non-anomalous links", "disregarded", "components", "sub components"]
+                                ['#bf1029', '#056517', 'black', '#f5cdcb', '#596466', '#a8b3b5']]
+                labels = ["fault path", "non-anomalous links", "disregarded", "anomalous components",
+                          "regular components", "sub components"]
                 plt.legend(legend_lines, labels, fontsize=40, loc='center right')
             else:  # initial graph legend
                 legend_lines = [self.create_legend_line(clr, lw=20) for clr in ["#596466", "#a8b3b5"]]
@@ -658,11 +659,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param dtc: DTC the original component suggestion was based on
         :param classification_reason: reason for the classification (ID of another classification)
         """
-        # the very first component entered; the beginning of isolation
-        if len(causal_paths) == 1 and len(causal_paths[0]) == 1:
-            self.create_sub_component_paths_for_initial_comp(
-                causal_paths, dtc, classification_reason, explicitly_considered_links
-            )
         sub_anomalies, sub_regulars = self.classify_sub_components_for_anomaly(checked_comp, dtc, classification_reason)
 
         already_in_path = False
@@ -715,6 +711,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         :param dtc: DTC the original component suggestion was based on
         :param anomalous_comp: initial anomalous component (entry point)
         """
+        # the very first component entered; the beginning of isolation
+        if len(causal_paths) == 1 and len(causal_paths[0]) == 1:
+            self.create_sub_component_paths_for_initial_comp(
+                causal_paths, dtc, already_checked_comps[anomalous_comp][1], explicitly_considered_links
+            )
         while len(unisolated_anomalous_comps) > 0:
             comp_to_be_checked = unisolated_anomalous_comps.pop(0)
             print(colored("\ncomponent to be checked: " + comp_to_be_checked, "green", "on_grey", ["bold"]))

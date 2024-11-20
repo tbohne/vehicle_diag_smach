@@ -4,6 +4,7 @@
 
 import os
 import platform
+import random
 from typing import List
 
 from PIL import Image
@@ -29,6 +30,7 @@ class LocalDataProvider(DataProvider):
         :param visualizations: causal graph visualizations to be displayed on hub UI
         """
         for vis in visualizations:
+            vis.save("causal_graph_" + str(random.randint(0, 10000)) + ".png")
             vis.show()
         util.artificial_demo_pause()
 
