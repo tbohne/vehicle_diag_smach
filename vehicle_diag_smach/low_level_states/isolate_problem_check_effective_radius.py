@@ -471,8 +471,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             # initial preview does not require the same legend
             if len(anomalous_paths.keys()) > 0 and len(explicitly_considered_links.keys()) > 0:
                 legend_lines = [self.create_legend_line(clr, lw=20) for clr in
-                                ['#bf1029', '#056517', 'black', '#f5cdcb', '#a8b3b5']]
-                labels = ["fault path", "non-anomalous links", "disregarded", "components", "sub components"]
+                                ['#bf1029', '#056517', 'black', '#f5cdcb', '#596466', '#a8b3b5']]
+                labels = ["fault path", "non-anomalous links", "disregarded", "anomalous components",
+                          "regular components", "sub components"]
                 plt.legend(legend_lines, labels, fontsize=40, loc='center right')
             else:  # initial graph legend
                 legend_lines = [self.create_legend_line(clr, lw=20) for clr in ["#596466", "#a8b3b5"]]
