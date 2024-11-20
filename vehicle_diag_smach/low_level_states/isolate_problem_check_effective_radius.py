@@ -451,15 +451,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
             if len(anomalous_paths) > 0:
                 for i, node in enumerate(g.nodes):
-                    if node in sub_components:
-                        for k in anomalous_paths.keys():
-                            for path in anomalous_paths[k]:
+                    for k in anomalous_paths.keys():
+                        for path in anomalous_paths[k]:
+                            if node in sub_components:
                                 if "(" + node + ")" in path:
                                     # set anomalous sub component outline to red
                                     node_outlines[i] = "#bf1029"
-                    else:  # set anomalous super components to red
-                        node_colors[i] = "#f5cdcb"
-                        node_outlines[i] = "#bf1029"
+                            else:  # super component
+                                if node in path:  # set anomalous super components to red
+                                    node_colors[i] = "#f5cdcb"
+                                    node_outlines[i] = "#bf1029"
 
             nx.draw(
                 g, pos=pos, with_labels=False, node_size=95000, font_size=25, alpha=0.75, arrows=True,
