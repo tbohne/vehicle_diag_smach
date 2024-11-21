@@ -263,7 +263,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 if req_chan_name == affecting_comp:
                     idx = int(req_idx)
                     break
-                    # TODO: what if affecting_comp does not appear in input_chan_req?
             voltage_dfs = [voltage_dfs[idx]]
 
         for df in range(len(voltage_dfs)):
