@@ -254,6 +254,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             model_uuid = model_instance.split("#")[1]
             input_chan_req_resp = self.qt.query_input_chan_req_by_model(model_uuid)
             assert len(input_chan_req_resp) > 0
+            idx = 0
             for input_chan_req, req_idx in input_chan_req_resp:
                 input_chan_req_id = input_chan_req.split("#")[1]
                 req_chan = self.qt.query_channel_by_input_req(input_chan_req_id)
@@ -261,6 +262,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 req_chan_name = req_chan[0][1]
                 if req_chan_name == affecting_comp:
                     idx = int(req_idx)
+                    break
                     # TODO: what if affecting_comp does not appear in input_chan_req?
             voltage_dfs = [voltage_dfs[idx]]
 
