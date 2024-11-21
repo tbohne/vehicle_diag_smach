@@ -250,8 +250,18 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         model, model_meta_info = self.get_model_and_metadata(affecting_comp, voltage_dfs, sub_comp)
 
         if sub_comp:
-            channels_for_super_comp = self.qt.query_sub_components_by_component(super_comp)
-            idx = channels_for_super_comp.index(affecting_comp)
+            model_instance = self.qt.query_model_by_model_id(model_meta_info["model_id"])[0]
+            model_uuid = model_instance.split("#")[1]
+            input_chan_req_resp = self.qt.query_input_chan_req_by_model(model_uuid)
+            assert len(input_chan_req_resp) > 0
+            for input_chan_req, req_idx in input_chan_req_resp:
+                input_chan_req_id = input_chan_req.split("#")[1]
+                req_chan = self.qt.query_channel_by_input_req(input_chan_req_id)
+                assert len(req_chan) == 1
+                req_chan_name = req_chan[0][1]
+                if req_chan_name == affecting_comp:
+                    idx = int(req_idx)
+                    # TODO: what if affecting_comp does not appear in input_chan_req?
             voltage_dfs = [voltage_dfs[idx]]
 
         for df in range(len(voltage_dfs)):
