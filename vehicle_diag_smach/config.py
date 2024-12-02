@@ -34,7 +34,7 @@ DUMMY_ISOLATION_OSCILLOGRAM_NEG2 = "res/dummy_isolation_oscillogram/dummy_isolat
 FINAL_DEMO_TEST_SAMPLES = "res/final_demonstrator_res/multivariate_signals/"
 FINAL_DEMO_MODELS = "res/final_demonstrator_res/final_demo_models/"
 # SEED = 22  # [ANOMALY -> REGULAR]; when ONLY_NEG_SAMPLES = False; SYNC_SAMPLES = False
-SEED = 42
+SEED = 4
 VEHICLE_DATA = "res/final_demonstrator_res/vehicle_info.json"
 WORKSHOP_DATA = "res/final_demonstrator_res/workshop_info.json"
 ONLY_NEG_SAMPLES = True
