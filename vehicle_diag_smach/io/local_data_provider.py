@@ -42,6 +42,8 @@ class LocalDataProvider(DataProvider):
         :param title: title of the heatmap plot (component + result of classification + score)
         """
         title = title.replace(" ", "_") + ".png"
+        if platform.system() == "Windows":
+            title = title.replace(":", "")
         heatmaps.save(title)
         # determine platform and open file with default image viewer
         if platform.system() == "Windows":
