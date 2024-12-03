@@ -757,8 +757,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                         assert len(req_chan) == 1
                         req_chan_name = req_chan[0][1]
                         comp_channels[int(req_idx)] = req_chan_name
-                    print(colored(f"- channels to be recorded for component {comp_to_be_checked}: {list(comp_channels)} ", "green",
-                              "on_grey", ["bold"]))
+                    print(colored(f"- {comp_to_be_checked}: channels to be recorded - {list(comp_channels)} ", "green",
+                                  "on_grey", ["bold"]))
                 except ValueError:
                     pass
 

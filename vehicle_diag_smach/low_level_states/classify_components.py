@@ -123,9 +123,9 @@ class ClassifyComponents(smach.State):
         print("components to be recorded:", components_to_be_recorded)
         print("components to be verified manually:", components_to_be_manually_verified)
         print("------------------------------------------")
-        print(colored("\nperform synchronized sensor recordings:", "green", "on_grey", ["bold"]))
+        print(colored("\nperform synchronized sensor recordings at:", "green", "on_grey", ["bold"]))
         for comp, channel_names in channels.items():
-            print(colored(f"- channels to be recorded for component {comp}: {list(channel_names)} ", "green", "on_grey", ["bold"]))
+            print(colored(f"- {comp}: channels to be recorded - {list(channel_names)} ", "green", "on_grey", ["bold"]))
         return components_to_be_recorded, components_to_be_manually_verified
 
     @staticmethod
