@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import smach
 import torch
-from obd_ontology import ontology_instance_generator
+from obd_ontology import ontology_instance_generator, knowledge_graph_query_tool
 from oscillogram_classification import cam
 from tensorflow import keras
 from termcolor import colored
@@ -53,6 +53,7 @@ class ClassifyComponents(smach.State):
         self.data_accessor = data_accessor
         self.data_provider = data_provider
         self.instance_gen = ontology_instance_generator.OntologyInstanceGenerator(kg_url=kg_url)
+        self.qt = knowledge_graph_query_tool.KnowledgeGraphQueryTool(kg_url=kg_url)
 
     @staticmethod
     def log_classification_actions(
@@ -91,9 +92,8 @@ class ClassifyComponents(smach.State):
               "state (applying trained model)..")
         print("############################################")
 
-    @staticmethod
     def perform_synchronized_sensor_recordings(
-            suggestion_list: Dict[str, Tuple[str, bool]]
+            self, suggestion_list: Dict[str, Tuple[str, bool]]
     ) -> Tuple[Dict[str, str], Dict[str, str]]:
         """
         Performs synchronized sensor recordings based on the provided suggestion list.
@@ -104,13 +104,28 @@ class ClassifyComponents(smach.State):
         """
         components_to_be_recorded = {k: v[0] for k, v in suggestion_list.items() if v[1]}
         components_to_be_manually_verified = {k: v[0] for k, v in suggestion_list.items() if not v[1]}
+        channels = {}
+        for component in components_to_be_recorded.keys():
+            norm, model_id, input_len = self.qt.query_xcm_model_meta_info_by_component(component)[0]
+            model_instance = self.qt.query_model_by_model_id(model_id)[0]
+            model_uuid = model_instance.split("#")[1]
+            input_chan_req_resp = self.qt.query_input_chan_req_by_model(model_uuid)
+            assert len(input_chan_req_resp) > 0
+            comp_channels = np.empty(len(input_chan_req_resp), dtype=object)
+            for input_chan_req, req_idx in input_chan_req_resp:
+                input_chan_req_id = input_chan_req.split("#")[1]
+                req_chan = self.qt.query_channel_by_input_req(input_chan_req_id)
+                assert len(req_chan) == 1
+                req_chan_name = req_chan[0][1]
+                comp_channels[int(req_idx)] = req_chan_name
+            channels[component] = comp_channels
         print("------------------------------------------")
         print("components to be recorded:", components_to_be_recorded)
         print("components to be verified manually:", components_to_be_manually_verified)
         print("------------------------------------------")
-        print(colored("\nperform synchronized sensor recordings at:", "green", "on_grey", ["bold"]))
-        for comp in components_to_be_recorded.keys():
-            print(colored("- " + comp, "green", "on_grey", ["bold"]))
+        print(colored("\nperform synchronized sensor recordings:", "green", "on_grey", ["bold"]))
+        for comp, channel_names in channels.items():
+            print(colored(f"- channels to be recorded for component {comp}: {list(channel_names)} ", "green", "on_grey", ["bold"]))
         return components_to_be_recorded, components_to_be_manually_verified
 
     @staticmethod
