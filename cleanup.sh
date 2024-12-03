@@ -7,5 +7,7 @@ pip uninstall vehicle_diag_smach
 pip uninstall tsai
 pip uninstall torch
 pip uninstall torchvision
+pip uninstall tensorflow
+pip uninstall numpy
 pip uninstall sktime
 pip cache purge
