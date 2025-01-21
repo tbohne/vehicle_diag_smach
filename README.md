@@ -107,8 +107,20 @@ $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 **Embedded Diagnosis State Machine (Low-Level)**
 ![](img/smach_low_level_v3.svg)
 
-## Fault Isolation Result Example
+## Univariate Fault Isolation Result Example
 ![](img/fault_isolation.svg)
+
+## Multivariate Fault Isolation
+![](img/causal_graph_pre.png)
+![](img/causal_graph_post.png)
+
+## Multivariate Heatmap Examples
+
+### Time Attribution Maps
+![](img/multivar_time.png)
+
+### Variable Attribution Maps
+![](img/multivar_var.png)
 
 ## Related Publications
 
