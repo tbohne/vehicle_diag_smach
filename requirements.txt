@@ -20,4 +20,4 @@ protobuf==4.23.3
 pygments
 pexpect
 git+https://github.com/tbohne/obd_ontology.git@v0.1.4
-git+https://github.com/tbohne/oscillogram_classification.git@v0.1.7
+git+https://github.com/tbohne/oscillogram_classification.git@v0.1.8
