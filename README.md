@@ -111,16 +111,16 @@ $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 ![](img/fault_isolation.svg)
 
 ## Multivariate Fault Isolation
-![](img/causal_graph_pre.png)
-![](img/causal_graph_post.png)
+![](img/causal_graph_pre.svg)
+![](img/causal_graph_post.svg)
 
 ## Multivariate Heatmap Examples
 
 ### Time Attribution Maps
-![](img/multivar_time.png)
+![](img/multivar_time.svg)
 
 ### Variable Attribution Maps
-![](img/multivar_var.png)
+![](img/multivar_var.svg)
 
 ## Related Publications
 
