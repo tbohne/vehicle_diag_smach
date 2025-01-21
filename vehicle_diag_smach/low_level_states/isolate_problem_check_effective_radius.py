@@ -5,6 +5,7 @@
 import io
 import json
 import os
+import random
 from typing import Union, List, Tuple, Dict
 
 import matplotlib.pyplot as plt
@@ -492,6 +493,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 plt.legend(legend_lines, labels, fontsize=40, loc='center right')
 
             buf = io.BytesIO()  # create bytes object and save matplotlib fig into it
+            plt.savefig("causal_" + str(random.randint(0, 10000)) + ".svg")
             plt.savefig(buf, format='png')
             buf.seek(0)
             plt.close()
