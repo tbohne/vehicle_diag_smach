@@ -125,6 +125,15 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
     def classify_with_keras_model(
             self, model: keras.models.Model, voltage_dfs: List[pd.DataFrame], dtc: str, affecting_comp: str
     ) -> Tuple[bool, float, str]:
+        """
+        Classifies the provided voltage dataframes using the provided Keras model.
+
+        :param model: trained Keras model to classify voltage frames
+        :param voltage_dfs: voltage data to be classified
+        :param dtc: DTC to set heatmap for
+        :param affecting_comp: component to classify oscillogram for
+        :return: (anomaly, prediction value, heatmap ID)
+        """
         voltages = list(voltage_dfs[0].to_numpy().flatten())
         net_input = util.construct_net_input(model, voltages)
         prediction = model.predict(np.array([net_input]))
@@ -146,6 +155,14 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
     def classify_with_torch_model(
             self, model: torch.nn.Module, voltage_dfs: List[pd.DataFrame], comp_name: str
     ) -> Tuple[bool, float, str]:
+        """
+        Classifies the provided voltage dataframes using the provided torch model.
+
+        :param model: trained torch model to classify voltage frames
+        :param voltage_dfs: voltage data to be classified
+        :param comp_name: name of the corresponding component
+        :return: (anomaly, prediction value, heatmap ID)
+        """
         multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
         # expected shape for test signals: (1, chan, length)
         multivariate_sample = multivariate_sample.reshape(
@@ -171,30 +188,18 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         # xcm_model.show_gradcam(tensor, TensorCategory(pred_value), figsize=(1920, 1080))
 
         att_maps = get_attribution_map(
-            xcm_model,
-            [xcm_model.conv2dblock, xcm_model.conv1dblock],
-            tensor,
-            detach=True,
-            apply_relu=True
+            xcm_model, [xcm_model.conv2dblock, xcm_model.conv1dblock], tensor, detach=True, apply_relu=True
         )
         att_maps[0] = (att_maps[0] - att_maps[0].min()) / (att_maps[0].max() - att_maps[0].min())
         att_maps[1] = (att_maps[1] - att_maps[1].min()) / (att_maps[1].max() - att_maps[1].min())
 
         var_attr_heatmaps = {"var. attr. map " + str(i): att_maps[0].numpy()[i] for i in range(len(voltage_dfs))}
         # plot_multi_chan_heatmaps_as_overlay(
-        #     var_attr_heatmaps,
-        #     tensor[0].numpy(),
-        #     'test_plot',
-        #     list(range(len(tensor[0, 0]))),
-        #     True
+        #     var_attr_heatmaps, tensor[0].numpy(), 'test_plot', list(range(len(tensor[0, 0]))), True
         # )
         time_attr_heatmaps = {"time attr. map " + str(i): att_maps[1].numpy()[i] for i in range(len(voltage_dfs))}
         # plot_multi_chan_heatmaps_as_overlay(
-        #     time_attr_heatmaps,
-        #     tensor[0].numpy(),
-        #     'test_plot',
-        #     list(range(len(tensor[0, 0]))),
-        #     False
+        #     time_attr_heatmaps, tensor[0].numpy(), 'test_plot', list(range(len(tensor[0, 0]))), False
         # )
 
         for i in range(len(var_attr_heatmaps)):
@@ -275,11 +280,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if isinstance(model, keras.models.Model):
             print("KERAS MODEL")
             anomaly, pred_value, heatmap_id = self.classify_with_keras_model(model, voltage_dfs, dtc, affecting_comp)
-
         elif isinstance(model, torch.nn.Module):
             print("TORCH MODEL")
             anomaly, pred_value, heatmap_id = self.classify_with_torch_model(model, voltage_dfs, affecting_comp)
-
         elif isinstance(model, RuleBasedModel):
             if isinstance(model, Lambdasonde) or isinstance(model, Saugrohrdrucksensor):
                 anomaly = model.predict(voltage_dfs[0].to_numpy(), affecting_comp)
@@ -319,10 +322,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         comp = components_to_process.pop(0)
         if comp not in graph.keys():
             affecting_comp = self.qt.query_affected_by_relations_by_suspect_component(comp, False)
-
             # add sub-components
             affecting_comp += self.qt.query_sub_components_by_component(comp)
-
             components_to_process += affecting_comp
             graph[comp] = affecting_comp
         return self.construct_complete_graph(graph, components_to_process)
@@ -338,7 +339,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return Line2D([0, 1], [0, 1], color=color, **kwargs)
 
     @staticmethod
-    def get_anomalous_paths_without_sub_components(key: str, anomalous_paths: Dict[str, List[List[str]]]):
+    def get_anomalous_paths_without_sub_components(
+            key: str, anomalous_paths: Dict[str, List[List[str]]]
+    ) -> List[List[str]]:
+        """
+        Retrieves anomalous paths without sub components.
+
+        :param key: considered component
+        :param anomalous_paths: anomalous paths
+        :return: anomalous paths without sub components
+        """
         anomalous_paths_without_sub = []
         if key in anomalous_paths.keys():
             for path in anomalous_paths[key]:
@@ -452,7 +462,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 pos = nx.spring_layout(g, scale=1, seed=67)
 
             labels = {n: n.replace(" ", "\n") for n in g.nodes}
-
             # assumption: each sub component is part of KG
             sub_components = [node for node in g.nodes if len(self.qt.query_sub_component_by_name(node)) == 1]
 
@@ -473,7 +482,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                                 if node in path:  # set anomalous super components to red
                                     node_colors[i] = "#f5cdcb"
                                     node_outlines[i] = "#bf1029"
-
             nx.draw(
                 g, pos=pos, with_labels=False, node_size=95000, font_size=25, alpha=0.75, arrows=True,
                 edge_color=edge_colors, node_color=node_colors, edgecolors=node_outlines,
@@ -597,7 +605,15 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
     def create_sub_component_paths_for_initial_comp(
             self, causal_paths: List[List[str]], dtc: str, classification_reason: str,
             explicitly_considered_links: Dict[str, List[str]]
-    ):
+    ) -> None:
+        """
+        Creates the sub component paths for the initial component.
+
+        :param causal_paths: causal paths to be extended with sub components
+        :param dtc: DTC the original component suggestion was based on
+        :param classification_reason: reason for the classification (ID of another classification)
+        :param explicitly_considered_links: links that have been verified explicitly
+        """
         sub_anomalies = []
         entry_comp = causal_paths[0][0]
         for sub_comp in self.qt.query_sub_components_by_component(entry_comp):
@@ -618,6 +634,14 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
     def classify_sub_components_for_anomaly(
             self, checked_comp: str, dtc: str, classification_reason: str,
     ) -> Tuple[List[str], List[str]]:
+        """
+        Classifies the sub components for a given anomaly.
+
+        :param checked_comp: anomaly to classify sub components for
+        :param dtc: DTC the original component suggestion was based on
+        :param classification_reason: reason for the classification (ID of another classification)
+        :return: (sub component anomalies, sub component regulars)
+        """
         # classify subcomponents for anomaly (univariate classification)
         sub_anomalies = []
         sub_regulars = []
@@ -635,7 +659,16 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         return sub_anomalies, sub_regulars
 
     @staticmethod
-    def create_sub_comp_paths_and_branch(prev_path: List[str], sub_anomalies: List[str], causal_paths: List[List[str]]):
+    def create_sub_comp_paths_and_branch(
+            prev_path: List[str], sub_anomalies: List[str], causal_paths: List[List[str]]
+    ) -> None:
+        """
+        Creates sub component paths and branches.
+
+        :param prev_path: the previous path
+        :param sub_anomalies: sub anomalies to be added to the causal paths
+        :param causal_paths: causal paths to be extended
+        """
         starter_path = prev_path.copy()
         if len(sub_anomalies) > 0:
             prev_path.append("(" + sub_anomalies[0] + ")")
@@ -647,7 +680,14 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 causal_paths.append(tmp)
 
     @staticmethod
-    def create_sub_comp_paths(causal_paths: List[List[str]], idx: int, sub_anomalies: List[str]):
+    def create_sub_comp_paths(causal_paths: List[List[str]], idx: int, sub_anomalies: List[str]) -> None:
+        """
+        Creates sub component paths without branching.
+
+        :param causal_paths: causal paths to be extended
+        :param idx: idx of causal path to be extended
+        :param sub_anomalies: sub anomalies to extend causal paths with
+        """
         starter_path = causal_paths[idx].copy()
         if len(sub_anomalies) > 0:
             causal_paths[idx].append("(" + sub_anomalies[0] + ")")

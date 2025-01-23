@@ -35,8 +35,9 @@ class ClassifyComponents(smach.State):
         - manual inspection of suspect components, for which oscilloscope diagnosis is not appropriate, is performed
     """
 
-    def __init__(self, model_accessor: ModelAccessor, data_accessor: DataAccessor, data_provider: DataProvider,
-                 kg_url: str) -> None:
+    def __init__(
+            self, model_accessor: ModelAccessor, data_accessor: DataAccessor, data_provider: DataProvider, kg_url: str
+    ) -> None:
         """
         Initializes the state.
 
@@ -158,6 +159,14 @@ class ClassifyComponents(smach.State):
     def classify_with_keras_model(
             self, model: keras.models.Model, voltage_dfs: List[pd.DataFrame], comp_name: str
     ) -> Tuple[bool, float, str]:
+        """
+        Classifies the provided voltage dataframes using the provided Keras model.
+
+        :param model: trained Keras model to classify voltage frames
+        :param voltage_dfs: voltage data to be classified
+        :param comp_name: name of the corresponding component
+        :return: (anomaly, prediction value, heatmap ID)
+        """
         voltages = list(voltage_dfs[0].to_numpy().flatten())
         net_input = util.construct_net_input(model, voltages)
         # TODO: fake time vals -- actually just data points
@@ -183,6 +192,14 @@ class ClassifyComponents(smach.State):
     def classify_with_torch_model(
             self, model: torch.nn.Module, voltage_dfs: List[pd.DataFrame], comp_name: str
     ) -> Tuple[bool, float, str]:
+        """
+        Classifies the provided voltage dataframes using the provided torch model.
+
+        :param model: trained torch model to classify voltage frames
+        :param voltage_dfs: voltage data to be classified
+        :param comp_name: name of the corresponding component
+        :return: (anomaly, prediction value, heatmap ID)
+        """
         multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
         # expected shape for test signals: (1, chan, length)
         multivariate_sample = multivariate_sample.reshape(
@@ -208,30 +225,18 @@ class ClassifyComponents(smach.State):
         # xcm_model.show_gradcam(tensor, TensorCategory(pred_value), figsize=(1920, 1080))
 
         att_maps = get_attribution_map(
-            xcm_model,
-            [xcm_model.conv2dblock, xcm_model.conv1dblock],
-            tensor,
-            detach=True,
-            apply_relu=True
+            xcm_model, [xcm_model.conv2dblock, xcm_model.conv1dblock], tensor, detach=True, apply_relu=True
         )
         att_maps[0] = (att_maps[0] - att_maps[0].min()) / (att_maps[0].max() - att_maps[0].min())
         att_maps[1] = (att_maps[1] - att_maps[1].min()) / (att_maps[1].max() - att_maps[1].min())
 
         var_attr_heatmaps = {"var. attr. map " + str(i): att_maps[0].numpy()[i] for i in range(len(voltage_dfs))}
         # plot_multi_chan_heatmaps_as_overlay(
-        #     var_attr_heatmaps,
-        #     tensor[0].numpy(),
-        #     'test_plot',
-        #     list(range(len(tensor[0, 0]))),
-        #     True
+        #     var_attr_heatmaps, tensor[0].numpy(), 'test_plot', list(range(len(tensor[0, 0]))), True
         # )
         time_attr_heatmaps = {"time attr. map " + str(i): att_maps[1].numpy()[i] for i in range(len(voltage_dfs))}
         # plot_multi_chan_heatmaps_as_overlay(
-        #     time_attr_heatmaps,
-        #     tensor[0].numpy(),
-        #     'test_plot',
-        #     list(range(len(tensor[0, 0]))),
-        #     False
+        #     time_attr_heatmaps, tensor[0].numpy(), 'test_plot', list(range(len(tensor[0, 0]))), False
         # )
 
         for i in range(len(var_attr_heatmaps)):
@@ -274,13 +279,11 @@ class ClassifyComponents(smach.State):
             print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
             voltage_dfs = osci_data.time_series
 
-            # multivariate
-            if len(voltage_dfs) > 1:
+            if len(voltage_dfs) > 1:  # multivariate
                 model = self.model_accessor.get_torch_multivariate_ts_classification_model_by_component(
                     osci_data.comp_name
                 )
-            # univariate
-            else:
+            else:  # univariate
                 model = self.model_accessor.get_keras_univariate_ts_classification_model_by_component(
                     osci_data.comp_name
                 )
@@ -299,8 +302,9 @@ class ClassifyComponents(smach.State):
             if isinstance(model, torch.nn.Module):
                 print("TORCH MODEL")
                 # TODO: potentially add torch model validation
-                anomaly, pred_value, heatmap_id = self.classify_with_torch_model(model, voltage_dfs,
-                                                                                 osci_data.comp_name)
+                anomaly, pred_value, heatmap_id = self.classify_with_torch_model(
+                    model, voltage_dfs, osci_data.comp_name
+                )
             elif isinstance(model, keras.models.Model):
                 print("KERAS MODEL")
                 try:
@@ -308,8 +312,9 @@ class ClassifyComponents(smach.State):
                 except ValueError as e:
                     util.invalid_model(osci_data, suggestion_list, e)
                     continue
-                anomaly, pred_value, heatmap_id = self.classify_with_keras_model(model, voltage_dfs,
-                                                                                 osci_data.comp_name)
+                anomaly, pred_value, heatmap_id = self.classify_with_keras_model(
+                    model, voltage_dfs, osci_data.comp_name
+                )
             else:
                 print("unknown model:", type(model))
                 continue

@@ -107,7 +107,7 @@ class EstablishInitialHypothesis(smach.State):
                 json.dump(unused_cc, f, default=str)
         else:
             print("no initial hypothesis based on customer complaints..")
-        # TODO: use historical data to refine initial hypothesis (e.g. to deny certain hypotheses)
+        # TODO: use historical data to refine initial hypothesis (e.g., to deny certain hypotheses)
         print("establish hypothesis..")
         self.data_provider.provide_state_transition(StateTransition(
             "ESTABLISH_INITIAL_HYPOTHESIS", "DIAGNOSIS", "established_init_hypothesis"
