@@ -91,8 +91,9 @@ class SuggestSuspectComponents(smach.State):
             oscilloscope_usage.append(use)
         return oscilloscope_usage
 
-    def gen_suggestions(self, selected_instance: str, suspect_components: List[str], oscilloscope_usage: List[bool]) \
-            -> Dict[str, Tuple[str, bool]]:
+    def gen_suggestions(
+            self, selected_instance: str, suspect_components: List[str], oscilloscope_usage: List[bool]
+    ) -> Dict[str, Tuple[str, bool]]:
         """
         Generates the suggestion dictionary: {comp: (reason_for, anomaly)}.
 

@@ -7,8 +7,7 @@ import os
 from typing import Dict, Union, List
 
 import smach
-from obd_ontology import knowledge_graph_query_tool
-from obd_ontology import ontology_instance_generator
+from obd_ontology import knowledge_graph_query_tool, ontology_instance_generator
 from termcolor import colored
 
 from vehicle_diag_smach.config import SESSION_DIR, OBD_INFO_FILE, CLASSIFICATION_LOG_FILE
@@ -76,7 +75,7 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
             log_file = json.load(f)
         return [classification_entry["Classification ID"] for classification_entry in log_file]
 
-    def read_vehicle_id(self, obd_data) -> str:
+    def read_vehicle_id(self, obd_data: Dict[str, Union[str, List[str]]]) -> str:
         """
         Queries the vehicle ID based on the provided OBD data.
 
@@ -93,7 +92,7 @@ class ProvideInitialHypothesisAndLogContext(smach.State):
         :return: outcome of the state ("no_diag")
         """
         self.log_state_info()
-        # TODO: create log file for the failed diagnostic process to improve future diagnosis (missing knowledge etc.)
+        # TODO: create log file for the failed diagnostic process to improve future diagnosis (missing knowledge, etc.)
         self.data_provider.provide_state_transition(StateTransition(
             "PROVIDE_INITIAL_HYPOTHESIS_AND_LOG_CONTEXT", "refuted_hypothesis", "no_diag"
         ))

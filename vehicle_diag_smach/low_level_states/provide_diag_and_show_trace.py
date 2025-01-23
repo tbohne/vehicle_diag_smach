@@ -101,7 +101,7 @@ class ProvideDiagAndShowTrace(smach.State):
             log_file = json.load(f)
         return [classification_entry["Classification ID"] for classification_entry in log_file]
 
-    def read_vehicle_id(self, obd_data) -> str:
+    def read_vehicle_id(self, obd_data: Dict[str, Union[str, List[str]]]) -> str:
         """
         Queries the vehicle ID based on the provided OBD data.
 
