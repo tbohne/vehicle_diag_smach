@@ -28,11 +28,13 @@ class Lambdasonde(RuleBasedModel):
         if chan_name == "Masseleitung der Heizung der Lambdasonde":
             return classify_sensor_rule_based(input_signal, relevant_value=14., relevant_value_means_anomaly=False)
         elif chan_name == "Plusleitung der Heizung der Lambdasonde":
-            return classify_sensor_rule_based(input_signal, relevant_value=0., relevant_value_means_anomaly=True,
-                                              outlier_intolerance=0.2)
+            return classify_sensor_rule_based(
+                input_signal, relevant_value=0., relevant_value_means_anomaly=True, outlier_intolerance=0.2
+            )
         elif chan_name == "Plusleitung der Lambdasonde":
-            return classify_sensor_rule_based(input_signal, relevant_value=0., relevant_value_means_anomaly=True,
-                                              outlier_intolerance=0.2)
+            return classify_sensor_rule_based(
+                input_signal, relevant_value=0., relevant_value_means_anomaly=True, outlier_intolerance=0.2
+            )
         elif chan_name == "Masseleitung der Lambdasonde":
             return classify_sensor_rule_based(input_signal, relevant_value=0., relevant_value_means_anomaly=False)
         else:

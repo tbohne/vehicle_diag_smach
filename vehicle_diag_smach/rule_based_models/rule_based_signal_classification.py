@@ -6,31 +6,30 @@ import numpy as np
 import pandas as pd
 
 
-def classify_sensor_rule_based(signal: np.array, relevant_value: float, relevant_value_means_anomaly: bool,
-                               threshold: float = 0.5, outlier_intolerance: float = 0.99) -> bool:
+def classify_sensor_rule_based(
+        signal: np.array, relevant_value: float, relevant_value_means_anomaly: bool, threshold: float = 0.5,
+        outlier_intolerance: float = 0.99
+) -> bool:
     """
-    Classifies whether a signal contains an anomaly based on a rule that specifies the values the signal should or should not take.
+    Classifies whether a signal contains an anomaly based on a rule that specifies the values the signal should or
+    should not take.
 
     :param signal: 1D time series that should be classified
     :param relevant_value: value that the signal should either match or avoid
     :param relevant_value_means_anomaly: flag specifying whether the signal matching relevant_value or
         avoiding relevant_value indicates an anomaly
-    :param threshold: defines a range around relevant_value within which the signal counts as "near the relevant
-        value"
+    :param threshold: defines a range around relevant_value within which the signal counts as "near the relevant value"
     :param outlier_intolerance: ratio specifying how many of the data points must / must not be "near the relevant
         value" (allowing for a small number of outliers) in order for the signal to count as regular
     :return: True if an anomaly has been found, else False
     """
     signal = signal.squeeze()
     assert (len(signal.shape) == 1)
-
     data_points_within_range = np.count_nonzero(np.abs(np.array(signal) - relevant_value) < threshold)
-
     if relevant_value_means_anomaly:
         signal_resembles_relevant_value = (len(signal) - data_points_within_range) / len(signal) >= outlier_intolerance
     else:
         signal_resembles_relevant_value = data_points_within_range / len(signal) >= outlier_intolerance
-
     return not signal_resembles_relevant_value
 
 

@@ -42,13 +42,15 @@ class TestHighLevelStateMachine(unittest.TestCase):
             self.assertEqual(len(qt.query_suspect_component_by_name("C" + str(i))), 1)
 
         # check expected `affected_by` relations
-        self.assertListEqual(sorted(qt.query_affected_by_relations_by_suspect_component("C1")),
-                             sorted(["C7", "C2", "C6"]))
+        self.assertListEqual(
+            sorted(qt.query_affected_by_relations_by_suspect_component("C1")), sorted(["C7", "C2", "C6"])
+        )
         self.assertListEqual(sorted(qt.query_affected_by_relations_by_suspect_component("C2")), sorted(["C8", "C3"]))
         self.assertListEqual(qt.query_affected_by_relations_by_suspect_component("C8"), ["C12"])
         self.assertListEqual(sorted(qt.query_affected_by_relations_by_suspect_component("C3")), sorted(["C4", "C9"]))
-        self.assertListEqual(sorted(qt.query_affected_by_relations_by_suspect_component("C4")),
-                             sorted(["C11", "C10", "C5"]))
+        self.assertListEqual(
+            sorted(qt.query_affected_by_relations_by_suspect_component("C4")), sorted(["C11", "C10", "C5"])
+        )
         self.assertListEqual(qt.query_affected_by_relations_by_suspect_component("C11"), ["C13"])
 
         # expected entry component
@@ -87,8 +89,9 @@ class TestHighLevelStateMachine(unittest.TestCase):
 
         # check expected `affected_by` relations
         self.assertListEqual(qt.query_affected_by_relations_by_suspect_component("C14"), ["C15"])
-        self.assertListEqual(sorted(qt.query_affected_by_relations_by_suspect_component("C15")),
-                             sorted(["C16", "C17", "C18"]))
+        self.assertListEqual(
+            sorted(qt.query_affected_by_relations_by_suspect_component("C15")), sorted(["C16", "C17", "C18"])
+        )
         self.assertListEqual(qt.query_affected_by_relations_by_suspect_component("C18"), ["C19"])
         self.assertListEqual(sorted(qt.query_affected_by_relations_by_suspect_component("C19")), sorted(["C20", "C21"]))
 
