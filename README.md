@@ -61,13 +61,13 @@ Optionally run customer XPS server (in `CustomerXPS/`):
 $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 ```
 
-## Multivariate `torch` demo
+## Multivariate `torch` Demo
 
 - uncomment corresponding demo config in `config.py`
 - host corresponding demo KG, i.e., `vehicle_diag_smach/res/final_demonstrator_res/KG.nq.gz`
 - install + run
 
-## Univariate `keras` demo
+## Univariate `keras` Demo
 
 - uncomment corresponding demo config in `config.py`
 - host corresponding demo KG, i.e., `vehicle_diag_smach/res/prev_demonstrator_res/test_kg.nt`
@@ -85,7 +85,7 @@ Create and start docker container with visualizations on host system (*Apache Je
 ```
 $ docker run -v /tmp/.X11-unix/:/tmp/.X11-unix -e DISPLAY=unix$DISPLAY -ti diag_system
 ```
-For configuration, i.e., hosting the knowledge graph, cf. [obd_ontology](https://github.com/tbohne/obd_ontology) (section "*Launch knowledge graph from RDF serialization (e.g. `.nt` / `.owl` / `.ttl` file*").
+For configuration, i.e., hosting the knowledge graph, cf. [obd_ontology](https://github.com/tbohne/obd_ontology) (section "*Launch knowledge graph from RDF serialization (e.g., `.nq.gz` / `.nt` / `.owl` / `.ttl` file*").
 
 ### <u>Run existing container</u>
 
