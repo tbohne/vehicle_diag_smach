@@ -1,6 +1,6 @@
 setuptools==68.0.0
 numpy==1.23.5
-packaging==21.3
+packaging
 standalone-smach==0.0.9
 Pillow>=10.0.1
 beautifulsoup4==4.12.2
