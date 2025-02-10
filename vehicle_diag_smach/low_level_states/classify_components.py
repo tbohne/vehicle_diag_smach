@@ -249,7 +249,7 @@ class ClassifyComponents(smach.State):
             self.instance_gen.extend_knowledge_graph_with_heatmap(
                 "XCM GradCAM time attribution map", time_attr_heatmaps["time attr. map " + str(0)].tolist()
             )
-            )
+        )
         res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
 
         var_attr_heatmap_img = cam.gen_multi_chan_heatmaps_as_overlay(
@@ -344,6 +344,24 @@ class ClassifyComponents(smach.State):
                 model_meta_info["model_id"], osci_ids, heatmap_ids
             )
             classification_instances[osci_data.comp_name] = classification_id
+
+            # "overlays" relation between heatmap and oscillogram
+            if len(heatmap_ids) == len(osci_ids):
+                for ind in range(len(osci_ids)):
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[ind], osci_id=osci_ids[ind]
+                    )
+            elif len(heatmap_ids) == len(osci_ids) + 1:
+                # it is expected that the last heatmap is a time attribution map that overlays all heatmaps
+                for ind in range(len(osci_ids)):
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[ind], osci_id=osci_ids[ind]
+                    )
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[-1], osci_id=osci_ids[ind]
+                    )
+            else:
+                print("Number of heatmaps does not match number of oscillograms.")
 
     def perform_manual_classifications(
             self, components_to_be_manually_verified: Dict[str, str], classification_instances: Dict[str, str],

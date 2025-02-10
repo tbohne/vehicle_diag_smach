@@ -289,7 +289,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if isinstance(model, keras.models.Model):
             print("KERAS MODEL")
             anomaly, pred_value, heatmap_id = self.classify_with_keras_model(model, voltage_dfs, dtc, affecting_comp)
-            heatmap_ids =[heatmap_id]
+            heatmap_ids = [heatmap_id]
         elif isinstance(model, torch.nn.Module):
             print("TORCH MODEL")
             anomaly, pred_value, heatmap_ids = self.classify_with_torch_model(model, voltage_dfs, affecting_comp)
@@ -316,7 +316,25 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
             osci_ids, heatmap_ids
         )
 
+        # "overlays" relation between heatmap and oscillogram
+        if len(heatmap_ids) > 0:
+            if len(heatmap_ids) == len(osci_ids):
+                for ind in range(len(osci_ids)):
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[ind], osci_id=osci_ids[ind]
                     )
+            elif len(heatmap_ids) == len(osci_ids) + 1:
+                # it is expected that the last heatmap is a time attribution map that overlays all heatmaps
+                for ind in range(len(osci_ids)):
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[ind], osci_id=osci_ids[ind]
+                    )
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[-1], osci_id=osci_ids[ind]
+                    )
+            else:
+                print("Number of heatmaps does not match number of oscillograms.")
+
         return anomaly, classification_id
 
     def construct_complete_graph(
