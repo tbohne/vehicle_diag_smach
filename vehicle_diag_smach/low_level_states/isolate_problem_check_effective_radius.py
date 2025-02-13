@@ -208,6 +208,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     "XCM GradCAM variable attribution map", var_attr_heatmaps["var. attr. map " + str(i)].tolist()
                 )
             )
+        # add only one of the time attribution maps, as they are identical for all channels
         heatmap_ids.append(
             self.instance_gen.extend_knowledge_graph_with_heatmap(
                 "XCM GradCAM time attribution map", time_attr_heatmaps["time attr. map " + str(0)].tolist()
@@ -225,6 +226,8 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         )
         self.data_provider.provide_heatmaps(var_attr_heatmap_img, comp_name + res_str + "_var_attr")
         self.data_provider.provide_heatmaps(time_attr_heatmap_img, comp_name + res_str + "_time_attr")
+
+        # store all heatmap IDs, i.e. for all channels
         return anomaly, pred_value, heatmap_ids
 
     def classify_component(
