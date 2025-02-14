@@ -154,14 +154,14 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
     def classify_with_torch_model(
             self, model: torch.nn.Module, voltage_dfs: List[pd.DataFrame], comp_name: str
-    ) -> Tuple[bool, float, str]:
+    ) -> Tuple[bool, float, List[str]]:
         """
         Classifies the provided voltage dataframes using the provided torch model.
 
         :param model: trained torch model to classify voltage frames
         :param voltage_dfs: voltage data to be classified
         :param comp_name: name of the corresponding component
-        :return: (anomaly, prediction value, heatmap ID)
+        :return: (anomaly, prediction value, list of heatmap IDs)
         """
         multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
         # expected shape for test signals: (1, chan, length)
@@ -180,7 +180,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         pred_value = float(probas.max()) if num_classes > 1 else probas[0][0]
 
         # heatmap generation for torch model (XCM)
-        heatmap_id = ""
+        heatmap_ids = []
         xcm_model = XCM(c_in=len(voltage_dfs), c_out=2, seq_len=multivariate_sample.shape[2])
         xcm_model.load_state_dict(model.state_dict())
         assert type(xcm_model) == XCM
@@ -203,9 +203,17 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         # )
 
         for i in range(len(var_attr_heatmaps)):
-            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-                "XCM GradCAM", var_attr_heatmaps["var. attr. map " + str(i)].tolist()
+            heatmap_ids.append(
+                self.instance_gen.extend_knowledge_graph_with_heatmap(
+                    "XCM GradCAM variable attribution map", var_attr_heatmaps["var. attr. map " + str(i)].tolist()
+                )
             )
+        # add only one of the time attribution maps, as they are identical for all channels
+        heatmap_ids.append(
+            self.instance_gen.extend_knowledge_graph_with_heatmap(
+                "XCM GradCAM time attribution map", time_attr_heatmaps["time attr. map " + str(0)].tolist()
+            )
+        )
         res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
 
         # TODO: could use actual time values instead of list(range(len(tensor[0, 0]))
@@ -218,8 +226,9 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         )
         self.data_provider.provide_heatmaps(var_attr_heatmap_img, comp_name + res_str + "_var_attr")
         self.data_provider.provide_heatmaps(time_attr_heatmap_img, comp_name + res_str + "_time_attr")
-        # TODO: generally, we would want to store all heatmap IDs, i.e., for all channels
-        return anomaly, pred_value, heatmap_id
+
+        # store all heatmap IDs, i.e. for all channels
+        return anomaly, pred_value, heatmap_ids
 
     def classify_component(
             self, affecting_comp: str, dtc: str, classification_reason: str, sub_comp: bool = False
@@ -250,8 +259,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         assert len(oscillograms) == 1
         voltage_dfs = oscillograms[0].time_series
-        # TODO: here, we need to distinguish between multivariate and univariate
-        osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(voltage_dfs)
+        assert isinstance(voltage_dfs[0], (pd.Series, pd.DataFrame, list))
 
         model, model_meta_info = self.get_model_and_metadata(affecting_comp, voltage_dfs, sub_comp)
 
@@ -271,7 +279,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                     break
             voltage_dfs = [voltage_dfs[idx]]
 
+        osci_ids = []
         for df in range(len(voltage_dfs)):
+            osci_ids.append(
+                self.instance_gen.extend_knowledge_graph_with_oscillogram(voltage_dfs[df])
+            )
             processed_chan = util.preprocess_time_series_based_on_model_meta_info(
                 model_meta_info, voltage_dfs[df].to_numpy()
             ).flatten()
@@ -280,9 +292,10 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         if isinstance(model, keras.models.Model):
             print("KERAS MODEL")
             anomaly, pred_value, heatmap_id = self.classify_with_keras_model(model, voltage_dfs, dtc, affecting_comp)
+            heatmap_ids = [heatmap_id]
         elif isinstance(model, torch.nn.Module):
             print("TORCH MODEL")
-            anomaly, pred_value, heatmap_id = self.classify_with_torch_model(model, voltage_dfs, affecting_comp)
+            anomaly, pred_value, heatmap_ids = self.classify_with_torch_model(model, voltage_dfs, affecting_comp)
         elif isinstance(model, RuleBasedModel):
             if isinstance(model, Lambdasonde) or isinstance(model, Saugrohrdrucksensor):
                 anomaly = model.predict(voltage_dfs[0].to_numpy(), affecting_comp)
@@ -290,7 +303,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
                 anomaly = model.predict(voltage_dfs[0].to_numpy())
             # no prediction values / heatmaps in case of the rule-based models
             pred_value = 1.0
-            heatmap_id = ""
+            heatmap_ids = []
         else:
             print("unknown model:", type(model))
             return
@@ -303,8 +316,28 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         affecting_comp = super_comp if sub_comp else affecting_comp
         classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
             anomaly, classification_reason, affecting_comp, pred_value, model_meta_info['model_id'],
-            osci_id, heatmap_id
+            osci_ids, heatmap_ids
         )
+
+        # "overlays" relation between heatmap and oscillogram
+        if len(heatmap_ids) > 0:
+            if len(heatmap_ids) == len(osci_ids):
+                for ind in range(len(osci_ids)):
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[ind], osci_id=osci_ids[ind]
+                    )
+            elif len(heatmap_ids) == len(osci_ids) + 1:
+                # it is expected that the last heatmap is a time attribution map that overlays all heatmaps
+                for ind in range(len(osci_ids)):
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[ind], osci_id=osci_ids[ind]
+                    )
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[-1], osci_id=osci_ids[ind]
+                    )
+            else:
+                print("Number of heatmaps does not match number of oscillograms.")
+
         return anomaly, classification_id
 
     def construct_complete_graph(

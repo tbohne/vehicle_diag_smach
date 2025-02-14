@@ -191,14 +191,14 @@ class ClassifyComponents(smach.State):
 
     def classify_with_torch_model(
             self, model: torch.nn.Module, voltage_dfs: List[pd.DataFrame], comp_name: str
-    ) -> Tuple[bool, float, str]:
+    ) -> Tuple[bool, float, List[str]]:
         """
         Classifies the provided voltage dataframes using the provided torch model.
 
         :param model: trained torch model to classify voltage frames
         :param voltage_dfs: voltage data to be classified
         :param comp_name: name of the corresponding component
-        :return: (anomaly, prediction value, heatmap ID)
+        :return: (anomaly, prediction value, list of heatmap IDs)
         """
         multivariate_sample = np.array([df.to_numpy() for df in voltage_dfs])
         # expected shape for test signals: (1, chan, length)
@@ -217,7 +217,7 @@ class ClassifyComponents(smach.State):
         pred_value = float(probas.max()) if num_classes > 1 else probas[0][0]
 
         # heatmap generation for torch model (XCM)
-        heatmap_id = ""
+        heatmap_ids = []
         xcm_model = XCM(c_in=len(voltage_dfs), c_out=2, seq_len=multivariate_sample.shape[2])
         xcm_model.load_state_dict(model.state_dict())
         assert type(xcm_model) == XCM
@@ -240,9 +240,17 @@ class ClassifyComponents(smach.State):
         # )
 
         for i in range(len(var_attr_heatmaps)):
-            heatmap_id = self.instance_gen.extend_knowledge_graph_with_heatmap(
-                "XCM GradCAM", var_attr_heatmaps["var. attr. map " + str(i)].tolist()
+            heatmap_ids.append(
+                self.instance_gen.extend_knowledge_graph_with_heatmap(
+                    "XCM GradCAM variable attribution map", var_attr_heatmaps["var. attr. map " + str(i)].tolist()
+                )
             )
+        # add only one of the time attribution maps, as they are identical for all channels
+        heatmap_ids.append(
+            self.instance_gen.extend_knowledge_graph_with_heatmap(
+                "XCM GradCAM time attribution map", time_attr_heatmaps["time attr. map " + str(0)].tolist()
+            )
+        )
         res_str = (" [ANOMALY" if anomaly else " [NO ANOMALY") + " - SCORE: " + str(pred_value) + "]"
 
         var_attr_heatmap_img = cam.gen_multi_chan_heatmaps_as_overlay(
@@ -254,8 +262,8 @@ class ClassifyComponents(smach.State):
         self.data_provider.provide_heatmaps(var_attr_heatmap_img, comp_name + res_str + "_var_attr")
         self.data_provider.provide_heatmaps(time_attr_heatmap_img, comp_name + res_str + "_time_attr")
 
-        # TODO: generally, we would want to store all heatmap IDs, i.e., for all channels
-        return anomaly, pred_value, heatmap_id
+        # store all heatmap IDs, i.e. for all channels
+        return anomaly, pred_value, heatmap_ids
 
     def process_oscillogram_recordings(
             self, oscillograms: List[OscillogramData], suggestion_list: Dict[str, Tuple[str, bool]],
@@ -274,12 +282,13 @@ class ClassifyComponents(smach.State):
         """
         osci_set_id = self.get_osci_set_id(components_to_be_recorded)
         for osci_data in oscillograms:  # iteratively process parallel recorded oscilloscope recordings
-            # TODO: here, we need to distinguish between multivariate and univariate
-            osci_id = self.instance_gen.extend_knowledge_graph_with_oscillogram(osci_data.time_series, osci_set_id)
-            print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
             voltage_dfs = osci_data.time_series
+            assert isinstance(voltage_dfs[0], (pd.Series, pd.DataFrame, list))
+            multivariate = True if len(voltage_dfs) > 1 else False
 
-            if len(voltage_dfs) > 1:  # multivariate
+            print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
+
+            if multivariate:
                 model = self.model_accessor.get_torch_multivariate_ts_classification_model_by_component(
                     osci_data.comp_name
                 )
@@ -293,7 +302,11 @@ class ClassifyComponents(smach.State):
                 continue
             (model, model_meta_info) = model  # not only obtain the model here, but also meta info
 
+            osci_ids = []
             for df in range(len(voltage_dfs)):
+                osci_ids.append(
+                    self.instance_gen.extend_knowledge_graph_with_oscillogram(voltage_dfs[df], osci_set_id)
+                )
                 processed_chan = util.preprocess_time_series_based_on_model_meta_info(
                     model_meta_info, voltage_dfs[df].to_numpy()
                 ).flatten()
@@ -302,7 +315,7 @@ class ClassifyComponents(smach.State):
             if isinstance(model, torch.nn.Module):
                 print("TORCH MODEL")
                 # TODO: potentially add torch model validation
-                anomaly, pred_value, heatmap_id = self.classify_with_torch_model(
+                anomaly, pred_value, heatmap_ids = self.classify_with_torch_model(
                     model, voltage_dfs, osci_data.comp_name
                 )
             elif isinstance(model, keras.models.Model):
@@ -315,6 +328,7 @@ class ClassifyComponents(smach.State):
                 anomaly, pred_value, heatmap_id = self.classify_with_keras_model(
                     model, voltage_dfs, osci_data.comp_name
                 )
+                heatmap_ids = [heatmap_id]
             else:
                 print("unknown model:", type(model))
                 continue
@@ -329,9 +343,27 @@ class ClassifyComponents(smach.State):
             self.log_corresponding_dtc(osci_data)
             classification_id = self.instance_gen.extend_knowledge_graph_with_oscillogram_classification(
                 anomaly, components_to_be_recorded[osci_data.comp_name], osci_data.comp_name, pred_value,
-                model_meta_info["model_id"], osci_id, heatmap_id
+                model_meta_info["model_id"], osci_ids, heatmap_ids
             )
             classification_instances[osci_data.comp_name] = classification_id
+
+            # "overlays" relation between heatmap and oscillogram
+            if len(heatmap_ids) == len(osci_ids):
+                for ind in range(len(osci_ids)):
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[ind], osci_id=osci_ids[ind]
+                    )
+            elif len(heatmap_ids) == len(osci_ids) + 1:
+                # it is expected that the last heatmap is a time attribution map that overlays all heatmaps
+                for ind in range(len(osci_ids)):
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[ind], osci_id=osci_ids[ind]
+                    )
+                    self.instance_gen.extend_knowledge_graph_with_overlays_relation(
+                        heatmap_id=heatmap_ids[-1], osci_id=osci_ids[ind]
+                    )
+            else:
+                print("Number of heatmaps does not match number of oscillograms.")
 
     def perform_manual_classifications(
             self, components_to_be_manually_verified: Dict[str, str], classification_instances: Dict[str, str],
