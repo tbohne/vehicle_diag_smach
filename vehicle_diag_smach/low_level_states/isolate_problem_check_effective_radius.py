@@ -260,7 +260,6 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         assert len(oscillograms) == 1
         voltage_dfs = oscillograms[0].time_series
         assert isinstance(voltage_dfs[0], (pd.Series, pd.DataFrame, list))
-
         model, model_meta_info = self.get_model_and_metadata(affecting_comp, voltage_dfs, sub_comp)
 
         if sub_comp:
@@ -281,9 +280,7 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
 
         osci_ids = []
         for df in range(len(voltage_dfs)):
-            osci_ids.append(
-                self.instance_gen.extend_knowledge_graph_with_oscillogram(voltage_dfs[df])
-            )
+            osci_ids.append(self.instance_gen.extend_knowledge_graph_with_oscillogram(voltage_dfs[df]))
             processed_chan = util.preprocess_time_series_based_on_model_meta_info(
                 model_meta_info, voltage_dfs[df].to_numpy()
             ).flatten()

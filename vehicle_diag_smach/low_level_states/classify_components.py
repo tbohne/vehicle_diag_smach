@@ -285,7 +285,6 @@ class ClassifyComponents(smach.State):
             voltage_dfs = osci_data.time_series
             assert isinstance(voltage_dfs[0], (pd.Series, pd.DataFrame, list))
             multivariate = True if len(voltage_dfs) > 1 else False
-
             print(colored("\n\nclassifying:" + osci_data.comp_name, "green", "on_grey", ["bold"]))
 
             if multivariate:
