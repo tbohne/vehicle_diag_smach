@@ -8,6 +8,7 @@ from datetime import date
 from pathlib import Path
 from typing import List
 
+import pandas as pd
 from oscillogram_classification import preprocess
 
 from vehicle_diag_smach.config import DUMMY_OSCILLOGRAMS, OSCI_SESSION_FILES, \
@@ -117,6 +118,7 @@ class TestDataAccessor(DataAccessor):
         for comp in components:
             path = SESSION_DIR + "/" + OSCI_SESSION_FILES + "/" + comp + ".csv"
             _, voltages = preprocess.read_oscilloscope_recording(path)
+            voltages = [pd.DataFrame(voltages)]
             oscillograms.append(OscillogramData(voltages, comp))
         return oscillograms
 
