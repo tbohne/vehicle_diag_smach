@@ -702,7 +702,11 @@ class IsolateProblemCheckEffectiveRadius(smach.State):
         starter_path = prev_path.copy()
         if len(sub_anomalies) > 0:
             prev_path.append("(" + sub_anomalies[0] + ")")
-            causal_paths.append(prev_path)
+
+        # this has to be done either way
+        causal_paths.append(prev_path)
+
+        if len(sub_anomalies) > 0:
             # create sub-comp paths
             for i in range(1, len(sub_anomalies)):
                 tmp = starter_path.copy()
