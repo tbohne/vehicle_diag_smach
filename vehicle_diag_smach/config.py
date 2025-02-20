@@ -22,6 +22,8 @@ DUMMY_ISOLATION_OSCILLOGRAM_POS = "res/dummy_isolation_oscillogram/dummy_isolati
 DUMMY_ISOLATION_OSCILLOGRAM_NEG1 = "res/dummy_isolation_oscillogram/dummy_isolation_NEG1.csv"
 DUMMY_ISOLATION_OSCILLOGRAM_NEG2 = "res/dummy_isolation_oscillogram/dummy_isolation_NEG2.csv"
 
+SYNC_SAMPLES = True
+
 # univariate keras demo data -- make sure to host corresponding KG
 # FINAL_DEMO_TEST_SAMPLES = "res/prev_demonstrator_res/univariate_signals/"
 # FINAL_DEMO_MODELS = "res/prev_demonstrator_res/keras_models/"
@@ -38,4 +40,3 @@ SEED = 4
 VEHICLE_DATA = "res/final_demonstrator_res/vehicle_info.json"
 WORKSHOP_DATA = "res/final_demonstrator_res/workshop_info.json"
 ONLY_NEG_SAMPLES = True
-SYNC_SAMPLES = True
