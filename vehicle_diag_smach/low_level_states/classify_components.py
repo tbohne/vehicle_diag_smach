@@ -104,22 +104,28 @@ class ClassifyComponents(smach.State):
                  ({comp: reason_for}, {comp: reason_for})
         """
         components_to_be_recorded = {k: v[0] for k, v in suggestion_list.items() if v[1]}
+        if len(components_to_be_recorded) > 0:
+            oscillograms = self.data_accessor.get_oscillograms_by_components(list(components_to_be_recorded.keys()))
+            multivariate = True if len(oscillograms[0].time_series) > 1 else False
         components_to_be_manually_verified = {k: v[0] for k, v in suggestion_list.items() if not v[1]}
         channels = {}
         for component in components_to_be_recorded.keys():
-            norm, model_id, input_len = self.qt.query_xcm_model_meta_info_by_component(component)[0]
-            model_instance = self.qt.query_model_by_model_id(model_id)[0]
-            model_uuid = model_instance.split("#")[1]
-            input_chan_req_resp = self.qt.query_input_chan_req_by_model(model_uuid)
-            assert len(input_chan_req_resp) > 0
-            comp_channels = np.empty(len(input_chan_req_resp), dtype=object)
-            for input_chan_req, req_idx in input_chan_req_resp:
-                input_chan_req_id = input_chan_req.split("#")[1]
-                req_chan = self.qt.query_channel_by_input_req(input_chan_req_id)
-                assert len(req_chan) == 1
-                req_chan_name = req_chan[0][1]
-                comp_channels[int(req_idx)] = req_chan_name
-            channels[component] = comp_channels
+            if multivariate:
+                norm, model_id, input_len = self.qt.query_xcm_model_meta_info_by_component(component)[0]
+                model_instance = self.qt.query_model_by_model_id(model_id)[0]
+                model_uuid = model_instance.split("#")[1]
+                input_chan_req_resp = self.qt.query_input_chan_req_by_model(model_uuid)
+                assert len(input_chan_req_resp) > 0
+                comp_channels = np.empty(len(input_chan_req_resp), dtype=object)
+                for input_chan_req, req_idx in input_chan_req_resp:
+                    input_chan_req_id = input_chan_req.split("#")[1]
+                    req_chan = self.qt.query_channel_by_input_req(input_chan_req_id)
+                    assert len(req_chan) == 1
+                    req_chan_name = req_chan[0][1]
+                    comp_channels[int(req_idx)] = req_chan_name
+                channels[component] = comp_channels
+            else:
+                channels[component] = [component + "-Signal"]
         print("------------------------------------------")
         print("components to be recorded:", components_to_be_recorded)
         print("components to be verified manually:", components_to_be_manually_verified)
