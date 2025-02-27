@@ -73,6 +73,13 @@ $ java -jar out/artifacts/CustomerXPS_jar/CustomerXPS.jar
 - host corresponding demo KG, i.e., `vehicle_diag_smach/res/prev_demonstrator_res/test_kg.nt`
 - install + run
 
+## Unit Tests
+
+Host unit test KG on the Fuseki server, i.e., `vehicle_diag_smach/res/unit_test_kg.nq.gz`, and run the tests:
+```
+$ python -m unittest vehicle_diag_smach/tests/test_high_level_smach.py
+```
+
 ## Docker Usage
 
 ### <u>Initial run (only for initial setup)</u>
