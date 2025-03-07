@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 URL = 'https://github.com/tbohne/vehicle_diag_smach'
 
 with open('requirements.txt') as f:
